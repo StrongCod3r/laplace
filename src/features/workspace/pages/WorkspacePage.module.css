@@ -1,0 +1,308 @@
+.app-shell {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+.editorContent {
+  display: contents;
+}
+.editorContent[hidden] {
+  display: none;
+}
+.breadcrumbs[hidden] {
+  display: none;
+}
+.diffBreadcrumb {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.main-area[data-git-diff] .topbar {
+  display: flex;
+}
+.topbar {
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: linear-gradient(var(--bg) 72%, transparent);
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.workspace-permission-btn {
+  flex: none;
+  margin-left: 7px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--panel);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.workspace-permission-btn:hover {
+  border-color: var(--obsidian-accent, var(--blue));
+  background: var(--hover);
+}
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 14px;
+}
+.crumb {
+  max-width: 180px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 4px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+.crumb-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  line-height: 1;
+}
+.crumb-icon :global(.external-page-icon) {
+  width: 14px;
+  height: 14px;
+}
+.crumb-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: inherit;
+}
+.crumb:hover {
+  background: var(--hover);
+}
+.crumb-sep {
+  color: var(--faint);
+}
+.breadcrumb-history-controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  margin-right: 3px;
+}
+.breadcrumb-history-btn {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+}
+.breadcrumb-history-btn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+.breadcrumb-history-btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.breadcrumb-page-menu-button {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+}
+.breadcrumb-page-menu-button:hover,
+.breadcrumb-page-menu-button[aria-expanded='true'] {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.toast {
+  position: fixed;
+  z-index: 120;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 900px) {
+  .main-area {
+    width: 100%;
+  }
+}
+@media (max-width: 600px) {
+  .breadcrumbs .crumb:not(:last-of-type),
+  .crumb-sep {
+    display: none;
+  }
+}
+.app-shell:global(.obsidian-layout) {
+  display: flex;
+  background: var(--ribbon);
+}
+.global-right-sidebar-toggle {
+  position: fixed;
+  top: 5px;
+  right: 6px;
+  z-index: 70;
+  width: 29px;
+  height: 29px;
+  background: var(--tab-bg);
+  color: var(--muted);
+  font-size: 18px;
+}
+.global-right-sidebar-toggle:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.pane-resizer {
+  width: 4px;
+  min-width: 4px;
+  height: 100vh;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  z-index: 55;
+}
+.pane-resizer:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1px;
+  width: 1px;
+  background: var(--border);
+}
+.pane-resizer:hover:after,
+.pane-resizer:global(.resizing):after {
+  left: 0;
+  width: 2px;
+  background: var(--obsidian-accent);
+}
+.pane-resizer:global(.hidden-resizer) {
+  width: 0;
+  min-width: 0;
+  pointer-events: none;
+}
+.main-area {
+  flex: 1;
+  min-width: 260px;
+  height: 100vh;
+  background: var(--workspace);
+  position: relative;
+}
+.topbar {
+  top: 39px;
+  height: 36px;
+  padding: 0 6px 0 10px;
+  background: var(--workspace);
+  z-index: 18;
+}
+.topbar-left {
+  flex: 1;
+  gap: 1px;
+}
+.breadcrumbs {
+  font-size: 12px;
+  color: var(--muted);
+}
+.crumb {
+  padding: 3px 5px;
+}
+.topbar :global(.ghost-btn) {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 5px 7px;
+}
+.topbar :global(.icon-btn) {
+  width: 28px;
+  height: 28px;
+}
+
+@media (max-width: 1100px) {
+  .right-resizer {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .left-resizer {
+    display: none;
+  }
+}
+.crumb[data-crumb-id] {
+  cursor: pointer;
+}
+.crumb[data-crumb-folder-path] {
+  cursor: pointer;
+}
+.main-area:global(.docked) .topbar {
+  display: none;
+}
+.main-area:global(.docked)[data-git-diff] .topbar {
+  display: flex;
+}
+.main-area:global(.docked) :global(.editor-dock) {
+  top: 0;
+}
+
+:global(.dock-breadcrumbs) .crumb,
+:global(.dock-breadcrumbs) .crumb-sep {
+  flex: 0 1 auto;
+}
+:global(.dock-breadcrumbs) .crumb[data-crumb-id]:last-of-type {
+  min-width: 0;
+  flex: 1 1 auto;
+}

@@ -1,0 +1,521 @@
+.graph-toolbar {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--workspace) 94%, var(--panel));
+}
+.graph-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.graph-title b {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+.graph-title span {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.graph-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.graph-control-btn {
+  min-width: 29px;
+  height: 29px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--muted);
+  padding: 0 8px;
+  font-size: 12px;
+}
+.graph-control-btn:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+.attachments-cleanup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.graph-control-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.attachments-cleanup-btn.cleaning svg {
+  animation: attachments-cleanup-spin 1s linear infinite;
+}
+@keyframes attachments-cleanup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attachments-cleanup-btn.cleaning svg {
+    animation: none;
+  }
+}
+.attachments-view {
+  position: absolute;
+  top: 75px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  overflow: auto;
+  background: var(--workspace);
+  padding-bottom: 58px;
+}
+.attachments-gallery-grid {
+  max-width: 1280px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  margin: 24px auto 0;
+  padding: 0 42px;
+}
+.attachment-gallery-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+}
+.attachment-gallery-thumb {
+  width: 100%;
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: var(--hover);
+  color: var(--muted);
+}
+button.attachment-gallery-thumb {
+  cursor: zoom-in;
+}
+.attachment-gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.16s ease;
+}
+.attachment-gallery-thumb:hover img {
+  transform: scale(1.035);
+}
+.attachment-gallery-file > :global(.app-lucide) {
+  width: 34px;
+  height: 34px;
+  stroke-width: 1.5;
+}
+.attachment-gallery-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+  padding: 10px 11px 11px;
+}
+.attachment-gallery-copy b {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-gallery-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-gallery-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 11px 10px;
+}
+.attachment-gallery-reference-trigger {
+  min-width: 0;
+  flex: 1;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-gallery-copy-action {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.attachment-gallery-copy-action:hover {
+  border-color: var(--border);
+  background: var(--hover);
+  color: var(--text);
+}
+.attachment-gallery-delete {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.attachment-gallery-delete:hover {
+  border-color: var(--danger, #dc4545);
+  background: color-mix(in srgb, var(--danger, #dc4545) 10%, transparent);
+  color: var(--danger, #dc4545);
+}
+.attachment-gallery-delete:focus-visible {
+  outline: 2px solid var(--danger, #dc4545);
+  outline-offset: 2px;
+}
+.attachment-gallery-reference-trigger:hover,
+.attachment-gallery-reference-trigger[aria-pressed='true'] {
+  color: var(--obsidian-accent, var(--blue));
+  text-decoration: underline;
+}
+.attachments-gallery-status {
+  max-width: 1200px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 24px auto 0;
+  padding: 22px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.attachments-retry-btn {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+}
+.attachments-pagination {
+  max-width: 1280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 22px auto 0;
+  padding: 0 42px;
+}
+.attachments-pagination > span {
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+.attachments-pagination button {
+  min-height: 30px;
+}
+.attachments-pagination button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+.attachment-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(0, 0, 0, 0.78);
+}
+.attachment-preview-dialog {
+  width: min(1080px, 100%);
+  max-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.attachment-preview-header {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.attachment-preview-header > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+.attachment-preview-header b {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-preview-header small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-preview-image-wrap {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 18px;
+}
+.attachment-preview-image-wrap img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 145px);
+  object-fit: contain;
+}
+.image-viewer-controls {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: rgba(24, 24, 24, 0.9);
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(12px);
+}
+.image-viewer-controls button {
+  width: 34px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.image-viewer-controls button:hover,
+.image-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.image-viewer-controls svg,
+.image-viewer-close svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+.image-viewer-controls output {
+  min-width: 48px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.image-viewer-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.image-viewer-close {
+  display: none;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: rgba(24, 24, 24, 0.78);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+:global(#attachmentPreview[data-image-block-fullscreen='true']) {
+  place-items: stretch;
+  padding: 0;
+  background: #08090b;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .attachment-preview-dialog {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #08090b;
+  box-shadow: none;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .attachment-preview-header {
+  display: none;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .attachment-preview-image-wrap {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  cursor: default;
+  touch-action: none;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .attachment-preview-image-wrap:global(.is-zoomed) {
+  cursor: grab;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .attachment-preview-image-wrap:global(.is-panning) {
+  cursor: grabbing;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .attachment-preview-image-wrap img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: zoom-in;
+  opacity: 0;
+  transition: none;
+  will-change: transform;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true'])
+  .attachment-preview-image-wrap:global(.is-ready) img {
+  opacity: 1;
+  transition:
+    opacity 120ms ease,
+    transform 160ms cubic-bezier(0.2, 0.75, 0.3, 1);
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true'])
+  .attachment-preview-image-wrap:global(.is-zoomed) img {
+  cursor: zoom-out;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true'])
+  .attachment-preview-image-wrap:global(.is-panning) img {
+  cursor: grabbing;
+  transition: none;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .image-viewer-controls {
+  position: absolute;
+  z-index: 2;
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px));
+  left: 50%;
+  display: flex;
+  transform: translateX(-50%);
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .image-viewer-close {
+  position: absolute;
+  z-index: 10;
+  top: max(20px, calc(env(safe-area-inset-top) + 10px));
+  right: max(20px, calc(env(safe-area-inset-right) + 10px));
+  display: grid;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  color: #fff;
+}
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .image-viewer-close:hover,
+:global(#attachmentPreview[data-image-block-fullscreen='true']) .image-viewer-close:focus-visible {
+  display: grid;
+  visibility: visible;
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(24, 24, 24, 0.96);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(#attachmentPreview[data-image-block-fullscreen='true'])
+    .attachment-preview-image-wrap:global(.is-ready) img {
+    transition: none;
+  }
+}
+@media (max-width: 600px) {
+  .attachments-view {
+    padding-bottom: 42px;
+  }
+}
+@media (max-width: 600px) {
+  .attachments-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+    gap: 10px;
+    padding: 0 16px;
+  }
+}
+@media (max-width: 600px) {
+  .attachments-pagination {
+    gap: 8px;
+    padding: 0 16px;
+  }
+}
+@media (max-width: 600px) {
+  .attachments-pagination > span {
+    max-width: 150px;
+    line-height: 1.4;
+  }
+}
+@media (max-width: 600px) {
+  .attachment-preview-backdrop {
+    padding: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .attachment-preview-dialog {
+    max-height: calc(100vh - 20px);
+  }
+}
+@media (max-width: 600px) {
+  .attachment-preview-image-wrap img {
+    max-height: calc(100vh - 105px);
+  }
+}

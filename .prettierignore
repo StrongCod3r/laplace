@@ -1,0 +1,20 @@
+# Dependencies, caches and build output
+**/node_modules/
+**/.pnpm-store/
+**/.vite/
+**/dist/
+/public/
+/.codegraph/
+
+# Test artifacts and generated files
+**/test-results/
+**/playwright-report/
+**/coverage/
+**/pnpm-lock.yaml
+**/package-lock.json
+**/yarn.lock
+/docs/migration-inventory.json
+
+# Local agent configuration
+/.agents/
+/.codex/

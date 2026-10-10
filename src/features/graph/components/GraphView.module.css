@@ -1,0 +1,145 @@
+.graph-view {
+  position: absolute;
+  top: 75px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: auto;
+  background: var(--workspace);
+  overflow: hidden;
+}
+.graph-shell {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.graph-search {
+  width: min(230px, 28vw);
+  height: 29px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.graph-search:focus {
+  border-color: color-mix(in srgb, var(--obsidian-accent) 72%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--obsidian-accent) 13%, transparent);
+}
+.graph-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--workspace);
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--muted) 18%, transparent) 0.8px,
+    transparent 0.9px
+  );
+  background-size: 20px 20px;
+}
+.graph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+.graph-svg:global(.graph-panning) {
+  cursor: grabbing;
+}
+.graph-edge {
+  stroke: color-mix(in srgb, var(--muted) 32%, transparent);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  transition:
+    opacity 0.12s,
+    stroke 0.12s;
+}
+.graph-node {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.12s;
+}
+.graph-node circle {
+  fill: var(--panel);
+  stroke: color-mix(in srgb, var(--muted) 66%, var(--border));
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 0.12s,
+    stroke 0.12s,
+    stroke-width 0.12s;
+}
+.graph-node text {
+  fill: var(--muted);
+  font-size: 12px;
+  font-family: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+  paint-order: stroke;
+  stroke: var(--workspace);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.graph-node:hover circle,
+.graph-node:focus circle {
+  fill: color-mix(in srgb, var(--obsidian-accent) 16%, var(--panel));
+  stroke: var(--obsidian-accent);
+  stroke-width: 2.2;
+}
+.graph-node:hover text,
+.graph-node:focus text {
+  fill: var(--text);
+}
+.graph-node:global(.current) circle {
+  fill: color-mix(in srgb, var(--obsidian-accent) 22%, var(--panel));
+  stroke: var(--obsidian-accent);
+  stroke-width: 2.2;
+}
+.graph-node:global(.current) text {
+  fill: var(--text);
+  font-weight: 650;
+}
+.graph-node:global(.dim),
+.graph-edge:global(.dim) {
+  opacity: 0.13;
+}
+.graph-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.graph-empty > div {
+  max-width: 300px;
+  padding: 24px;
+}
+.graph-empty b {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+.graph-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--muted);
+  font-size: 10px;
+  pointer-events: none;
+  backdrop-filter: blur(5px);
+}

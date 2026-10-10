@@ -1,0 +1,437 @@
+.panel {
+  --sc-text: var(--text);
+  --sc-muted: var(--muted);
+  --sc-input: #fff;
+  --sc-input-border: #d1d1d1;
+  --sc-count: #dedede;
+  --sc-added: #218750;
+  --sc-modified: #956b00;
+  --sc-deleted: #b42318;
+  color: var(--sc-text);
+  font-family: inherit;
+  font-size: 13px;
+  padding-bottom: 8px;
+  min-height: 100%;
+}
+:global(body.dark) .panel {
+  --sc-text: #ccc;
+  --sc-muted: #999;
+  --sc-input: #3c3c3c;
+  --sc-input-border: transparent;
+  --sc-count: #4d4d4d;
+  --sc-added: #73c991;
+  --sc-modified: #c7a76c;
+  --sc-deleted: #e06c75;
+}
+.panel [hidden] {
+  display: none;
+}
+.panel button,
+.panel textarea {
+  font: inherit;
+  color: inherit;
+}
+.panel button,
+.actionDropdown > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.panel button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.panel button:hover:not(:disabled),
+.panel summary:hover {
+  background: var(--hover);
+}
+.panel button:focus-visible,
+.panel textarea:focus-visible,
+.panel summary:focus-visible {
+  outline: 1px solid #007acc;
+  outline-offset: -1px;
+}
+.header,
+.repositoryActions,
+.commitActions {
+  display: flex;
+  align-items: center;
+}
+.header {
+  height: 35px;
+  padding: 0 6px 0 8px;
+  justify-content: space-between;
+}
+.header h2 {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--sc-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+.repositoryActions {
+  gap: 5px;
+  flex: none;
+}
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 10px;
+  background: var(--panel);
+  color: var(--sc-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid var(--border);
+  border-top-color: var(--obsidian-accent, var(--blue));
+  border-radius: 50%;
+  animation: git-spin 0.8s linear infinite;
+}
+@keyframes git-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+.repositoryActions > button,
+.actionDropdown > summary {
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
+}
+.composer {
+  padding: 7px 10px 8px;
+}
+.messageLabel {
+  display: block;
+  margin-bottom: 13px;
+}
+.messageLabel > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.composer textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 82px;
+  min-height: 82px;
+  resize: none;
+  padding: 5px 7px;
+  border: 1px solid var(--sc-input-border);
+  border-radius: 3px;
+  background: var(--sc-input);
+  line-height: 23px;
+  color-scheme: light;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--sc-muted) 46%, transparent) transparent;
+}
+:global(body.dark) .composer textarea {
+  color-scheme: dark;
+}
+.composer textarea::-webkit-scrollbar {
+  width: 10px;
+}
+.composer textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+.composer textarea::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--sc-muted) 42%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.composer textarea::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--sc-muted) 68%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.composer textarea::placeholder {
+  color: var(--sc-muted);
+}
+.commitActions {
+  border-radius: 4px;
+  background: #106ba6;
+  color: #fff;
+}
+.panel .commitButton {
+  min-height: 30px;
+  flex: 1;
+  gap: 5px;
+  border-radius: 4px 0 0 4px;
+  color: #fff;
+}
+.commitDropdown {
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+.commitDropdown > summary {
+  width: 30px;
+  height: 30px;
+  border-radius: 0 4px 4px 0;
+  color: #fff;
+}
+.panel .commitButton:hover:not(:disabled),
+.commitDropdown > summary:hover {
+  background: #1177bb;
+}
+.fileGroup {
+  margin: 0 0 2px;
+}
+.fileGroup > summary {
+  display: flex;
+  height: 27px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px 0 15px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.panel summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure {
+  transition: transform 100ms ease;
+}
+.fileGroup[open] > summary .disclosure {
+  transform: rotate(90deg);
+}
+.count {
+  display: inline-flex;
+  min-width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0 5px;
+  align-items: center;
+  justify-content: center;
+  background: var(--sc-count);
+  border-radius: 50%;
+  font-size: 12px;
+}
+.files {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.files li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 26px;
+}
+.files li > button,
+.files li > div {
+  display: flex;
+  width: 100%;
+  height: 26px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 15px 0 19px;
+  text-align: left;
+}
+.fileLabel,
+.path {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.fileLabel {
+  flex: 1;
+  gap: 10px;
+}
+.fileLabel > svg,
+.fileLabel > span:first-child {
+  flex: none;
+}
+.path {
+  gap: 6px;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.pathName {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pathDirectory {
+  flex: 1 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--sc-muted);
+}
+.reactIcon {
+  color: #24a6d8;
+}
+.fileTypeIcon {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: 15px;
+  height: 16px;
+  border-radius: 1px;
+  padding: 0 1px 1px;
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 9px;
+  line-height: 10px;
+}
+.tsIcon {
+  background: #3178c6;
+}
+.jsIcon {
+  background: #d6ba32;
+  color: #252526;
+}
+.cssIcon {
+  background: #955ec4;
+  font-size: 6px;
+  clip-path: polygon(0 0, 10px 0, 15px 5px, 15px 16px, 0 16px);
+}
+.documentIcon {
+  color: #a886c0;
+}
+.added,
+.modified,
+.deleted,
+.untracked {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.added,
+.untracked {
+  color: var(--sc-added);
+}
+.modified {
+  color: var(--sc-modified);
+}
+.deleted {
+  color: var(--sc-deleted);
+}
+.actionDropdown {
+  position: relative;
+  flex: none;
+}
+.actionDropdown > summary {
+  list-style: none;
+}
+.actionDropdown:not([open]) > .actionMenu {
+  display: none;
+}
+.actionMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 3px);
+  z-index: 60;
+  display: grid;
+  min-width: 210px;
+  padding: 4px;
+  color: var(--sc-text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.actionMenu button {
+  justify-content: flex-start;
+  gap: 7px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 2px;
+  text-align: left;
+  white-space: nowrap;
+}
+.menuDivider {
+  height: 1px;
+  margin: 4px;
+  background: var(--border);
+}
+.menuInfo {
+  margin: 5px 8px;
+  color: var(--sc-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.commitList {
+  margin: 2px 10px 3px 22px;
+  padding: 0;
+  list-style: none;
+}
+.commitList li {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.commitList code {
+  flex: none;
+  color: var(--sc-muted);
+  font-size: 11px;
+}
+.commitList li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.commits {
+  margin-top: 6px;
+}
+.hint,
+.feedback {
+  margin: 8px 15px 8px 22px;
+  color: var(--sc-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.error {
+  margin: 8px 10px 8px 22px;
+  padding: 7px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.empty {
+  padding: 8px 15px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.empty button {
+  width: 100%;
+  height: 30px;
+  background: #106ba6;
+  border-radius: 3px;
+  color: #fff;
+}

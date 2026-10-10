@@ -1,0 +1,17 @@
+{
+  "$schema": "https://www.schemastore.org/prettierrc.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "endOfLine": "lf",
+  "embeddedLanguageFormatting": "off",
+  "overrides": [
+    {
+      "files": ["*.webmanifest"],
+      "options": { "parser": "json" }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+.editor-view {
+  height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.editor-view {
+  position: absolute;
+  top: 75px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: auto;
+  background: var(--workspace);
+}
+.editor-view {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
+}
+.editor-view::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.editor-view::-webkit-scrollbar-track {
+  background: transparent;
+}
+.editor-view::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.editor-view::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 68%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.editor-view:global(.dock-drop-left):after,
+.editor-view:global(.dock-drop-right):after,
+.editor-view:global(.dock-drop-top):after,
+.editor-view:global(.dock-drop-bottom):after {
+  content: '';
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--obsidian-accent, var(--blue)) 22%, transparent);
+  border: 2px solid var(--obsidian-accent, var(--blue));
+}
+.editor-view:global(.dock-drop-left):after {
+  inset: 0 75% 0 0;
+}
+.editor-view:global(.dock-drop-right):after {
+  inset: 0 0 0 75%;
+}
+.editor-view:global(.dock-drop-top):after {
+  inset: 0 0 75% 0;
+}
+.editor-view:global(.dock-drop-bottom):after {
+  inset: 75% 0 0 0;
+}

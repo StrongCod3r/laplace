@@ -1,0 +1,8 @@
+.spa-status {
+  padding: 2rem;
+  font-family: system-ui, sans-serif;
+}
+.spa-status button,
+.spa-status a {
+  margin-right: 1rem;
+}

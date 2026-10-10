@@ -1,0 +1,36 @@
+{
+  "name": "laplace",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test": "node --test tests/unit/*.test.mjs",
+    "test:e2e": "tsc --noEmit && vite build && playwright test",
+    "prepare:pages": "node scripts/prepare-pages.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^22.0.0",
+    "prettier": "3.9.9",
+    "typescript": "^5.7.3",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "isomorphic-git": "^1.43.1",
+    "lucide": "^1.50.0",
+    "preact": "^11.0.0",
+    "react": "npm:@preact/compat@18.3.2",
+    "zustand": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

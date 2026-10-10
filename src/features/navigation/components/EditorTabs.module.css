@@ -1,0 +1,202 @@
+.editor-tabs {
+  position: absolute;
+  top: 45px;
+  left: 0;
+  right: 0;
+  height: 36px;
+  z-index: 15;
+  display: flex;
+  align-items: stretch;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+.tabs-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+.editor-tab {
+  position: relative;
+  flex: 0 1 190px;
+  min-width: 110px;
+  max-width: 230px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 7px 0 10px;
+  border-right: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--sidebar);
+  cursor: default;
+}
+.editor-tab:hover {
+  background: color-mix(in srgb, var(--hover) 55%, transparent);
+  color: color-mix(in srgb, var(--muted) 72%, var(--text));
+}
+.editor-tab:global(.active) {
+  background: var(--bg);
+  color: var(--text);
+}
+.editor-tab:global(.active):before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--blue);
+}
+.editor-tab:global(.dragging) {
+  opacity: 0.42;
+}
+.editor-tab:global(.tab-drop-before):after,
+.editor-tab:global(.tab-drop-after):after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  background: var(--blue);
+  z-index: 3;
+}
+.editor-tab:global(.tab-drop-before):after {
+  left: -1px;
+}
+.editor-tab:global(.tab-drop-after):after {
+  right: -1px;
+}
+.tab-icon {
+  width: 18px;
+  flex: none;
+  text-align: center;
+  font-size: 13px;
+}
+body:global(.hide-files-tab-icons) .editor-tab .tab-icon,
+body:global(.hide-files-tab-icons) :global(.dock-tab) .tab-icon {
+  display: none;
+}
+.tab-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  transition:
+    color 0.14s ease,
+    text-shadow 0.14s ease;
+}
+.editor-tab .tab-title,
+:global(.dock-tab) .tab-title {
+  color: var(--faint);
+}
+.editor-tab:hover:not(:global(.active)) .tab-title,
+:global(.dock-tab):hover:not(:global(.active)) .tab-title {
+  color: color-mix(in srgb, var(--faint) 45%, var(--text));
+}
+.editor-tab:global(.active) .tab-title {
+  color: color-mix(in srgb, var(--text) 78%, var(--obsidian-accent) 22%);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--obsidian-accent) 38%, transparent);
+}
+.tab-close {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0;
+}
+.editor-tab:hover .tab-close,
+.editor-tab:global(.active) .tab-close {
+  opacity: 1;
+}
+.tab-close:hover {
+  background: var(--active);
+  color: var(--text);
+}
+.tabs-empty {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--faint);
+  font-size: 11px;
+}
+.editor-tabs {
+  top: 0;
+  height: 39px;
+  background: var(--tab-bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 20;
+}
+:global(.main-area):global(.right-sidebar-collapsed) .editor-tabs {
+  padding-right: 42px;
+}
+.tabs-scroll {
+  padding-left: 2px;
+}
+.editor-tab {
+  height: 38px;
+  flex-basis: 190px;
+  min-width: 105px;
+  max-width: 240px;
+  padding: 0 8px 0 11px;
+  background: var(--tab-bg);
+  border-right: 1px solid var(--border);
+}
+.editor-tab:global(.active) {
+  background: var(--tab-active);
+}
+.editor-tab:global(.active):before {
+  top: auto;
+  bottom: 0;
+  height: 2px;
+  background: var(--obsidian-accent);
+}
+.editor-tab:global(.active):after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--tab-active);
+}
+.tab-title {
+  font-size: 12px;
+  font-weight: 500;
+}
+@media (max-width: 600px) {
+  .editor-tab {
+    min-width: 95px;
+  }
+}
+:global(.main-area):global(.docked) .editor-tabs {
+  display: none;
+}
+:global(.main-area)[data-git-diff] .editor-tabs {
+  display: flex;
+}
+:global(.dock-pane):global(.active) :global(.dock-tab):global(.active) .tab-title {
+  color: color-mix(in srgb, var(--text) 78%, var(--obsidian-accent, var(--blue)) 22%);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--obsidian-accent, var(--blue)) 38%, transparent);
+}
+:global(.dock-tab):hover .tab-close,
+:global(.dock-tab):global(.active) .tab-close {
+  opacity: 1;
+}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" data-startup-theme="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>__APP_NAME__</title>
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%icons/__APP_ID__.svg" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <meta name="theme-color" content="#101216" />
+    <script>
+      try {
+        const theme = localStorage.getItem('__APP_STARTUP_THEME_KEY__');
+        if (theme === 'light' || theme === 'dark')
+          document.documentElement.dataset.startupTheme = theme;
+      } catch {}
+    </script>
+    <!-- startup-styles -->
+  </head>
+  <body>
+    <div id="root"><!-- startup-skeleton --></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

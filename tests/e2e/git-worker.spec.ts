@@ -1,0 +1,114 @@
+import { expect, test } from '@playwright/test';
+
+test('Git shows progress and keeps panel navigation responsive during worker reads', async ({
+  page,
+}) => {
+  const workers: string[] = [];
+  page.on('worker', (worker) => workers.push(worker.url()));
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'showDirectoryPicker', {
+      configurable: true,
+      value: async () => navigator.storage.getDirectory(),
+    });
+    const original = Worker.prototype.postMessage;
+    let hold = true;
+    const queued: (() => void)[] = [];
+    Worker.prototype.postMessage = function (message, options) {
+      const send = () => original.call(this, message, options as StructuredSerializeOptions);
+      if (hold && message?.method === 'status') queued.push(send);
+      else send();
+    };
+    Object.assign(window, {
+      releaseGitReads() {
+        hold = false;
+        queued.splice(0).forEach((send) => send());
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await page.locator('#chooseDirectoryBtn').click();
+  await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
+  const panel = page.locator('#gitPanel');
+  await expect(panel).toHaveAttribute('aria-busy', 'true');
+  await expect(panel.getByRole('status')).toContainText('Reading changes');
+  await expect.poll(() => workers.some((url) => url.includes('git.worker'))).toBe(true);
+  await page.getByRole('button', { name: 'Files', exact: true }).click();
+  await expect(page.locator('#pageTree')).toBeVisible();
+  await expect(panel).toBeHidden();
+  await page.evaluate(() => (window as unknown as { releaseGitReads(): void }).releaseGitReads());
+  await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
+  await expect(panel).toHaveAttribute('aria-busy', 'false');
+  await expect(
+    panel.getByRole('button', { name: 'Initialize repository', exact: true }),
+  ).toBeEnabled();
+  const initializedWorkers = workers.length;
+  await page.getByRole('button', { name: 'Files', exact: true }).click();
+  await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
+  await expect(panel).toHaveAttribute('aria-busy', 'false');
+  expect(workers.length).toBe(initializedWorkers);
+});
+
+test('Git worker serializes operations and prepares file differences away from the UI', async ({
+  page,
+}) => {
+  const workers: string[] = [];
+  page.on('worker', (worker) => workers.push(worker.url()));
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const modulePath = '/src/features/git/services/git-worker-client.ts';
+    const { createGitClient } = await import(modulePath);
+    const root = await navigator.storage.getDirectory();
+    const directory = await root.getDirectoryHandle('worker-test', { create: true });
+    const write = async (content: string) => {
+      const stream = await (
+        await directory.getFileHandle('Note.md', { create: true })
+      ).createWritable();
+      await stream.write(content);
+      await stream.close();
+    };
+    const client = await createGitClient(directory);
+    try {
+      let failure = '';
+      try {
+        await client.configure({ url: '', corsProxy: '', name: '', email: '' });
+      } catch (error) {
+        failure = (error as Error).message;
+      }
+      await write('Original\n');
+      // These deliberately overlap; configure must wait until initialization is complete.
+      await Promise.all([
+        client.initialize(),
+        client.configure({
+          url: '',
+          corsProxy: '',
+          name: 'Worker test',
+          email: 'worker@example.com',
+        }),
+      ]);
+      await client.commit('Initial content');
+      await write('Updated\n');
+      let ticks = 0;
+      const timer = setInterval(() => ticks++, 0);
+      try {
+        const preview = await client.preview('Note.md', 'unstaged');
+        const pendingStatus = client.status();
+        client.dispose();
+        const snapshot = await pendingStatus;
+        return { ticks, failure, preview, changes: snapshot.unstagedChanges };
+      } finally {
+        clearInterval(timer);
+      }
+    } finally {
+      client.dispose();
+    }
+  });
+  expect(workers.some((url) => url.includes('git.worker'))).toBe(true);
+  expect(result.ticks).toBeGreaterThan(0);
+  expect(result.failure).toContain('Open a branch in a Git repository');
+  expect(result.changes).toContainEqual({ path: 'Note.md', kind: 'modified' });
+  expect(result.preview.lines).toEqual([
+    { kind: 'removed', text: 'Original\n', beforeLine: 1 },
+    { kind: 'added', text: 'Updated\n', afterLine: 1 },
+  ]);
+});
