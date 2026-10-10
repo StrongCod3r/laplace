@@ -18,7 +18,7 @@ const appManifest = () =>
 
 export default defineConfig({
   publicDir: 'pwa-assets',
-  base: '/Laplace/',
+  base: '/laplace/',
   plugins: [
     preact(),
     gitProxyPlugin(),
