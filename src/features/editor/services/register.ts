@@ -152,7 +152,6 @@ export function registerEditor(runtime: EditorRuntime) {
     if (block.type === 'image') return runtime.imageHTML(block, gutter);
     if (block.type === 'code') return runtime.codeBlockHTML(block, gutter);
     if (block.type === 'table') return runtime.simpleTableHTML(block, gutter);
-    if (block.type === 'columns') return runtime.columnsHTML(block, gutter);
     if (block.type === 'divider')
       return runtime.htmlWithStyles(
         `<div class="block-row" data-block-id="${block.id}" data-type="divider" draggable="false">${gutter}<div class="divider-line"></div></div>`,
@@ -715,7 +714,21 @@ export function registerEditor(runtime: EditorRuntime) {
   function normalizeBlockTree(blocks) {
     if (!Array.isArray(blocks)) return [];
     // The removed database block type is discarded throughout the document tree.
-    blocks = blocks.filter((block) => block?.type !== 'database');
+    blocks = blocks.flatMap((block) => {
+      if (block?.type === 'database') return [];
+      // Convert legacy column layouts to ordinary blocks in reading order.
+      if (block?.type === 'columns')
+        return runtime.normalizeBlockTree(
+          (Array.isArray(block.columns) ? block.columns : []).flatMap((column) =>
+            typeof column === 'string'
+              ? [{ type: 'text', text: column }]
+              : Array.isArray(column?.blocks)
+                ? column.blocks
+                : [],
+          ),
+        );
+      return [block];
+    });
     for (const block of blocks) {
       if (!block || typeof block !== 'object') continue;
       if (!block.id) block.id = runtime.uid('b');
@@ -743,7 +756,6 @@ export function registerEditor(runtime: EditorRuntime) {
       if (runtime.isListBlock(block))
         runtime.setListIndentLevel(block, runtime.listIndentLevel(block));
       else if ('indent' in block) delete block.indent;
-      if (block.type === 'columns') runtime.normalizeColumnsBlock(block);
     }
     return blocks.filter(Boolean);
   }
@@ -751,8 +763,6 @@ export function registerEditor(runtime: EditorRuntime) {
   function flattenBlocks(blocks, out = []) {
     for (const block of blocks || []) {
       out.push(block);
-      if (block?.type === 'columns')
-        for (const col of block.columns || []) runtime.flattenBlocks(col.blocks, out);
       if (block?.type === 'toggle') runtime.flattenBlocks(block.children, out);
     }
     return out;
@@ -1565,39 +1575,14 @@ export function registerEditor(runtime: EditorRuntime) {
     return { id: runtime.uid('b'), type: 'text', text: '' };
   }
 
-  function findBlockLocation(
-    id,
-    blocks = runtime.currentPage()?.blocks || [],
-    parentBlock = null,
-    column = null,
-  ) {
+  function findBlockLocation(id, blocks = runtime.currentPage()?.blocks || [], parentBlock = null) {
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
-      if (block?.id === id) return { block, blocks, index: i, parentBlock, column };
-      if (block?.type === 'columns') {
-        runtime.normalizeColumnsBlock(block);
-        for (const col of block.columns) {
-          const found = runtime.findBlockLocation(id, col.blocks, block, col);
-          if (found) return found;
-        }
-      }
+      if (block?.id === id) return { block, blocks, index: i, parentBlock };
       if (block?.type === 'toggle') {
         runtime.normalizeToggleBlock(block);
-        const found = runtime.findBlockLocation(id, block.children, block, null);
+        const found = runtime.findBlockLocation(id, block.children, block);
         if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  function findColumnLocation(id, blocks = runtime.currentPage()?.blocks || []) {
-    for (const block of blocks || []) {
-      if (block?.type !== 'columns') continue;
-      runtime.normalizeColumnsBlock(block);
-      for (const col of block.columns) {
-        if (col.id === id) return { column: col, parentBlock: block };
-        const nested = runtime.findColumnLocation(id, col.blocks);
-        if (nested) return nested;
       }
     }
     return null;
@@ -1611,11 +1596,6 @@ export function registerEditor(runtime: EditorRuntime) {
         if (!holder.block) holder.block = block;
         blocks.splice(i, 1);
         continue;
-      }
-      if (block?.type === 'columns') {
-        runtime.normalizeColumnsBlock(block);
-        for (const col of block.columns)
-          runtime.removeBlockOccurrences(id, col.blocks, holder, emptiedLists);
       }
       if (block?.type === 'toggle') {
         runtime.normalizeToggleBlock(block);
@@ -1733,11 +1713,6 @@ export function registerEditor(runtime: EditorRuntime) {
   function cloneBlockWithNewIds(block) {
     const cp = runtime.clone(block);
     cp.id = runtime.uid('b');
-    if (cp.type === 'columns' && Array.isArray(cp.columns))
-      cp.columns = cp.columns.map((col) => ({
-        id: runtime.uid('col'),
-        blocks: (col.blocks || []).map(runtime.cloneBlockWithNewIds),
-      }));
     if (cp.type === 'toggle' && Array.isArray(cp.children))
       cp.children = cp.children.map(runtime.cloneBlockWithNewIds);
     return cp;
@@ -1746,10 +1721,6 @@ export function registerEditor(runtime: EditorRuntime) {
   function blockContainsId(block, id) {
     if (!block) return false;
     if (block.id === id) return true;
-    if (block.type === 'columns')
-      return (block.columns || []).some((col) =>
-        (col.blocks || []).some((child) => runtime.blockContainsId(child, id)),
-      );
     if (block.type === 'toggle')
       return (block.children || []).some((child) => runtime.blockContainsId(child, id));
     return false;
@@ -1758,12 +1729,6 @@ export function registerEditor(runtime: EditorRuntime) {
   function blockTextFallback(block) {
     if (!block) return '';
     if (block.type === 'table') return (block.tableRows || []).flat().filter(Boolean).join(' ');
-    if (block.type === 'columns')
-      return runtime
-        .flattenBlocks((block.columns || []).flatMap((c) => c.blocks || []))
-        .map((b) => b.text || b.caption || b.url || '')
-        .filter(Boolean)
-        .join(' ');
     if (block.type === 'toggle')
       return [
         block.text,
@@ -2400,7 +2365,6 @@ export function registerEditor(runtime: EditorRuntime) {
     clearInlineSelectionFormatting,
     newTextBlock,
     findBlockLocation,
-    findColumnLocation,
     removeBlockOccurrences,
     findBlock,
     isTextLikeBlock,

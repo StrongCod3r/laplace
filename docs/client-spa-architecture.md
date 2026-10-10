@@ -29,7 +29,6 @@ src/
 │   ├── history/                # Undo/redo por workspace
 │   ├── markdown/               # Parsing, serialización, frontmatter y enlaces
 │   ├── tables/                 # Selección, ejes, clipboard y edición de tablas
-│   ├── columns/                # Bloques anidados y columnas
 │   ├── code/                   # Highlight y Mermaid
 │   ├── commands/               # Slash, búsqueda, iconos y emojis
 │   ├── interactions/           # Teclado, arrastre, clipboard y selección

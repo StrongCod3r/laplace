@@ -23,7 +23,6 @@ import { registerGraph } from '@/features/graph/services/register';
 import { registerDashboard } from '@/features/dashboard/services/register';
 import { registerEditor } from '@/features/editor/services/register';
 import { registerTables } from '@/features/tables/services/register';
-import { registerColumns } from '@/features/columns/services/register';
 import { registerCode } from '@/features/code/services/register';
 import { registerInteractions } from '@/features/interactions/services/register';
 import { registerMarkdown } from '@/features/markdown/services/register';
@@ -552,7 +551,6 @@ export function createWorkspaceController(): WorkspaceController {
   registerDashboard(runtime);
   registerEditor(runtime);
   registerTables(runtime);
-  registerColumns(runtime);
   registerCode(runtime);
   registerInteractions(runtime);
   registerMarkdown(runtime);
@@ -819,13 +817,6 @@ export function createWorkspaceController(): WorkspaceController {
       icon: 'table-2',
       name: 'Table',
       desc: 'Simple editable table',
-      group: 'Layout',
-    },
-    {
-      type: 'columns',
-      icon: 'columns-2',
-      name: 'Columns',
-      desc: 'Arrange blocks side by side',
       group: 'Layout',
     },
   ];

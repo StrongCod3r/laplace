@@ -2430,16 +2430,6 @@ export function registerInteractions(runtime: EditorRuntime) {
       }
       return;
     }
-    if (e.target.matches('[data-columns-count]')) {
-      const row = e.target.closest('.columns-block'),
-        b = runtime.findBlock(row?.dataset.blockId);
-      if (b) {
-        runtime.setColumnsCount(b, e.target.value);
-        runtime.scheduleSave();
-        runtime.renderBlocks(runtime.currentPage());
-      }
-      return;
-    }
     if (e.target === runtime.els.workspaceSelect) {
       void runtime.switchWorkspaceLocation(e.target.value);
       return;
@@ -3492,22 +3482,14 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     if (!runtime.dragBlockId) return;
     document
-      .querySelectorAll('.drop-before,.drop-after,.column-drop-target')
-      .forEach((x) => x.classList.remove('drop-before', 'drop-after', 'column-drop-target'));
-    const pane = e.target.closest('.column-pane');
-    let row = e.target.closest('.block-row');
-    // When the pointer is on empty column space, closest() reaches the outer Columns block.
-    // Treat that as a column drop instead of moving the child outside the layout.
-    if (pane && row?.classList.contains('columns-block')) row = null;
+      .querySelectorAll('.drop-before,.drop-after')
+      .forEach((x) => x.classList.remove('drop-before', 'drop-after'));
+    const row = e.target.closest('.block-row');
     if (row && row.dataset.blockId !== runtime.dragBlockId) {
       e.preventDefault();
       const r = row.getBoundingClientRect();
       row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-before' : 'drop-after');
       return;
-    }
-    if (pane) {
-      e.preventDefault();
-      pane.classList.add('column-drop-target');
     }
   }
 
@@ -3677,22 +3659,13 @@ export function registerInteractions(runtime: EditorRuntime) {
     const fromLoc = runtime.findBlockLocation(movedId);
     if (!fromLoc) return runtime.clearDragState();
 
-    const pane = e.target.closest('.column-pane');
-    let targetRow = e.target.closest('.block-row');
-    if (pane && targetRow?.classList.contains('columns-block')) targetRow = null;
+    const targetRow = e.target.closest('.block-row');
     if (targetRow?.dataset.blockId === movedId) return runtime.clearDragState();
 
     const targetId = targetRow?.dataset.blockId || null;
-    const targetColumnId = !targetId ? pane?.dataset.columnId || null : null;
-    if (!targetId && !targetColumnId) return runtime.clearDragState();
+    if (!targetId) return runtime.clearDragState();
     if (targetId && runtime.blockContainsId(fromLoc.block, targetId))
       return runtime.clearDragState();
-    if (targetColumnId) {
-      const owner = runtime.findColumnLocation(targetColumnId);
-      if (!owner || runtime.blockContainsId(fromLoc.block, owner.parentBlock?.id))
-        return runtime.clearDragState();
-    }
-
     const insertAfter =
       !!targetRow &&
       e.clientY >=
@@ -3703,35 +3676,15 @@ export function registerInteractions(runtime: EditorRuntime) {
     const moved = holder.block || fromLoc.block;
     if (!moved) return runtime.clearDragState();
 
-    let destination = null,
-      to = 0;
-    if (targetId) {
-      const toLoc = runtime.findBlockLocation(targetId);
-      if (!toLoc) {
-        // Defensive fallback: restore the block to its original list if the target disappeared.
-        fromLoc.blocks.splice(Math.min(fromLoc.index, fromLoc.blocks.length), 0, moved);
-        runtime.clearDragState();
-        return;
-      }
-      destination = toLoc.blocks;
-      to = toLoc.index + (insertAfter ? 1 : 0);
-    } else {
-      const colLoc = runtime.findColumnLocation(targetColumnId);
-      if (!colLoc) {
-        fromLoc.blocks.splice(Math.min(fromLoc.index, fromLoc.blocks.length), 0, moved);
-        runtime.clearDragState();
-        return;
-      }
-      destination = colLoc.column.blocks;
-      // Empty columns contain a placeholder text block. Replace it when a real block is dropped.
-      if (
-        destination.length === 1 &&
-        destination[0].type === 'text' &&
-        !(destination[0].text || '')
-      )
-        destination.length = 0;
-      to = destination.length;
+    const toLoc = runtime.findBlockLocation(targetId);
+    if (!toLoc) {
+      // Restore the block if the target disappeared.
+      fromLoc.blocks.splice(Math.min(fromLoc.index, fromLoc.blocks.length), 0, moved);
+      runtime.clearDragState();
+      return;
     }
+    const destination = toLoc.blocks;
+    let to = toLoc.index + (insertAfter ? 1 : 0);
 
     // removeBlockOccurrences() above already detached every stale copy of this id,
     // so the block is inserted exactly once at its destination.
@@ -3886,15 +3839,12 @@ export function registerInteractions(runtime: EditorRuntime) {
     runtime.clearDockIndicators();
     runtime.clearTableAxisDropIndicators();
     document
-      .querySelectorAll(
-        '.dragging,.drop-before,.drop-after,.column-drop-target,.tab-drop-before,.tab-drop-after',
-      )
+      .querySelectorAll('.dragging,.drop-before,.drop-after,.tab-drop-before,.tab-drop-after')
       .forEach((x) =>
         x.classList.remove(
           'dragging',
           'drop-before',
           'drop-after',
-          'column-drop-target',
           'tab-drop-before',
           'tab-drop-after',
         ),

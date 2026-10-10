@@ -1,5 +1,5 @@
 {
-  "total": 646,
+  "total": 642,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -308,9 +308,7 @@
       "renderGraphView",
       "openWikiLink"
     ],
-    "dashboard": [
-      "renderHome"
-    ],
+    "dashboard": ["renderHome"],
     "editor": [
       "renderPage",
       "replaceRenderedBlockMarkup",
@@ -396,7 +394,6 @@
       "clearInlineSelectionFormatting",
       "newTextBlock",
       "findBlockLocation",
-      "findColumnLocation",
       "removeBlockOccurrences",
       "findBlock",
       "isTextLikeBlock",
@@ -477,11 +474,6 @@
       "showSimpleTableAxisMenu",
       "runSimpleTableAxisAction",
       "reorderSimpleTableAxis"
-    ],
-    "columns": [
-      "normalizeColumnsBlock",
-      "columnsHTML",
-      "setColumnsCount"
     ],
     "code": [
       "codeBlockHTML",

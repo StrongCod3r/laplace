@@ -204,13 +204,6 @@ export function registerCommands(runtime: EditorRuntime) {
       b.tableHeaderColumn = false;
       delete b.text;
     }
-    if (type === 'columns') {
-      b.columns = Array.from({ length: 2 }, () => ({
-        id: runtime.uid('col'),
-        blocks: [runtime.newTextBlock()],
-      }));
-      delete b.text;
-    }
     runtime.scheduleSave();
     runtime.hideSlashMenu();
     runtime.renderBlocks(parent);
@@ -219,12 +212,6 @@ export function registerCommands(runtime: EditorRuntime) {
       runtime.lifecycle.frame(() =>
         document
           .querySelector(`.simple-table-block[data-block-id="${b.id}"] [data-table-cell="0:0"]`)
-          ?.focus(),
-      );
-    else if (type === 'columns')
-      runtime.lifecycle.frame(() =>
-        document
-          .querySelector(`.columns-block[data-block-id="${b.id}"] .column-pane .block-content`)
           ?.focus(),
       );
     else if (!['divider', 'image'].includes(type)) runtime.focusBlock(b.id, 0);
@@ -299,7 +286,6 @@ export function registerCommands(runtime: EditorRuntime) {
       delete b.tableCellInline;
       delete b.tableHeaderRow;
       delete b.tableHeaderColumn;
-      delete b.columns;
     }
     if (action === 'move-up' && i > 0) {
       [blocks[i - 1], blocks[i]] = [blocks[i], blocks[i - 1]];

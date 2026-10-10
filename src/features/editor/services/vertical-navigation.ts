@@ -252,15 +252,10 @@ export function createEditorVerticalNavigation() {
           : middle <= Math.min(...edges.map((rect) => rect.top)) + lineHeight * 0.75;
       if (!atBoundary) return false;
       const bounds = editor.getBoundingClientRect();
-      const column = editor.closest('.column-pane');
       const candidates = [...page.querySelectorAll<HTMLElement>(EDITABLES)]
         .filter(
           (target) =>
             target !== editor && !target.closest('[inert]') && target.getClientRects().length,
-        )
-        .filter(
-          (target) =>
-            !column || !target.closest('.column-pane') || target.closest('.column-pane') === column,
         )
         .map((target) => ({ target, rect: target.getBoundingClientRect() }))
         .filter(({ rect }) =>
