@@ -1,0 +1,63 @@
+{
+  "_WorkspacePage-BGYH9uBt.css": {
+    "file": "assets/WorkspacePage-BGYH9uBt.css",
+    "src": "_WorkspacePage-BGYH9uBt.css"
+  },
+  "_WorkspacePage-CMKQclN1.js": {
+    "file": "assets/WorkspacePage-CMKQclN1.js",
+    "name": "WorkspacePage",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "dynamicImports": [
+      "src/features/git/services/git-client.ts",
+      "src/features/git/services/git-worker-client.ts",
+      "src/features/git/services/git-worker-client.ts"
+    ],
+    "css": [
+      "assets/WorkspacePage-BGYH9uBt.css"
+    ]
+  },
+  "index.html": {
+    "file": "assets/index-hYhxXM2n.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "_WorkspacePage-CMKQclN1.js"
+    ],
+    "css": [
+      "assets/index-BeTujRiY.css"
+    ]
+  },
+  "src/features/git/services/directory-fs.ts": {
+    "file": "assets/directory-fs-KUIAstcR.js",
+    "name": "directory-fs",
+    "src": "src/features/git/services/directory-fs.ts",
+    "isDynamicEntry": true
+  },
+  "src/features/git/services/git-client.ts": {
+    "file": "assets/git-client-CkZpjUx5.js",
+    "name": "git-client",
+    "src": "src/features/git/services/git-client.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html",
+      "_WorkspacePage-CMKQclN1.js"
+    ]
+  },
+  "src/features/git/services/git-worker-client.ts": {
+    "file": "assets/git-worker-client-BR8wWlpX.js",
+    "name": "git-worker-client",
+    "src": "src/features/git/services/git-worker-client.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "dynamicImports": [
+      "src/features/git/services/git-client.ts",
+      "src/features/git/services/directory-fs.ts"
+    ]
+  }
+}
