@@ -1,0 +1,5 @@
+node_modules/
+.pnpm-store/
+pnpm-workspace.yaml
+test-results/
+playwright-report/
