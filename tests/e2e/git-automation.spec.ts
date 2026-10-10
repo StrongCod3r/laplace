@@ -1,3 +1,4 @@
+import { openGitFixtureSettings } from '../fixtures/git-workspace';
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -14,7 +15,7 @@ test('automation keeps its deadline across panel switches and focused editing, a
       value: async () => navigator.storage.getDirectory(),
     });
   });
-  await page.goto('/');
+  await page.goto('/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
@@ -27,7 +28,7 @@ test('automation keeps its deadline across panel switches and focused editing, a
   await page.locator('#pageTree').getByText('Timing', { exact: true }).click();
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   const panel = page.locator('#gitPanel');
-  await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+  await openGitFixtureSettings(page);
   const repository = page.getByRole('dialog', { name: 'Repository settings' });
   await repository.getByLabel('Author name').fill('Timer test');
   await repository.getByLabel('Author email').fill('timer@example.com');
@@ -126,7 +127,7 @@ test('automatic commits opt in to push, retry failed uploads and persist setting
         value: async () => navigator.storage.getDirectory(),
       });
     });
-    await page.goto('/');
+    await page.goto('/laplace/');
     await expect(page.locator('#pageTitle')).toBeVisible();
     await page.evaluate(async () => {
       const root = await navigator.storage.getDirectory();
@@ -139,7 +140,7 @@ test('automatic commits opt in to push, retry failed uploads and persist setting
     await page.locator('#pageTree').getByText('Scheduled note', { exact: true }).click();
     await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
     const panel = page.locator('#gitPanel');
-    await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+    await openGitFixtureSettings(page);
     const repository = page.getByRole('dialog', { name: 'Repository settings' });
     await repository.getByLabel('Remote repository (HTTPS)').fill(remote.url);
     await repository.getByLabel('Author name').fill('Automatic user');

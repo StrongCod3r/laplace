@@ -1,3 +1,4 @@
+import { openGitFixtureSettings } from '../fixtures/git-workspace';
 import { expect, test, type Locator } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -10,14 +11,12 @@ async function repositoryAction(panel: Locator, name: string) {
   await panel.getByRole('button', { name, exact: true }).click();
 }
 
-test('Git toolbar offers a local-folder workflow for browser workspaces', async ({ page }) => {
-  await page.goto('/');
+test('Git informs browser workspaces without offering a local-folder picker', async ({ page }) => {
+  await page.goto('/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   await expect(page.locator('#gitPanel')).toBeVisible();
-  await expect(
-    page.getByText('Select a local folder to synchronize this workspace with Git.'),
-  ).toBeVisible();
+  await expect(page.getByText('Git is not initialized in this workspace.')).toBeVisible();
   await page.getByRole('button', { name: 'Files', exact: true }).click();
   await expect(page.locator('#gitPanel')).toBeHidden();
   await expect(page.locator('#pageTree')).toBeVisible();
@@ -26,7 +25,7 @@ test('Git toolbar offers a local-folder workflow for browser workspaces', async 
 test('Source Control resizes with the sidebar and preserves the width across panels and reloads', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   const sidebar = page.locator('#sidebar');
   const width = async () => Math.round((await sidebar.boundingBox())!.width);
@@ -53,7 +52,7 @@ test('Source Control resizes with the sidebar and preserves the width across pan
   await expect.poll(width).toBe(356);
 });
 
-test('Git panel initializes a folder, commits notes, previews changes and restores saved credentials', async ({
+test('Git panel commits notes in an existing repository, previews changes and restores saved credentials', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -64,7 +63,7 @@ test('Git panel initializes a folder, commits notes, previews changes and restor
       value: async () => navigator.storage.getDirectory(),
     });
   });
-  await page.goto('/');
+  await page.goto('/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
@@ -77,7 +76,7 @@ test('Git panel initializes a folder, commits notes, previews changes and restor
   await expect(page.locator('#pageTree')).toContainText('Sync note');
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   const panel = page.locator('#gitPanel');
-  await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+  await openGitFixtureSettings(page);
   await expect(panel.getByRole('heading', { name: 'Source Control', exact: true })).toHaveAttribute(
     'title',
     /main/,
@@ -188,7 +187,7 @@ test('saving pages updates Git changes without refreshing or interrupting the ed
       value: async () => navigator.storage.getDirectory(),
     });
   });
-  await page.goto('/');
+  await page.goto('/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
@@ -203,7 +202,7 @@ test('saving pages updates Git changes without refreshing or interrupting the ed
   await content.fill('Baseline from the editor.');
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   const panel = page.locator('#gitPanel');
-  await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+  await openGitFixtureSettings(page);
   const dialog = page.getByRole('dialog', { name: 'Repository settings' });
   await dialog.getByLabel('Author name').fill('Browser test');
   await dialog.getByLabel('Author email').fill('test@example.com');
@@ -292,7 +291,7 @@ test('browser Git pushes to a real remote and reloads received notes in the edit
         value: async () => navigator.storage.getDirectory(),
       });
     });
-    await page.goto('/');
+    await page.goto('/laplace/');
     await expect(page.locator('#pageTitle')).toBeVisible();
     await page.evaluate(async () => {
       const root = await navigator.storage.getDirectory();
@@ -305,7 +304,7 @@ test('browser Git pushes to a real remote and reloads received notes in the edit
     await expect(page.locator('#pageTree')).toContainText('Local note');
     await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
     const panel = page.locator('#gitPanel');
-    await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+    await openGitFixtureSettings(page);
     const dialog = page.getByRole('dialog', { name: 'Repository settings' });
     await expect(dialog).toBeVisible();
     const readConfig = () =>
@@ -457,12 +456,12 @@ test('GitHub connections automatically use the local proxy with draft authentica
         value: async () => navigator.storage.getDirectory(),
       });
     });
-    await page.goto('/');
+    await page.goto('/laplace/');
     await expect(page.locator('#pageTitle')).toBeVisible();
     await page.locator('#chooseDirectoryBtn').click();
     await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
     const panel = page.locator('#gitPanel');
-    await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+    await openGitFixtureSettings(page);
     const dialog = page.getByRole('dialog', { name: 'Repository settings' });
     await expect(dialog).toBeVisible();
     await dialog.getByLabel('Remote repository (HTTPS)').fill(github);
@@ -516,14 +515,11 @@ test('static builds explain the required GitHub proxy before attempting a direct
       value: async () => navigator.storage.getDirectory(),
     });
   });
-  await page.goto('http://127.0.0.1:4176/');
+  await page.goto('http://127.0.0.1:4176/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   await page.locator('#chooseDirectoryBtn').click();
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
-  await page
-    .locator('#gitPanel')
-    .getByRole('button', { name: 'Initialize repository', exact: true })
-    .click();
+  await openGitFixtureSettings(page);
   const dialog = page.getByRole('dialog', { name: 'Repository settings' });
   await expect(dialog).toBeVisible();
   await dialog
@@ -609,7 +605,7 @@ test('source control matches the compact VS Code layout with real staged and uns
         value: async () => navigator.storage.getDirectory(),
       });
     });
-    await page.goto('/');
+    await page.goto('/laplace/');
     await expect(page.locator('#pageTitle')).toBeVisible();
     await page.evaluate(async (files) => {
       const root = await navigator.storage.getDirectory();
@@ -769,7 +765,7 @@ test('authenticated Git survives a cache-bypassing reload and supports removing 
         value: async () => navigator.storage.getDirectory(),
       });
     });
-    await page.goto('/');
+    await page.goto('/laplace/');
     await expect(page.locator('#pageTitle')).toBeVisible();
     await page.evaluate(async () => {
       const root = await navigator.storage.getDirectory();
@@ -785,7 +781,7 @@ test('authenticated Git survives a cache-bypassing reload and supports removing 
     await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
     const panel = page.locator('#gitPanel');
     const dialog = page.getByRole('dialog', { name: 'Repository settings' });
-    await panel.getByRole('button', { name: 'Initialize repository', exact: true }).click();
+    await openGitFixtureSettings(page);
     await dialog.getByLabel('Remote repository (HTTPS)').fill(remote.url);
     await dialog.getByLabel('Author name').fill('Reload test');
     await dialog.getByLabel('Author email').fill('reload@example.com');
@@ -806,7 +802,7 @@ test('authenticated Git survives a cache-bypassing reload and supports removing 
     ).toContain('Authenticated workspace.');
     const persisted = await page.evaluate(
       async ({ workspaceId, url }) => {
-        const modulePath = '/src/features/git/services/git-credentials.ts';
+        const modulePath = '/laplace/src/features/git/services/git-credentials.ts';
         const credentials = await import(modulePath);
         const otherWorkspace = await credentials.loadGitCredentials(`${workspaceId}-other`, url);
         const otherRepository = await credentials.loadGitCredentials(

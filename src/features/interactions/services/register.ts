@@ -452,7 +452,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       void runtime.saveBrowserWorkspaceLocally();
       return;
     }
-    if (e.target.closest('#closeWorkspaceBtn')) {
+    if (e.target.closest('#closeWorkspaceBtn, #workspaceDisconnectCloseBtn')) {
       runtime.requestCloseSelectedWorkspace();
       return;
     }

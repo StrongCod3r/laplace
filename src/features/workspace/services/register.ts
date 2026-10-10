@@ -490,6 +490,9 @@ export function registerWorkspace(runtime: EditorRuntime) {
           ? 'No se puede confirmar que la copia local esté sincronizada. Vuelve a seleccionar este workspace y concede permisos de lectura y escritura para continuar.'
           : '';
     }
+    runtime
+      .$('workspaceDisconnectCloseBtn')
+      ?.classList.toggle('hidden', !runtime.localStorageGateway.hasDirectory?.());
     runtime.syncWorkspaceLocationActions();
 
     runtime.publish();
@@ -974,9 +977,16 @@ export function registerWorkspace(runtime: EditorRuntime) {
   }
 
   async function switchWorkspaceLocation(id) {
-    if (runtime.gitOperationActive) return;
+    if (
+      runtime.gitOperationActive ||
+      runtime.workspaceLocationSwitching ||
+      runtime.workspaceLocationClosing ||
+      runtime.browserWorkspaceCopying
+    )
+      return false;
     const destination = runtime.workspaceLocations.find((item) => item.id === id);
-    if (!destination || destination.active) return;
+    if (!destination) return false;
+    if (destination.active) return true;
     runtime.workspaceLocationSwitching = true;
     runtime.syncWorkspaceLocationActions();
     const previousAccess = runtime.workspaceAccess;
@@ -1015,11 +1025,13 @@ export function registerWorkspace(runtime: EditorRuntime) {
         await runtime.persistStateNow();
       runtime.initializeHistoryForVault(runtime.activeVaultId, { reset: true });
       runtime.lastSyncedWorkspace = runtime.clone(runtime.state);
-      // Keep editing blocked until hydration has finished; do not accept edits into defaults.
+      // Enable editing only after the destination has finished hydrating.
+      runtime.setWorkspaceAccess(runtime.accessModeForPermission(permission));
       runtime.applyTheme();
       runtime.renderAll();
       await runtime.refreshWorkspaceSelector();
       runtime.toast(`Workspace: ${destination.name}`);
+      return true;
     } catch (error) {
       if (activated) {
         runtime.setWorkspaceAccess('blocked');
@@ -1031,6 +1043,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         runtime.renderWorkspaceSelector();
       }
       runtime.toast(error?.message || 'Could not switch workspace.');
+      return false;
     } finally {
       runtime.workspaceLocationSwitching = false;
       runtime.syncWorkspaceLocationActions();
@@ -1040,6 +1053,10 @@ export function registerWorkspace(runtime: EditorRuntime) {
   function closeWorkspaceCloseDialog() {
     runtime.pendingWorkspaceCloseId = null;
     runtime.els.workspaceCloseDialog?.classList.add('hidden');
+    runtime.els.workspaceAccessNotice?.classList.toggle(
+      'hidden',
+      runtime.workspaceAccess !== 'blocked',
+    );
   }
 
   function requestCloseSelectedWorkspace() {
@@ -1049,8 +1066,11 @@ export function registerWorkspace(runtime: EditorRuntime) {
       runtime.browserWorkspaceCopying
     )
       return;
-    const id = runtime.els.workspaceSelect?.value,
-      location = runtime.workspaceLocations.find((item) => item.id === id);
+    const id =
+      runtime.workspaceAccess === 'blocked'
+        ? runtime.workspaceLocations.find((item) => item.active)?.id
+        : runtime.els.workspaceSelect?.value;
+    const location = runtime.workspaceLocations.find((item) => item.id === id);
     if (!location) return;
     runtime.pendingWorkspaceCloseId = location.id;
     const browser = location.kind === 'browser';
@@ -1064,6 +1084,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         : `This removes “${location.name}” from the workspace list. Its files will remain in the folder.`;
     runtime.els.workspaceCloseConfirm.textContent = browser ? 'Clear workspace' : 'Close workspace';
     runtime.els.workspaceCloseConfirm.classList.toggle('destructive', browser);
+    runtime.els.workspaceAccessNotice?.classList.add('hidden');
     runtime.els.workspaceCloseDialog?.classList.remove('hidden');
     runtime.lifecycle.frame(() => runtime.els.workspaceCloseConfirm?.focus());
   }
@@ -1105,6 +1126,10 @@ export function registerWorkspace(runtime: EditorRuntime) {
 
   async function confirmCloseSelectedWorkspace() {
     if (runtime.workspaceLocationClosing || runtime.workspaceLocationSwitching) return;
+    if (runtime.gitOperationActive) {
+      runtime.toast('Wait for the Git operation to finish before closing this workspace.');
+      return;
+    }
     const id = runtime.pendingWorkspaceCloseId,
       location = runtime.workspaceLocations.find((item) => item.id === id);
     if (!location) {
@@ -1121,10 +1146,24 @@ export function registerWorkspace(runtime: EditorRuntime) {
         runtime.toast('Browser storage cleared. A new empty workspace is ready.');
       } else {
         if (location.active) {
-          await runtime.switchWorkspaceLocation('browser');
+          await runtime.workspacePermissionCheck;
+          runtime.cancelPageOperations();
+          runtime.flushHistoryPending(runtime.activeVaultId);
+          if (runtime.workspaceAccess === 'writable') {
+            if (!(await runtime.persistStateNow()))
+              throw new Error('Could not save the workspace before closing it.');
+            await runtime.saveVaultRegistry();
+          }
+          runtime.lifecycle.clearTimeout(runtime.saveTimer);
+          runtime.saveTimer = null;
+          await runtime.storageWriteChain.catch(() => {});
+          // Activate Browser storage directly, even if the disconnected workspace
+          // could not hydrate or the selector still contains stale active flags.
+          runtime.setWorkspaceAccess('checking');
+          await runtime.restoreBrowserStorageWorkspace();
           const latestLocations = await runtime.localStorageGateway.listWorkspaceLocations();
           if (latestLocations.find((item) => item.id === id)?.active)
-            throw new Error('Switch to another workspace before closing this one.');
+            throw new Error('Could not activate Browser storage before closing the workspace.');
         }
         await runtime.localStorageGateway.removeWorkspaceLocation(id);
         await runtime.refreshWorkspaceSelector();
@@ -1135,6 +1174,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         );
       }
     } catch (error) {
+      if (runtime.workspaceAccess === 'checking') runtime.setWorkspaceAccess('blocked');
       console.error('Could not close the selected workspace.', error);
       runtime.toast(error?.message || 'Could not close this workspace.');
     } finally {
@@ -2188,17 +2228,23 @@ export function registerWorkspace(runtime: EditorRuntime) {
       });
     } catch (error) {
       if (runtime.lifecycle.disposed) return;
-      console.error(`${APP_NAME} ${runtime.storageProviderLabel()} initialization failed`, error);
+      const missingFolder =
+        error?.name === 'NotFoundError' && runtime.localStorageGateway.hasDirectory?.();
+      if (missingFolder) console.warn('The workspace folder is no longer available.', error);
+      else
+        console.error(`${APP_NAME} ${runtime.storageProviderLabel()} initialization failed`, error);
       runtime.setWorkspaceAccess('blocked');
       runtime.renderAll();
       if (runtime.els.workspaceAccessMessage)
-        runtime.els.workspaceAccessMessage.textContent = error?.message?.includes(
-          'different workspace',
-        )
-          ? 'La caché pertenece a otro workspace. Selecciona el workspace local correcto para evitar mezclar datos.'
-          : 'No se pudo comprobar la sincronización con este workspace. Selecciónalo de nuevo y concede permisos de lectura y escritura.';
+        runtime.els.workspaceAccessMessage.textContent = missingFolder
+          ? 'La carpeta del workspace ya no está disponible. Puedes cerrar este workspace o volver a seleccionar su carpeta.'
+          : error?.message?.includes('different workspace')
+            ? 'La caché pertenece a otro workspace. Selecciona el workspace local correcto para evitar mezclar datos.'
+            : 'No se pudo comprobar la sincronización con este workspace. Selecciónalo de nuevo y concede permisos de lectura y escritura.';
       runtime.toast(
-        `${runtime.storageProviderLabel()} could not be initialized. Reconnect the workspace to continue.`,
+        missingFolder
+          ? 'Workspace folder unavailable. Close it or reconnect its folder.'
+          : `${runtime.storageProviderLabel()} could not be initialized. Reconnect the workspace to continue.`,
       );
     }
   }

@@ -3,6 +3,7 @@ import git, { type FsClient, type GitHttpRequest, type ReadCommitResult } from '
 import http from 'isomorphic-git/http/web';
 import { Buffer } from 'buffer';
 import { connectionProxy } from './git-connection';
+import { emptyGitStatus } from './repository-detection';
 import type { GitComparison } from '../types';
 import { validateGitAutoCommitSettings, type GitAutoCommitSettings } from './git-auto-commit';
 
@@ -301,22 +302,7 @@ export class WorkspaceGitClient {
   }
 
   async repositoryInfo(remoteMissing = false): Promise<GitStatus> {
-    const empty: GitStatus = {
-      initialized: false,
-      branch: null,
-      remote: 'origin',
-      remoteBranch: 'main',
-      settings: { url: '', corsProxy: '', name: '', email: '' },
-      changes: [],
-      stagedChanges: [],
-      unstagedChanges: [],
-      outgoing: [],
-      incoming: [],
-      outgoingFiles: [],
-      incomingFiles: [],
-      headOid: null,
-      remoteOid: null,
-    };
+    const empty = emptyGitStatus();
     try {
       const stat = await this.fs.promises!.stat(`${this.base.dir.replace(/\/$/, '')}/.git`);
       if (!stat.isDirectory())

@@ -1,3 +1,4 @@
+import { prepareGitRepository } from '../fixtures/git-workspace';
 import { expect, test } from '@playwright/test';
 
 test('Git shows progress and keeps panel navigation responsive during worker reads', async ({
@@ -25,8 +26,9 @@ test('Git shows progress and keeps panel navigation responsive during worker rea
       },
     });
   });
-  await page.goto('/');
+  await page.goto('/laplace/');
   await expect(page.locator('#pageTitle')).toBeVisible();
+  await prepareGitRepository(page);
   await page.locator('#chooseDirectoryBtn').click();
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   const panel = page.locator('#gitPanel');
@@ -39,9 +41,7 @@ test('Git shows progress and keeps panel navigation responsive during worker rea
   await page.evaluate(() => (window as unknown as { releaseGitReads(): void }).releaseGitReads());
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   await expect(panel).toHaveAttribute('aria-busy', 'false');
-  await expect(
-    panel.getByRole('button', { name: 'Initialize repository', exact: true }),
-  ).toBeEnabled();
+  await expect(panel.getByLabel('Commit message')).toBeVisible();
   const initializedWorkers = workers.length;
   await page.getByRole('button', { name: 'Files', exact: true }).click();
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
@@ -54,9 +54,9 @@ test('Git worker serializes operations and prepares file differences away from t
 }) => {
   const workers: string[] = [];
   page.on('worker', (worker) => workers.push(worker.url()));
-  await page.goto('/');
+  await page.goto('/laplace/');
   const result = await page.evaluate(async () => {
-    const modulePath = '/src/features/git/services/git-worker-client.ts';
+    const modulePath = '/laplace/src/features/git/services/git-worker-client.ts';
     const { createGitClient } = await import(modulePath);
     const root = await navigator.storage.getDirectory();
     const directory = await root.getDirectoryHandle('worker-test', { create: true });

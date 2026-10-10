@@ -206,3 +206,7 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+.workspace-access-card :global(.primary-btn) + :global(.primary-btn) {
+  margin-left: 8px;
+}

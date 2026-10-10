@@ -31,6 +31,13 @@ export const WorkspaceDialogs = memo(function WorkspaceDialogs() {
           >
             {'Volver a conceder permisos'}
           </button>
+          <button
+            id="workspaceDisconnectCloseBtn"
+            type="button"
+            className={withModuleClasses(styles, 'primary-btn')}
+          >
+            {'Close workspace'}
+          </button>
         </section>
       </div>
       <div

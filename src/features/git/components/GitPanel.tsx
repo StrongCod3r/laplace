@@ -1,10 +1,10 @@
-import { APP_DIRECTORY } from './../../../app-identity';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { Icon } from '@/shared/components/Icon';
 import type { DirectoryHandle } from '../services/directory-fs';
 import type { GitChange, GitSettings, GitStatus } from '../services/git-client';
 import type { GitClient } from '../services/git-worker-client';
+import { emptyGitStatus, hasGitRepository } from '../services/repository-detection';
 import styles from './GitPanel.module.css';
 import { GitRepositoryDialog, type GitAuthentication } from './GitRepositoryDialog';
 import { GitActionMenu } from './GitActionMenu';
@@ -26,7 +26,7 @@ import { startGitAutomationSchedule } from '../services/git-automation-schedule'
 const emptySettings: GitSettings = { url: '', corsProxy: '', name: '', email: '' };
 const labels = { added: 'Added', modified: 'Modified', deleted: 'Deleted', untracked: 'Untracked' };
 const symbols = { added: 'A', modified: 'M', deleted: 'D', untracked: 'U' };
-type Action = 'refresh' | 'initialize' | 'configure' | 'fetch' | 'commit' | 'sync';
+type Action = 'refresh' | 'configure' | 'fetch' | 'commit' | 'sync';
 
 function FilePath({ path }: { path: string }) {
   const separator = path.lastIndexOf('/');
@@ -193,7 +193,6 @@ export function GitPanel() {
     setError('');
     let candidate: GitClient | null = null;
     void (async () => {
-      const { createGitClient } = await import('../services/git-worker-client');
       if (
         version !== generation.current ||
         !mounted.current ||
@@ -208,10 +207,21 @@ export function GitPanel() {
           useWorkspaceStore.getState().ui.locations.find((item) => item.active)?.id !== location.id
         )
           return;
+        const directory = (await controller.invoke('getGitDirectory')) as DirectoryHandle | null;
+        if (!directory)
+          throw new Error('The workspace folder is unavailable. Reopen it from Workspaces.');
+        const initialized = await hasGitRepository(directory);
+        if (version !== generation.current || !mounted.current) return;
+        if (!initialized) {
+          setStatus(emptyGitStatus());
+          setSettings(emptySettings);
+          setAutoCommitSettings(DEFAULT_GIT_AUTO_COMMIT_SETTINGS);
+          return;
+        }
         if (access === 'writable' && !(await controller.flush()))
           throw new Error('Could not save the notes before reading Git changes.');
-        const directory = (await controller.invoke('getGitDirectory')) as DirectoryHandle | null;
-        if (!directory) throw new Error('Select a local folder to use Git.');
+        const { createGitClient } = await import('../services/git-worker-client');
+        if (version !== generation.current || !mounted.current) return;
         const next =
           client.current && clientLocation.current === location.id
             ? client.current
@@ -275,10 +285,19 @@ export function GitPanel() {
       version === generation.current &&
       useWorkspaceStore.getState().ui.locations.find((item) => item.active)?.id === location.id;
     void (async () => {
+      const directory = (await controller.invoke('getGitDirectory')) as DirectoryHandle | null;
+      if (!directory)
+        throw new Error('The workspace folder is unavailable. Reopen it from Workspaces.');
+      const initialized = await hasGitRepository(directory);
+      if (!active()) return;
+      if (!initialized) {
+        setStatus(emptyGitStatus());
+        setSettings(emptySettings);
+        setAutoCommitSettings(DEFAULT_GIT_AUTO_COMMIT_SETTINGS);
+        return;
+      }
       const { createGitClient } = await import('../services/git-worker-client');
       if (!active()) return;
-      const directory = (await controller.invoke('getGitDirectory')) as DirectoryHandle | null;
-      if (!directory) throw new Error('Select a local folder to use automatic commits.');
       const next = await createGitClient(directory);
       candidate = next;
       const snapshot = await next.repositoryInfo();
@@ -484,7 +503,6 @@ export function GitPanel() {
     const version = generation.current;
     const descriptions = {
       refresh: 'Reading changes…',
-      initialize: 'Initializing Git…',
       configure: 'Saving settings…',
       fetch: 'Fetching remote…',
       commit: 'Creating commit…',
@@ -525,7 +543,6 @@ export function GitPanel() {
       }
       let result: GitStatus | undefined;
       let reload = false;
-      if (action === 'initialize') await current.initialize();
       if (action === 'configure') {
         const nextSettings = configuration?.settings ?? settings;
         if (authentication.token && !nextSettings.url.trim())
@@ -558,7 +575,6 @@ export function GitPanel() {
           setRepositoryOpen(false);
           setNotice('Repository settings saved.');
         }
-        if (action === 'initialize') setRepositoryOpen(true);
         if (action === 'fetch')
           setNotice('Remote fetched. The latest remote changes are shown below.');
       }
@@ -780,9 +796,11 @@ export function GitPanel() {
               </button>
             </>
           )}
-          <GitActionMenu id="gitRepositorySettingsBtn" label="More source control actions">
-            {repositoryActions()}
-          </GitActionMenu>
+          {status?.initialized && (
+            <GitActionMenu id="gitRepositorySettingsBtn" label="More source control actions">
+              {repositoryActions()}
+            </GitActionMenu>
+          )}
         </div>
       </header>
       {loadingText && (
@@ -793,23 +811,13 @@ export function GitPanel() {
       )}
       {location?.kind !== 'directory' ? (
         <div className={styles.empty}>
-          <p>Select a local folder to synchronize this workspace with Git.</p>
-          <button type="button" onClick={() => controller?.invoke('chooseMarkdownDirectory')}>
-            Open local folder
-          </button>
+          <p>Git is not initialized in this workspace.</p>
         </div>
       ) : (
         <>
           {status && !status.initialized && (
             <div className={styles.empty}>
-              <p>This folder does not contain a Git repository yet.</p>
-              <button type="button" disabled={!writable} onClick={() => void run('initialize')}>
-                Initialize repository
-              </button>
-              <p className={styles.hint}>
-                Notes, attachments and app settings in {APP_DIRECTORY} will be synchronized. Git
-                access tokens stay in local encrypted storage.
-              </p>
+              <p>Git is not initialized in this workspace.</p>
             </div>
           )}
           {status?.initialized && (
@@ -933,7 +941,7 @@ export function GitPanel() {
               {notice}
             </p>
           )}
-          {access !== 'writable' && !gitBusy && (
+          {status?.initialized && access !== 'writable' && !gitBusy && (
             <p className={styles.hint}>Grant write access to create commits and synchronize.</p>
           )}
           {diverged && (
