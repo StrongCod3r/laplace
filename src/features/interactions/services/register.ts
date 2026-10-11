@@ -2999,9 +2999,54 @@ export function registerInteractions(runtime: EditorRuntime) {
       e.preventDefault();
       return;
     }
+    if (e.key === 'Enter' && e.shiftKey && runtime.isListBlock(b)) {
+      e.preventDefault();
+      const selection = runtime.selectionOffsetsWithin(content);
+      const caret = runtime.replaceBlockRangeWithInlineLink(
+        b,
+        selection.start,
+        selection.end,
+        '\n',
+        null,
+      );
+      runtime.hideFloatingMenus();
+      runtime.scheduleSave();
+      runtime.renderBlocks(page);
+      runtime.focusBlock(b.id, caret);
+      return;
+    }
     if (e.key === 'Tab' && runtime.isListBlock(b)) {
       e.preventDefault();
       const caret = runtime.getCaretOffset(content);
+      const previous = blocks[index - 1];
+      if (
+        !e.shiftKey &&
+        !(b.text || '').trim() &&
+        previous?.type === b.type &&
+        runtime.listIndentLevel(previous) === runtime.listIndentLevel(b) &&
+        runtime.listSubtreeEnd(blocks, index) === index + 1
+      ) {
+        const end = (previous.text || '').length;
+        runtime.replaceBlockRangeWithInlineLink(previous, end, end, '\n', null);
+        blocks.splice(index, 1);
+        runtime.hideFloatingMenus();
+        runtime.scheduleSave();
+        runtime.renderBlocks(page);
+        runtime.focusBlock(previous.id, end + 1);
+        return;
+      }
+      const lineStart = caret > 0 ? (b.text || '').lastIndexOf('\n', caret - 1) + 1 : 0;
+      if (lineStart > 0) {
+        const leading = (b.text || '').slice(lineStart).match(/^(?:\t| {1,4})/)?.[0] || '';
+        const removed = e.shiftKey ? leading.length : 0;
+        const inserted = e.shiftKey ? '' : '\t';
+        runtime.replaceBlockRangeWithInlineLink(b, lineStart, lineStart + removed, inserted, null);
+        runtime.hideFloatingMenus();
+        runtime.scheduleSave();
+        runtime.renderBlocks(page);
+        runtime.focusBlock(b.id, Math.max(lineStart, caret + inserted.length - removed));
+        return;
+      }
       if (runtime.changeListIndent(blocks, index, e.shiftKey ? -1 : 1)) {
         runtime.hideFloatingMenus();
         runtime.scheduleSave();

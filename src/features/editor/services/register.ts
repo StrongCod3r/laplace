@@ -491,7 +491,11 @@ export function registerEditor(runtime: EditorRuntime) {
       boundaries.add(format.end);
     }
     const points = [...boundaries].filter((n) => n >= 0 && n <= text.length).sort((a, b) => a - b);
-    if (points.length <= 2 && !tokens.length && !formats.length) return runtime.escapeHtml(text);
+    // A final editable line needs a real DOM anchor for both layout and native typing.
+    const caretPlaceholder =
+      runtime.isListBlock(block) && text.endsWith('\n') ? '<br data-caret-placeholder>' : '';
+    if (points.length <= 2 && !tokens.length && !formats.length)
+      return runtime.escapeHtml(text) + caretPlaceholder;
     let html = '';
     for (let i = 0; i < points.length - 1; i++) {
       const start = points[i],
@@ -520,7 +524,7 @@ export function registerEditor(runtime: EditorRuntime) {
       }
       html += segment;
     }
-    return html;
+    return html + caretPlaceholder;
   }
 
   function inlineLinksFromContent(content, text) {
@@ -2167,7 +2171,9 @@ export function registerEditor(runtime: EditorRuntime) {
       node = el;
       pos = el.childNodes.length;
     }
-    range.setStart(node, pos);
+    const placeholder = el.querySelector('[data-caret-placeholder]');
+    if (placeholder && offset === el.textContent.length) range.setStartBefore(placeholder);
+    else range.setStart(node, pos);
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);

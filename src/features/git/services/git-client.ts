@@ -461,6 +461,88 @@ export class WorkspaceGitClient {
     return this.status(!exists);
   }
 
+  private selectedPaths(paths: string[]) {
+    if (!Array.isArray(paths) || !paths.length) throw new Error('Select at least one file.');
+    for (const path of paths) {
+      if (
+        typeof path !== 'string' ||
+        !path ||
+        path.startsWith('/') ||
+        path.includes('\\') ||
+        path.includes('\0') ||
+        path.split('/').some((part) => !part || part === '.' || part === '..') ||
+        path.split('/')[0].toLowerCase() === '.git'
+      )
+        throw new Error('Select repository files using relative paths.');
+    }
+    return [...new Set(paths)];
+  }
+
+  private async selectedStatus(paths: string[]) {
+    await this.assertReady();
+    if (!(await this.repositoryInfo()).initialized)
+      throw new Error('Git is not initialized in this workspace.');
+    const selected = this.selectedPaths(paths);
+    const rows = await git.statusMatrix({ ...this.base, filepaths: selected });
+    if (selected.some((path) => !rows.some(([name]) => name === path)))
+      throw new Error('A selected file is no longer available. Refresh the changes.');
+    return rows.filter(([path]) => selected.includes(path));
+  }
+
+  async stageFiles(paths: string[]) {
+    const rows = await this.selectedStatus(paths);
+    for (const [filepath, , work] of rows) {
+      if (work === 0) await git.remove({ ...this.base, filepath });
+      else await git.add({ ...this.base, filepath });
+    }
+  }
+
+  async unstageFiles(paths: string[]) {
+    const rows = await this.selectedStatus(paths);
+    const head = await this.optionalRef('HEAD');
+    for (const [filepath] of rows) {
+      if (head) await git.resetIndex({ ...this.base, filepath, ref: head });
+      else await git.remove({ ...this.base, filepath });
+    }
+  }
+
+  async discardChanges(paths: string[]) {
+    const rows = await this.selectedStatus(paths);
+    const head = await this.optionalRef('HEAD');
+    await this.assertSupportedTree(head);
+    // Read all originals before changing any files, so a missing Git object cannot cause a partial discard.
+    const originals = await Promise.all(
+      rows.map(async ([path, committed]) => ({
+        path,
+        content: committed && head ? await this.committedContent(head, path) : null,
+      })),
+    );
+    const root = this.base.dir.replace(/\/$/, '');
+    for (const { path, content } of originals) {
+      if (content === null) {
+        try {
+          await this.fs.promises.unlink(root + '/' + path);
+        } catch (error) {
+          if ((error as { code?: string }).code !== 'ENOENT') throw error;
+        }
+      } else {
+        const parts = path.split('/');
+        let parent = root;
+        for (const name of parts.slice(0, -1)) {
+          parent += '/' + name;
+          try {
+            await this.fs.promises.mkdir(parent);
+          } catch (error) {
+            if ((error as { code?: string }).code !== 'EEXIST') throw error;
+          }
+        }
+        await this.fs.promises.writeFile(root + '/' + path, content);
+      }
+      if (head) await git.resetIndex({ ...this.base, filepath: path, ref: head });
+      else await git.remove({ ...this.base, filepath: path });
+    }
+  }
+
   async commit(message: string) {
     await this.assertReady();
     return this.commitChanges(message, await this.workingStatus());

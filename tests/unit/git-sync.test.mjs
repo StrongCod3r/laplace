@@ -910,3 +910,86 @@ test('repository metadata avoids file scans and history cache follows refs while
   assert.equal(synced.outgoing.length, 0);
   assert.equal(synced.incoming.length, 0);
 });
+
+test('selected files stage, unstage and discard without changing unrelated drafts', async (t) => {
+  const { directory, WorkspaceGitClient, createDirectoryFs } = await fixture(t);
+  const client = new WorkspaceGitClient(createDirectoryFs(directoryHandle(directory)));
+  await client.initialize();
+  await client.configure({ url: '', corsProxy: '', name: 'Test', email: 'test@example.com' });
+  await fs.promises.mkdir(path.join(directory, 'nested'));
+  await fs.promises.writeFile(path.join(directory, 'Note.md'), 'Original\n');
+  await fs.promises.writeFile(path.join(directory, 'Other.md'), 'Other original\n');
+  await fs.promises.writeFile(path.join(directory, 'empty.bin'), new Uint8Array());
+  await fs.promises.writeFile(
+    path.join(directory, 'nested', 'deleted.bin'),
+    new Uint8Array([0, 255, 1]),
+  );
+  await client.commit('Initial');
+  await fs.promises.writeFile(path.join(directory, 'Note.md'), 'Draft\n');
+  await fs.promises.writeFile(path.join(directory, 'Other.md'), 'Keep this draft\n');
+  await fs.promises.writeFile(path.join(directory, 'New.md'), 'New file\n');
+  await fs.promises.rm(path.join(directory, 'nested'), { recursive: true });
+  await fs.promises.writeFile(path.join(directory, 'empty.bin'), 'Modified');
+  await client.stageFiles(['Note.md', 'New.md', 'nested/deleted.bin']);
+  assert.deepEqual(
+    (await client.status()).stagedChanges.map((change) => change.path),
+    ['New.md', 'Note.md', 'nested/deleted.bin'],
+  );
+  await fs.promises.writeFile(path.join(directory, 'Note.md'), 'Newer draft\n');
+  await client.unstageFiles(['Note.md', 'New.md']);
+  assert.equal(
+    await fs.promises.readFile(path.join(directory, 'Note.md'), 'utf8'),
+    'Newer draft\n',
+  );
+  assert.deepEqual(
+    (await client.status()).stagedChanges.map((change) => change.path),
+    ['nested/deleted.bin'],
+  );
+  await client.stageFiles(['Note.md', 'New.md']);
+  await client.discardChanges(['Note.md', 'New.md', 'nested/deleted.bin', 'empty.bin']);
+  assert.equal(await fs.promises.readFile(path.join(directory, 'Note.md'), 'utf8'), 'Original\n');
+  assert.equal(
+    await fs.promises.readFile(path.join(directory, 'Other.md'), 'utf8'),
+    'Keep this draft\n',
+  );
+  assert.deepEqual(
+    new Uint8Array(await fs.promises.readFile(path.join(directory, 'nested', 'deleted.bin'))),
+    new Uint8Array([0, 255, 1]),
+  );
+  assert.equal((await fs.promises.stat(path.join(directory, 'empty.bin'))).size, 0);
+  await assert.rejects(fs.promises.stat(path.join(directory, 'New.md')), { code: 'ENOENT' });
+  assert.deepEqual((await client.status()).changes, [{ path: 'Other.md', kind: 'modified' }]);
+  assert.deepEqual((await client.status()).stagedChanges, []);
+  await fs.promises.writeFile(path.join(directory, 'Delete me.md'), 'Untracked');
+  await client.discardChanges(['Delete me.md']);
+  await assert.rejects(fs.promises.stat(path.join(directory, 'Delete me.md')), { code: 'ENOENT' });
+  for (const unsafe of [
+    '../escape.md',
+    '/Note.md',
+    '.git/HEAD',
+    'nested/../Note.md',
+    'C:\\Note.md',
+  ]) {
+    await assert.rejects(client.discardChanges([unsafe]), /relative paths/);
+  }
+  const before = await fs.promises.readFile(path.join(directory, 'Other.md'), 'utf8');
+  await assert.rejects(client.discardChanges(['Other.md', 'missing.md']), /no longer available/);
+  assert.equal(await fs.promises.readFile(path.join(directory, 'Other.md'), 'utf8'), before);
+});
+
+test('file actions also handle repositories before their first commit', async (t) => {
+  const { directory, WorkspaceGitClient } = await fixture(t);
+  const client = new WorkspaceGitClient(fs, directory);
+  await client.initialize();
+  await fs.promises.writeFile(path.join(directory, 'New.md'), 'Before first commit');
+  await client.stageFiles(['New.md']);
+  assert.ok((await client.status()).stagedChanges.some((change) => change.path === 'New.md'));
+  await client.unstageFiles(['New.md']);
+  assert.ok(!(await client.status()).stagedChanges.some((change) => change.path === 'New.md'));
+  assert.equal(
+    await fs.promises.readFile(path.join(directory, 'New.md'), 'utf8'),
+    'Before first commit',
+  );
+  await client.discardChanges(['New.md']);
+  await assert.rejects(fs.promises.stat(path.join(directory, 'New.md')), { code: 'ENOENT' });
+});

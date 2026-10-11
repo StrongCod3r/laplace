@@ -782,6 +782,40 @@ export function registerMarkdown(runtime: EditorRuntime) {
       blocks.push(block);
     };
     let i = 0;
+    const indentationWidth = (prefix) =>
+      [...prefix].reduce((width, char) => (char === '\t' ? width + 4 - (width % 4) : width + 1), 0);
+    const listMarker = /^[ \t]*(?:[-+*]|\d+[.)])(?:[ \t]+|$)/;
+    const readListText = (firstLine, requiredIndent) => {
+      const text = [firstLine];
+      const removeIndent = (line) => {
+        const prefix = line.match(/^[ \t]*/)[0];
+        let width = 0,
+          chars = 0;
+        while (chars < prefix.length && width < requiredIndent) {
+          width += prefix[chars] === '\t' ? 4 - (width % 4) : 1;
+          chars++;
+        }
+        return line.slice(chars);
+      };
+      i++;
+      while (i < lines.length) {
+        if (!lines[i].trim() && indentationWidth(lines[i]) >= requiredIndent) {
+          text.push(removeIndent(lines[i++]));
+          continue;
+        }
+        let next = i;
+        while (next < lines.length && !lines[next].trim()) next++;
+        if (next >= lines.length || listMarker.test(lines[next])) break;
+        const prefix = lines[next].match(/^[ \t]*/)[0];
+        if (indentationWidth(prefix) < requiredIndent) break;
+        while (i < next) {
+          text.push('');
+          i++;
+        }
+        text.push(removeIndent(lines[i++]));
+      }
+      return text.join('\n');
+    };
     while (i < lines.length) {
       const line = lines[i];
       const trimmed = line.trim();
@@ -878,16 +912,17 @@ export function registerMarkdown(runtime: EditorRuntime) {
       const bullet = line.match(/^(\s*)[-+*](?:[ \t]+(.*))?[ \t]*$/);
       if (bullet) {
         const indent = Math.min(8, Math.floor(bullet[1].replace(/\t/g, '  ').length / 2));
-        pushText('bullet', bullet[2] || '', indent ? { indent } : {});
-        i++;
+        const text = readListText(bullet[2] || '', indentationWidth(bullet[1]) + 2);
+        pushText('bullet', text, indent ? { indent } : {});
         continue;
       }
 
       const number = line.match(/^(\s*)\d+[.)](?:[ \t]+(.*))?[ \t]*$/);
       if (number) {
         const indent = Math.min(8, Math.floor(number[1].replace(/\t/g, '  ').length / 2));
-        pushText('number', number[2] || '', indent ? { indent } : {});
-        i++;
+        const markerWidth = line.slice(number[1].length).match(/^\d+[.)]/)[0].length;
+        const text = readListText(number[2] || '', indentationWidth(number[1]) + markerWidth + 1);
+        pushText('number', text, indent ? { indent } : {});
         continue;
       }
 
@@ -1309,11 +1344,12 @@ export function registerMarkdown(runtime: EditorRuntime) {
                 ? `### ${text}`
                 : text,
         );
-      else if (block.type === 'bullet')
-        lines.push(`${'  '.repeat(runtime.listIndentLevel(block))}- ${text}`);
-      else if (block.type === 'number')
-        lines.push(`${'  '.repeat(runtime.listIndentLevel(block))}1. ${text}`);
-      else if (block.type === 'todo') lines.push(`- [${block.checked ? 'x' : ' '}] ${text}`);
+      else if (block.type === 'bullet' || block.type === 'number') {
+        const indent = '  '.repeat(runtime.listIndentLevel(block));
+        const marker = block.type === 'number' ? '1. ' : '- ';
+        const continuation = indent + ' '.repeat(marker.length);
+        lines.push(indent + marker + text.replace(/<br>/g, '\n' + continuation));
+      } else if (block.type === 'todo') lines.push(`- [${block.checked ? 'x' : ' '}] ${text}`);
       else if (block.type === 'quote')
         lines.push(
           String(text)

@@ -36,6 +36,66 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
     registerMarkdown(runtime);
     registerInteractions(runtime);
     const workspace = { pages: [] };
+    for (const kind of ['number', 'bullet']) {
+      const marker = kind === 'number' ? '1. ' : '- ';
+      const padding = ' '.repeat(marker.length);
+      let content =
+        marker +
+        'First\n\tIntermediate **bold** [link](https://example.com)\n' +
+        marker +
+        'Second\n' +
+        marker +
+        'Third\n';
+      for (let reload = 0; reload < 3; reload++) {
+        const { blocks } = runtime.parseMarkdownFile({ path: 'Continuation.md', content });
+        assert.deepEqual(
+          blocks.map((block) => block.type),
+          [kind, kind, kind],
+        );
+        assert.equal(blocks[0].text, 'First\nIntermediate bold link');
+        assert.equal(blocks[1].text, 'Second');
+        assert.equal(blocks[2].text, 'Third');
+        assert.equal(blocks[0].inlineLinks[0].url, 'https://example.com/');
+        assert.equal(
+          blocks[0].text.slice(blocks[0].inlineLinks[0].start, blocks[0].inlineLinks[0].end),
+          'link',
+        );
+        if (kind === 'number')
+          assert.deepEqual(
+            blocks.map((block) => runtime.numberForBlock(block.id, blocks)),
+            [1, 2, 3],
+          );
+        content = runtime.markdownForBlocks(blocks, workspace, new Map()) + '\n';
+        assert.ok(
+          content.includes('\n' + padding + 'Intermediate **bold** [link](https://example.com/)'),
+        );
+      }
+    }
+    const nestedContinuation = runtime.parseMarkdownBlocks(
+      '1. Parent\n   parent text\n  1. Child\n     child text\n1. Next',
+      { preserveInline: true },
+    );
+    assert.deepEqual(
+      nestedContinuation.map((block) => [block.type, block.text, runtime.listIndentLevel(block)]),
+      [
+        ['number', 'Parent\nparent text', 0],
+        ['number', 'Child\nchild text', 1],
+        ['number', 'Next', 0],
+      ],
+    );
+    const multiline = [
+      { id: 'first', type: 'number', text: 'First\n\nlast\n' },
+      { id: 'second', type: 'number', text: 'Next' },
+    ];
+    const savedMultiline = runtime.markdownForBlocks(multiline, workspace, new Map());
+    const restoredMultiline = runtime.parseMarkdownFile({
+      path: 'Empty continuation.md',
+      content: savedMultiline + '\n',
+    }).blocks;
+    assert.deepEqual(
+      restoredMultiline.map((block) => [block.type, block.text]),
+      multiline.map((block) => [block.type, block.text]),
+    );
     const linkedList = readFileSync(new URL('../fixtures/list-links.md', import.meta.url), 'utf8');
     const urls = [...linkedList.matchAll(/\]\(([^)]+)\)/g)].map((match) => `${match[1]}/`);
     for (const kind of ['number', 'bullet']) {

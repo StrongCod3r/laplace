@@ -435,3 +435,130 @@
   border-radius: 3px;
   color: #fff;
 }
+
+.files .selectedFile {
+  background: var(--active);
+}
+.fileContextMenu {
+  position: fixed;
+  z-index: 110;
+  min-width: 200px;
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  display: grid;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.fileContextMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.fileContextMenu button:hover:not(:disabled),
+.fileContextMenu button:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+.fileContextMenu button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.contextCaption {
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3px;
+}
+.fileContextMenu .dangerAction,
+.discardDialog .dangerAction {
+  color: var(--danger);
+}
+.discardBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+}
+.discardDialog {
+  width: min(440px, 100%);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.discardDialog h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+.discardDialog p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.discardDialog ul {
+  max-height: min(220px, 30vh);
+  overflow: auto;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
+}
+.discardDialog ul::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.discardDialog ul::-webkit-scrollbar-track,
+.discardDialog ul::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.discardDialog ul::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.discardDialog ul::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 68%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.discardButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+.discardButtons button {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.discardButtons button:hover {
+  background: var(--hover);
+}
+.discardButtons button:focus-visible {
+  outline: 2px solid var(--obsidian-accent);
+  outline-offset: 2px;
+}

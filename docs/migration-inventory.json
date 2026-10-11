@@ -1,5 +1,5 @@
 {
-  "total": 642,
+  "total": 640,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -13,6 +13,7 @@
       "openSettings",
       "setSettingsView",
       "renderShortcutSettings",
+      "resetAppSettings",
       "resetShortcuts",
       "shortcutActionForEvent",
       "runShortcutAction",
@@ -109,9 +110,6 @@
       "init",
       "syncFolderNoteSettings",
       "applyTreeIconSizes",
-      "blobToDataUrl",
-      "exportWorkspace",
-      "importWorkspace",
       "insertTextAtSelection"
     ],
     "history": [
@@ -308,7 +306,9 @@
       "renderGraphView",
       "openWikiLink"
     ],
-    "dashboard": ["renderHome"],
+    "dashboard": [
+      "renderHome"
+    ],
     "editor": [
       "renderPage",
       "replaceRenderedBlockMarkup",

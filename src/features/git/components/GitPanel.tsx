@@ -1,3 +1,4 @@
+import type { TargetedMouseEvent } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { Icon } from '@/shared/components/Icon';
@@ -9,6 +10,7 @@ import styles from './GitPanel.module.css';
 import { GitRepositoryDialog, type GitAuthentication } from './GitRepositoryDialog';
 import { GitActionMenu } from './GitActionMenu';
 import { GitFileIcon } from './GitFileIcon';
+import { GitFileContextMenu, GitDiscardDialog, type FileMenuItem } from './GitFileContextMenu';
 import type { GitComparison, GitDiffDocument } from '../types';
 import { loadGitCredentials, saveGitCredentials } from '../services/git-credentials';
 import { subscribeWorkspaceFileChanges } from '@/shared/lib/workspace-file-events';
@@ -26,7 +28,16 @@ import { startGitAutomationSchedule } from '../services/git-automation-schedule'
 const emptySettings: GitSettings = { url: '', corsProxy: '', name: '', email: '' };
 const labels = { added: 'Added', modified: 'Modified', deleted: 'Deleted', untracked: 'Untracked' };
 const symbols = { added: 'A', modified: 'M', deleted: 'D', untracked: 'U' };
-type Action = 'refresh' | 'configure' | 'fetch' | 'commit' | 'sync';
+type Action =
+  'refresh' | 'configure' | 'fetch' | 'commit' | 'sync' | 'stage' | 'unstage' | 'discard';
+type FileSelection = { comparison: GitComparison; paths: string[]; anchor: string };
+type FileMenu = {
+  workspaceId: string;
+  comparison: GitComparison;
+  paths: string[];
+  x: number;
+  y: number;
+};
 
 function FilePath({ path }: { path: string }) {
   const separator = path.lastIndexOf('/');
@@ -44,9 +55,17 @@ function FilePath({ path }: { path: string }) {
 function Changes({
   changes,
   onPreview,
+  selectedPaths = [],
+  comparison,
+  onSelect,
+  onContext,
 }: {
   changes: GitChange[];
   onPreview?: (path: string) => void;
+  selectedPaths?: string[];
+  comparison?: GitComparison;
+  onSelect?: (path: string, event: TargetedMouseEvent<HTMLButtonElement>) => void;
+  onContext?: (path: string, x: number, y: number) => void;
 }) {
   return (
     <ul className={styles.files}>
@@ -57,7 +76,35 @@ function Changes({
               type="button"
               title={change.path}
               aria-label={`${change.path} ${labels[change.marker || change.kind]}`}
-              onClick={() => onPreview(change.path)}
+              data-git-path={change.path}
+              data-git-comparison={comparison}
+              className={selectedPaths.includes(change.path) ? styles.selectedFile : undefined}
+              aria-pressed={selectedPaths.includes(change.path)}
+              onClick={(event) =>
+                onSelect ? onSelect(change.path, event) : onPreview(change.path)
+              }
+              onContextMenu={(event) => {
+                if (!onContext) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const bounds = event.currentTarget.getBoundingClientRect();
+                onContext(
+                  change.path,
+                  event.clientX || bounds.x + 24,
+                  event.clientY || bounds.bottom,
+                );
+              }}
+              onKeyDown={(event) => {
+                if (
+                  onContext &&
+                  (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))
+                ) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  onContext(change.path, bounds.x + 24, bounds.bottom);
+                }
+              }}
             >
               <FilePath path={change.path} />
               <span
@@ -113,6 +160,14 @@ export function GitPanel() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [fileRevision, setFileRevision] = useState(0);
+  const [selection, setSelection] = useState<FileSelection | null>(null);
+  const [fileMenu, setFileMenu] = useState<FileMenu | null>(null);
+  const [discardRequest, setDiscardRequest] = useState<FileMenu | null>(null);
+  useEffect(() => {
+    setSelection(null);
+    setFileMenu(null);
+    setDiscardRequest(null);
+  }, [location?.id, visible]);
   const [autoCommitSettings, setAutoCommitSettings] = useState<GitAutoCommitSettings>(
     DEFAULT_GIT_AUTO_COMMIT_SETTINGS,
   );
@@ -127,6 +182,8 @@ export function GitPanel() {
     access,
     repositoryOpen,
     autoCommitDialogOpen,
+    fileMenuOpen: Boolean(fileMenu),
+    discardOpen: Boolean(discardRequest),
     visible,
   });
   automationState.current = {
@@ -137,6 +194,8 @@ export function GitPanel() {
     access,
     repositoryOpen,
     autoCommitDialogOpen,
+    fileMenuOpen: Boolean(fileMenu),
+    discardOpen: Boolean(discardRequest),
     visible,
   };
   const automationSchedule = useRef<ReturnType<typeof startGitAutomationSchedule> | null>(null);
@@ -395,6 +454,8 @@ export function GitPanel() {
           latest.access !== 'writable' ||
           latest.repositoryOpen ||
           latest.autoCommitDialogOpen ||
+          latest.fileMenuOpen ||
+          latest.discardOpen ||
           useWorkspaceStore.getState().gitBusy ||
           useWorkspaceStore.getState().ui.locations.find((item) => item.active)?.id !== workspaceId
         )
@@ -494,7 +555,11 @@ export function GitPanel() {
 
   async function run(
     action: Action,
-    configuration?: { settings: GitSettings; authentication: GitAuthentication },
+    configuration?: {
+      settings?: GitSettings;
+      authentication?: GitAuthentication;
+      paths?: string[];
+    },
   ) {
     const current = client.current;
     if (!current || !controller || running.current || clientLocation.current !== location?.id)
@@ -507,6 +572,9 @@ export function GitPanel() {
       fetch: 'Fetching remote…',
       commit: 'Creating commit…',
       sync: 'Synchronizing…',
+      stage: 'Staging files…',
+      unstage: 'Unstaging files…',
+      discard: 'Discarding changes…',
     };
     setBusy(descriptions[action]);
     setError('');
@@ -550,6 +618,22 @@ export function GitPanel() {
         await current.configure(nextSettings);
         await saveGitCredentials(location!.id, nextSettings.url, authentication);
       }
+      if (action === 'stage') await current.stageFiles(configuration?.paths || []);
+      if (action === 'unstage') await current.unstageFiles(configuration?.paths || []);
+      if (action === 'discard') {
+        reload = true;
+        await current.discardChanges(configuration?.paths || []);
+      }
+      if (['stage', 'unstage', 'discard'].includes(action)) {
+        setSelection(null);
+        setNotice(
+          action === 'discard'
+            ? 'Selected changes discarded.'
+            : action === 'stage'
+              ? 'Selected files staged.'
+              : 'Selected files unstaged.',
+        );
+      }
       if (action === 'fetch') result = await current.fetchStatus();
       if (action === 'commit') {
         const oid = await current.commit(message);
@@ -570,8 +654,8 @@ export function GitPanel() {
         setStatus(snapshot);
         if (action === 'configure') {
           setSettings(snapshot.settings);
-          setUsername(configuration?.authentication.username ?? username);
-          setToken(configuration?.authentication.token ?? token);
+          setUsername(configuration?.authentication?.username ?? username);
+          setToken(configuration?.authentication?.token ?? token);
           setRepositoryOpen(false);
           setNotice('Repository settings saved.');
         }
@@ -595,7 +679,8 @@ export function GitPanel() {
       }
     } finally {
       try {
-        if (locked) await controller.invoke('endGitOperation', action === 'sync');
+        if (locked)
+          await controller.invoke('endGitOperation', action === 'sync' || action === 'discard');
       } catch {
         if (mounted.current)
           setError(
@@ -653,6 +738,116 @@ export function GitPanel() {
     (gitBusy ? 'Processing repository…' : '');
   const writable = access === 'writable' && !disabled;
   const diverged = Boolean(status?.incoming.length && status.outgoing.length);
+
+  function changesFor(comparison: GitComparison) {
+    if (!status) return [];
+    return comparison === 'staged'
+      ? status.stagedChanges
+      : comparison === 'unstaged'
+        ? status.unstagedChanges
+        : comparison === 'incoming'
+          ? status.incomingFiles
+          : status.outgoingFiles;
+  }
+
+  function fileInteractions(comparison: GitComparison) {
+    return {
+      comparison,
+      selectedPaths: selection?.comparison === comparison ? selection.paths : [],
+      onSelect: (path: string, event: TargetedMouseEvent<HTMLButtonElement>) => {
+        if (disabled || discardRequest) return;
+        setFileMenu(null);
+        const previous = selection?.comparison === comparison ? selection : null;
+        let paths = [path];
+        if (event.shiftKey && previous) {
+          const ordered = changesFor(comparison).map((change) => change.path);
+          const start = ordered.indexOf(previous.anchor),
+            end = ordered.indexOf(path);
+          if (start >= 0) paths = ordered.slice(Math.min(start, end), Math.max(start, end) + 1);
+          if (event.ctrlKey || event.metaKey) paths = [...new Set([...previous.paths, ...paths])];
+        } else if (event.ctrlKey || event.metaKey) {
+          paths = previous?.paths.includes(path)
+            ? previous.paths.filter((item) => item !== path)
+            : [...(previous?.paths || []), path];
+        }
+        setSelection({
+          comparison,
+          paths,
+          anchor: event.shiftKey && previous ? previous.anchor : path,
+        });
+        if (!event.shiftKey && !event.ctrlKey && !event.metaKey) void showPreview(path, comparison);
+      },
+      onContext: (path: string, x: number, y: number) => {
+        if (disabled || discardRequest || !location) return;
+        const selected =
+          selection?.comparison === comparison && selection.paths.includes(path)
+            ? selection.paths
+            : [path];
+        const paths = selected.filter((item) =>
+          changesFor(comparison).some((change) => change.path === item),
+        );
+        setSelection({
+          comparison,
+          paths,
+          anchor:
+            selection?.comparison === comparison && selection.paths.includes(path)
+              ? selection.anchor
+              : path,
+        });
+        setFileMenu({ workspaceId: location.id, comparison, paths, x, y });
+      },
+    };
+  }
+
+  function contextItems(menu: FileMenu): FileMenuItem[] {
+    const notes =
+      controller?.getDocument().pages.filter((note) => menu.paths.includes(note.filePath || '')) ||
+      [];
+    const local = menu.comparison === 'staged' || menu.comparison === 'unstaged';
+    const items: FileMenuItem[] = [
+      {
+        label: 'View changes',
+        icon: 'git-branch',
+        disabled: disabled || menu.paths.length !== 1,
+        action: () => void showPreview(menu.paths[0], menu.comparison),
+      },
+      {
+        label: menu.paths.length > 1 ? 'Open files' : 'Open file',
+        icon: 'file-text',
+        disabled: disabled || notes.length !== menu.paths.length,
+        action: () =>
+          notes.forEach((note) => controller?.invoke('openPage', note.id, { newTab: true })),
+      },
+      {
+        label: 'Copy path',
+        icon: 'copy',
+        action: () => {
+          void navigator.clipboard
+            .writeText(menu.paths.join('\n'))
+            .then(() => setNotice('File paths copied.'))
+            .catch(() => setError('Could not copy the file paths.'));
+        },
+      },
+    ];
+    if (local) {
+      items.push({
+        label: menu.comparison === 'staged' ? 'Unstage changes' : 'Stage changes',
+        icon: menu.comparison === 'staged' ? 'minus' : 'plus',
+        disabled: !writable,
+        action: () =>
+          void run(menu.comparison === 'staged' ? 'unstage' : 'stage', { paths: menu.paths }),
+      });
+      items.push({
+        label: 'Discard changes',
+        icon: 'trash',
+        danger: true,
+        disabled: !writable,
+        action: () => setDiscardRequest(menu),
+      });
+    }
+    return items;
+  }
+
   const canCommit = Boolean(writable && status?.branch && status.changes.length && message.trim());
   const canFetch = Boolean(writable && status?.branch && status.settings.url);
   const canSync = canFetch && !diverged && (!status?.changes.length || Boolean(message.trim()));
@@ -878,6 +1073,7 @@ export function GitPanel() {
                     </summary>
                     <Changes
                       changes={status.stagedChanges}
+                      {...fileInteractions('staged')}
                       onPreview={(path) => void showPreview(path, 'staged')}
                     />
                   </details>
@@ -891,6 +1087,7 @@ export function GitPanel() {
                   {status.unstagedChanges.length ? (
                     <Changes
                       changes={status.unstagedChanges}
+                      {...fileInteractions('unstaged')}
                       onPreview={(path) => void showPreview(path, 'unstaged')}
                     />
                   ) : !status.changes.length ? (
@@ -924,6 +1121,7 @@ export function GitPanel() {
                         changes={
                           direction === 'outgoing' ? status.outgoingFiles : status.incomingFiles
                         }
+                        {...fileInteractions(direction)}
                         onPreview={(path) => void showPreview(path, direction)}
                       />
                     </details>
@@ -951,6 +1149,28 @@ export function GitPanel() {
             </p>
           )}
         </>
+      )}
+      {fileMenu && visible && fileMenu.workspaceId === location?.id && (
+        <GitFileContextMenu
+          key={fileMenu.comparison + fileMenu.paths.join('|') + fileMenu.x + ':' + fileMenu.y}
+          x={fileMenu.x}
+          y={fileMenu.y}
+          count={fileMenu.paths.length}
+          items={contextItems(fileMenu)}
+          onClose={() => setFileMenu(null)}
+        />
+      )}
+      {discardRequest && visible && discardRequest.workspaceId === location?.id && (
+        <GitDiscardDialog
+          paths={discardRequest.paths}
+          onClose={() => setDiscardRequest(null)}
+          onConfirm={() => {
+            const request = discardRequest;
+            setDiscardRequest(null);
+            if (writable && request.workspaceId === location?.id)
+              void run('discard', { paths: request.paths });
+          }}
+        />
       )}
       <GitRepositoryDialog
         open={repositoryOpen && visible}

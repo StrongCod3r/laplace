@@ -254,11 +254,18 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 .right-sidebar {
   width: var(--right-sidebar-width);
   min-width: var(--right-sidebar-width);
+  transition:
+    width 0.18s ease,
+    min-width 0.18s ease;
   height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--sidebar);
   overflow: hidden;
+}
+
+:global(body.resizing-pane) .right-sidebar {
+  transition: none;
 }
 
 .right-sidebar:global(.collapsed) {
