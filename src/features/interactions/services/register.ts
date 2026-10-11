@@ -441,10 +441,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       });
       return;
     }
-    if (
-      e.target.closest('#chooseDirectoryBtn') ||
-      e.target.closest('#settingsChooseDirectoryBtn')
-    ) {
+    if (e.target.closest('#chooseDirectoryBtn')) {
       void runtime.chooseMarkdownDirectory();
       return;
     }
@@ -842,29 +839,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.cycleTheme();
       return;
     }
-    if (e.target.closest('#exportBtn')) {
-      runtime.exportWorkspace();
-      return;
-    }
-    if (e.target.closest('#importBtn')) {
-      runtime.els.importFile.click();
-      return;
-    }
-    if (e.target.closest('#resetBtn')) {
-      runtime.flushHistoryPending(runtime.activeVaultId);
-      const previousWorkspace = runtime.clone(runtime.state);
-      runtime.state = runtime.clone(
-        runtime.localStorageGateway.hasDirectory?.()
-          ? runtime.DEFAULT_WORKSPACE
-          : runtime.DEFAULT_BROWSER_WORKSPACE,
-      );
-      runtime.state.name = runtime.activeVaultMeta()?.name || runtime.state.name;
-      runtime.scheduleSave();
-      void runtime.persistStateNow(previousWorkspace);
-      runtime.applyTheme();
-      runtime.renderAll();
-      runtime.els.settingsModal.classList.add('hidden');
-      runtime.toast('Current vault reset');
+    if (e.target.closest('#resetAppSettingsBtn')) {
+      runtime.resetAppSettings();
       return;
     }
 
@@ -2445,8 +2421,6 @@ export function registerInteractions(runtime: EditorRuntime) {
       row.classList.toggle('checked', b.checked);
       runtime.scheduleSave();
     }
-    if (e.target === runtime.els.importFile && e.target.files[0])
-      runtime.importWorkspace(e.target.files[0]);
     if (e.target === runtime.els.imageFileInput && e.target.files[0]) {
       const id = runtime.activeImageBlockId;
       const file = e.target.files[0];

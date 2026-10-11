@@ -24,7 +24,7 @@ export type WorkspaceAction =
   | 'closeTab'
   | 'cancelPageOperations'
   | 'requestCloseSelectedWorkspace'
-  | 'exportWorkspace'
+  | 'resetAppSettings'
   | 'serializeMarkdownWorkspace'
   | 'workspaceFromMarkdown'
   | 'parseMarkdownBlocks'

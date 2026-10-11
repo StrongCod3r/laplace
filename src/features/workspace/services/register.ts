@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { APP_NAME, DEFAULT_VAULT_NAME, WORKSPACE_EXPORT_FILENAME } from './../../../app-identity';
+import { APP_NAME, DEFAULT_VAULT_NAME } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
 import { useWorkspaceStore } from '@/store/workspace.store';
@@ -2259,89 +2259,6 @@ export function registerWorkspace(runtime: EditorRuntime) {
     document.documentElement.style.setProperty('--tree-icon-size', `${size}px`);
   }
 
-  async function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(reader.error || new Error('Could not read attachment'));
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function exportWorkspace() {
-    try {
-      const exported = runtime.clone(runtime.state),
-        attachments = {};
-      for (const page of exported.pages || [])
-        for (const block of runtime.flattenBlocks(page.blocks || [])) {
-          const path = block.type === 'image' ? runtime.normalizeAttachmentPath(block.src) : '';
-          if (
-            !path ||
-            !path.startsWith(`${runtime.STORAGE_CONFIG.indexeddb.attachmentsDirectory}/`) ||
-            Object.prototype.hasOwnProperty.call(attachments, path)
-          )
-            continue;
-          const blob = await runtime.localStorageGateway.readAttachment(path);
-          if (blob) attachments[path] = await runtime.blobToDataUrl(blob);
-        }
-      if (Object.keys(attachments).length) exported.attachments = attachments;
-      const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = WORKSPACE_EXPORT_FILENAME;
-      a.click();
-      URL.revokeObjectURL(url);
-      runtime.toast('Workspace exported');
-    } catch (error) {
-      console.error('Could not export workspace attachments.', error);
-      runtime.toast('Could not export the workspace.');
-    }
-  }
-
-  function importWorkspace(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      void (async () => {
-        try {
-          const data = JSON.parse(reader.result);
-          if (!data.pages?.length) throw new Error();
-          const attachments =
-            data.attachments && typeof data.attachments === 'object' ? data.attachments : {};
-          delete data.attachments;
-          const attachmentRoot = `${runtime.STORAGE_CONFIG.indexeddb.attachmentsDirectory}/`;
-          for (const [rawPath, dataUrl] of Object.entries(attachments)) {
-            const path = runtime.normalizeAttachmentPath(rawPath);
-            if (
-              !path?.startsWith(attachmentRoot) ||
-              typeof dataUrl !== 'string' ||
-              !/^data:image\//i.test(dataUrl)
-            )
-              continue;
-            const blob = await (await fetch(dataUrl)).blob();
-            await runtime.localStorageGateway.writeAttachment(path, blob);
-          }
-          runtime.invalidateAttachmentList();
-          runtime.state = runtime.normalizeWorkspace(data);
-          runtime.state.name = runtime.activeVaultMeta()?.name || runtime.state.name;
-          runtime.scheduleSave();
-          runtime.applyTheme();
-          runtime.renderAll();
-          runtime.els.settingsModal.classList.add('hidden');
-          runtime.toast('Workspace imported');
-        } catch (error) {
-          console.error('Could not import workspace.', error);
-          runtime.toast('Invalid workspace file');
-        }
-      })();
-    };
-    reader.readAsText(file);
-    eTargetReset();
-    function eTargetReset() {
-      runtime.els.importFile.value = '';
-    }
-  }
-
   function insertTextAtSelection(root, text) {
     const sel = window.getSelection();
     if (!sel?.rangeCount) {
@@ -2448,9 +2365,6 @@ export function registerWorkspace(runtime: EditorRuntime) {
     init,
     syncFolderNoteSettings,
     applyTreeIconSizes,
-    blobToDataUrl,
-    exportWorkspace,
-    importWorkspace,
     insertTextAtSelection,
   });
 }

@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
+import { APP_SETTING_KEYS, APPEARANCE_KEYS, pickConfig } from '@/workspace-config';
 import type { EditorRuntime } from '@/features/editor/types';
 
 export function registerSettings(runtime: EditorRuntime) {
@@ -188,6 +189,28 @@ export function registerSettings(runtime: EditorRuntime) {
     }).join('');
   }
 
+  function resetAppSettings() {
+    Object.assign(
+      runtime.state,
+      runtime.clone(
+        pickConfig(runtime.DEFAULT_WORKSPACE, [
+          ...APP_SETTING_KEYS,
+          ...APPEARANCE_KEYS,
+          'shortcuts',
+        ]),
+      ),
+    );
+    runtime.state.shortcuts = runtime.normalizeWorkspaceShortcuts(runtime.DEFAULT_SHORTCUTS);
+    runtime.shortcutCaptureAction = null;
+    runtime.scheduleSave();
+    runtime.applyTheme();
+    runtime.renderAll();
+    runtime.syncPageFontSettings();
+    runtime.syncTreeIconSizeSettings();
+    runtime.renderShortcutSettings();
+    runtime.toast('App settings restored to defaults');
+  }
+
   function resetShortcuts() {
     runtime.shortcutCaptureAction = null;
     runtime.state.shortcuts = { ...runtime.DEFAULT_SHORTCUTS };
@@ -335,6 +358,7 @@ export function registerSettings(runtime: EditorRuntime) {
     setSettingsView,
     renderShortcutSettings,
     resetShortcuts,
+    resetAppSettings,
     shortcutActionForEvent,
     runShortcutAction,
     updateSettingsText,

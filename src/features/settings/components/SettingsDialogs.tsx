@@ -1,4 +1,4 @@
-import { APP_NAME, APP_DIRECTORY } from './../../../app-identity';
+import { APP_NAME } from './../../../app-identity';
 import { withModuleClasses } from '@/shared/lib/css-classes';
 import settingsStyles from './SettingsDialogs.module.css';
 import { memo } from 'preact/compat';
@@ -229,15 +229,6 @@ export const SettingsDialogs = memo(function SettingsDialogs() {
                   </output>
                 </div>
               </div>
-              <div className={withModuleClasses(styles, 'setting-row')}>
-                <div>
-                  <b>{'Notes folder'}</b>
-                  <div className={withModuleClasses(styles, 'muted')}>
-                    {`Markdown notes, images in .attachments, and app data in ${APP_DIRECTORY}`}
-                  </div>
-                </div>
-                <button id="settingsChooseDirectoryBtn">{'Choose folder'}</button>
-              </div>
               <div className={withModuleClasses(styles, 'setting-row hidden')} id="installAppRow">
                 <div>
                   <b>{`Install ${APP_NAME}`}</b>
@@ -249,33 +240,18 @@ export const SettingsDialogs = memo(function SettingsDialogs() {
               </div>
               <div className={withModuleClasses(styles, 'setting-row')}>
                 <div>
-                  <b>{'Export workspace'}</b>
+                  <b>{'Reset app settings'}</b>
                   <div className={withModuleClasses(styles, 'muted')}>
-                    {'Download a JSON backup'}
+                    {
+                      'Restore default preferences and keyboard shortcuts. Your notes and workspaces are kept.'
+                    }
                   </div>
                 </div>
-                <button id="exportBtn">{'Export'}</button>
+                <button id="resetAppSettingsBtn" type="button">
+                  {'Restore defaults'}
+                </button>
               </div>
-              <div className={withModuleClasses(styles, 'setting-row')}>
-                <div>
-                  <b>{'Import workspace'}</b>
-                  <div className={withModuleClasses(styles, 'muted')}>
-                    {'Restore from a JSON backup'}
-                  </div>
-                </div>
-                <button id="importBtn">{'Import'}</button>
-                <input id="importFile" type="file" accept="application/json" hidden />
-                <input id="imageFileInput" type="file" accept="image/*" hidden />
-              </div>
-              <div className={withModuleClasses(styles, 'setting-row danger')}>
-                <div>
-                  <b>{'Reset demo'}</b>
-                  <div className={withModuleClasses(styles, 'muted')}>
-                    {'Restore the initial workspace'}
-                  </div>
-                </div>
-                <button id="resetBtn">{'Reset'}</button>
-              </div>
+              <input id="imageFileInput" type="file" accept="image/*" hidden />
             </section>
             <section
               className={withModuleClasses(styles, 'settings-view hidden')}
