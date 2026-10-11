@@ -25,20 +25,26 @@ export default defineConfig({
     {
       name: `${APP_ID}-startup-skeleton`,
       configureServer(server) {
-        server.middlewares.use('/manifest.webmanifest', (_request, response) => {
-          response.setHeader('Content-Type', 'application/manifest+json');
-          response.end(appManifest());
-        });
+        server.middlewares.use(
+          `${server.config.base}manifest.webmanifest`,
+          (_request, response) => {
+            response.setHeader('Content-Type', 'application/manifest+json');
+            response.end(appManifest());
+          },
+        );
       },
-      transformIndexHtml(html) {
-        const startupFile = (name: string) =>
-          readFileSync(
-            new URL(`./src/app/components/StartupSkeleton.${name}`, import.meta.url),
-            'utf8',
-          );
-        return renderIdentity(html)
-          .replace('<!-- startup-styles -->', `<style>${startupFile('css')}</style>`)
-          .replace('<!-- startup-skeleton -->', startupFile('html'));
+      transformIndexHtml: {
+        order: 'pre',
+        handler(html) {
+          const startupFile = (name: string) =>
+            readFileSync(
+              new URL(`./src/app/components/StartupSkeleton.${name}`, import.meta.url),
+              'utf8',
+            );
+          return renderIdentity(html)
+            .replace('<!-- startup-styles -->', `<style>${startupFile('css')}</style>`)
+            .replace('<!-- startup-skeleton -->', startupFile('html'));
+        },
       },
     },
     {

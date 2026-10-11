@@ -637,5 +637,5 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 
 :global(#pageTree),
 :global(#pageTree) * {
-  cursor: default;
+  cursor: pointer;
 }

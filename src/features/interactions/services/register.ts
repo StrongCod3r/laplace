@@ -1634,7 +1634,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (e.button !== 1) return;
     if (
       e.target.closest(
-        '.editor-tab[data-tab-id], .dock-tab[data-tab-id], .page-tree-row [data-action="open-page"], [data-crumb-id], [data-crumb-folder-path], [data-home-page], [data-page-block-open], [data-page-link-open]',
+        '.editor-tab[data-tab-id], .dock-tab[data-tab-id], .page-tree-row [data-action="open-page"], .folder-tree-row [data-action="select-folder"], [data-crumb-id], [data-crumb-folder-path], [data-home-page], [data-page-block-open], [data-page-link-open]',
       )
     )
       e.preventDefault();
