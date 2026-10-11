@@ -2,11 +2,69 @@ import { APP_NAME } from './../../../app-identity';
 import { withModuleClasses } from '@/shared/lib/css-classes';
 import settingsStyles from './SettingsDialogs.module.css';
 import { memo } from 'preact/compat';
+import { useEffect, useRef } from 'preact/hooks';
+import type { TargetedPointerEvent } from 'preact';
 import { Icon } from '@/shared/components/Icon';
 
 const styles = settingsStyles;
 
 export const SettingsDialogs = memo(function SettingsDialogs() {
+  const windowRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+
+  function positionWindow(x: number, y: number) {
+    const panel = windowRef.current;
+    if (!panel) return;
+    const bounds = panel.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    panel.style.left = Math.max(12, Math.min(x, window.innerWidth - bounds.width - 12)) + 'px';
+    panel.style.top = Math.max(12, Math.min(y, window.innerHeight - bounds.height - 12)) + 'px';
+  }
+
+  useEffect(() => {
+    const panel = windowRef.current;
+    if (!panel) return;
+    const keepVisible = () => {
+      const bounds = panel.getBoundingClientRect();
+      if (bounds.width && bounds.height) positionWindow(bounds.x, bounds.y);
+    };
+    const observer = new ResizeObserver(keepVisible);
+    observer.observe(panel);
+    window.addEventListener('resize', keepVisible);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', keepVisible);
+    };
+  }, []);
+
+  function startWindowDrag(event: TargetedPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0 || (event.target as Element).closest('button')) return;
+    const bounds = windowRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    event.preventDefault();
+    drag.current = {
+      pointerId: event.pointerId,
+      x: event.clientX - bounds.x,
+      y: event.clientY - bounds.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.dataset.dragging = 'true';
+  }
+
+  function moveWindow(event: TargetedPointerEvent<HTMLDivElement>) {
+    const activeDrag = drag.current;
+    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+    positionWindow(event.clientX - activeDrag.x, event.clientY - activeDrag.y);
+  }
+
+  function stopWindowDrag(event: TargetedPointerEvent<HTMLDivElement>) {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+    delete event.currentTarget.dataset.dragging;
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
   return (
     <>
       <div id="shareModal" className={withModuleClasses(styles, 'modal-backdrop hidden')}>
@@ -50,12 +108,31 @@ export const SettingsDialogs = memo(function SettingsDialogs() {
           </div>
         </div>
       </div>
-      <div id="settingsModal" className={withModuleClasses(styles, 'modal-backdrop hidden')}>
-        <div className={withModuleClasses(styles, 'settings-panel panel')}>
+      <div id="settingsModal" className={withModuleClasses(styles, 'settings-window hidden')}>
+        <div
+          ref={windowRef}
+          className={withModuleClasses(styles, 'settings-panel')}
+          role="dialog"
+          aria-labelledby="settingsWindowTitle"
+          aria-modal="false"
+        >
           <div className={withModuleClasses(styles, 'settings-header')}>
-            <div className={withModuleClasses(styles, 'modal-title-row')}>
-              <h3>{'Settings'}</h3>
-              <button className={withModuleClasses(styles, 'icon-btn')} data-close-modal>
+            <div
+              className={withModuleClasses(styles, 'settings-title-row')}
+              onPointerDown={startWindowDrag}
+              onPointerMove={moveWindow}
+              onPointerUp={stopWindowDrag}
+              onPointerCancel={stopWindowDrag}
+              onLostPointerCapture={stopWindowDrag}
+              title="Drag to move Settings"
+            >
+              <h3 id="settingsWindowTitle">{'Settings'}</h3>
+              <button
+                className={withModuleClasses(styles, 'icon-btn')}
+                data-close-modal
+                aria-label="Close settings"
+                title="Close settings"
+              >
                 <Icon name="x" size="18" className={withModuleClasses(styles, '')} />
               </button>
             </div>

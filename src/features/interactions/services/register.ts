@@ -823,7 +823,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     const closeModalButton = e.target.closest?.('[data-close-modal]');
     if (closeModalButton) {
-      closeModalButton.closest('.modal-backdrop')?.classList.add('hidden');
+      closeModalButton.closest('.modal-backdrop, #settingsModal')?.classList.add('hidden');
       return;
     }
     if (e.target.classList.contains('modal-backdrop')) {
@@ -2778,7 +2778,9 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (e.key === 'Escape') {
       runtime.hideFloatingMenus();
       runtime.hideTextFormatToolbar();
-      document.querySelectorAll('.modal-backdrop').forEach((m) => m.classList.add('hidden'));
+      document
+        .querySelectorAll('.modal-backdrop, #settingsModal')
+        .forEach((m) => m.classList.add('hidden'));
       return;
     }
     const keyboardGraphNode = e.target.closest?.('[data-graph-page]');

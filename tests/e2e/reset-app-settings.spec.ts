@@ -1,3 +1,4 @@
+import type { WorkspaceDocument } from '../../src/features/workspace/types';
 import { expect, test, type Page } from '@playwright/test';
 
 async function documentState(page: Page) {
@@ -77,7 +78,7 @@ for (const local of [false, true]) {
         }
         if (local && reloaded) {
           // Markdown reloads generate fresh block IDs and normalize absent frontmatter.
-          const comparablePages = (pages) =>
+          const comparablePages = (pages: WorkspaceDocument['pages']) =>
             pages.map(({ frontmatter = [], blocks, ...note }) => ({
               ...note,
               frontmatter,
