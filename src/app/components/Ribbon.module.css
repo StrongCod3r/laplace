@@ -29,6 +29,7 @@
   display: grid;
   place-items: center;
   font-size: 18px;
+  text-decoration: none;
 }
 .ribbon-btn:hover {
   background: var(--hover);

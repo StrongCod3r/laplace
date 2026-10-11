@@ -94,6 +94,16 @@ export function Ribbon() {
         </button>
       </div>
       <div className={withModuleClasses(styles, 'ribbon-bottom')}>
+        <a
+          className={withModuleClasses(styles, 'ribbon-btn')}
+          href="https://github.com/strongcod3r/laplace"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Source code on GitHub"
+          aria-label="Source code on GitHub"
+        >
+          <Icon name="code-xml" />
+        </a>
         <button
           className={withModuleClasses(styles, 'ribbon-btn')}
           data-ribbon-action="settings"
