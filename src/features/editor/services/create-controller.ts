@@ -48,6 +48,7 @@ export function createWorkspaceController(): WorkspaceController {
     },
   };
   Object.defineProperties(runtime, {
+    confirmedPageDeletions: { value: new Set<string>() },
     gitOperationActive: { value: false, writable: true },
     htmlWithStyles: { value: (html: string) => withHtmlModuleClasses(uiStyles, html) },
     classWithStyles: { value: (classes: string) => withModuleClasses(uiStyles, classes) },
@@ -1278,7 +1279,13 @@ export function createWorkspaceController(): WorkspaceController {
     dispose: () => {
       if (lifecycle.disposed) return;
       runtime.flushHistoryPending();
-      if (activeVaultId && workspaceAccess === 'writable') void runtime.persistStateNow();
+      if (
+        runtime.saveTimer &&
+        activeVaultId &&
+        lastSyncedWorkspace &&
+        workspaceAccess === 'writable'
+      )
+        void runtime.persistStateNow();
       runtime.clearAttachmentObjectUrls();
       lifecycle.dispose();
       deleteConfirmResolver?.(false);

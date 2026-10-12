@@ -819,6 +819,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
         }
         await runtime.storageGateway.saveRegistry(runtime.vaultRegistry);
       }
+      runtime.lastSyncedWorkspace = runtime.clone(runtime.state);
+      runtime.confirmedPageDeletions.clear();
       runtime.setWorkspaceAccess('writable');
       for (const folder of runtime.state.folders || [])
         if (folder.path) await runtime.localStorageGateway.createFolder?.(folder.path);
@@ -1021,12 +1023,12 @@ export function registerWorkspace(runtime: EditorRuntime) {
         runtime.state.mainView = 'page';
       if (!Number.isFinite(runtime.state.sidebarWidth)) runtime.state.sidebarWidth = 276;
       if (!Number.isFinite(runtime.state.rightSidebarWidth)) runtime.state.rightSidebarWidth = 286;
-      if (permission === 'readwrite' && (await runtime.externalizeEmbeddedImages(runtime.state)))
-        await runtime.persistStateNow();
       runtime.initializeHistoryForVault(runtime.activeVaultId, { reset: true });
       runtime.lastSyncedWorkspace = runtime.clone(runtime.state);
       // Enable editing only after the destination has finished hydrating.
       runtime.setWorkspaceAccess(runtime.accessModeForPermission(permission));
+      if (permission === 'readwrite' && (await runtime.externalizeEmbeddedImages(runtime.state)))
+        await runtime.persistStateNow();
       runtime.applyTheme();
       runtime.renderAll();
       await runtime.refreshWorkspaceSelector();
@@ -1224,9 +1226,20 @@ export function registerWorkspace(runtime: EditorRuntime) {
       return;
     }
     try {
-      if (runtime.saveTimer) await runtime.persistStateNow();
-      runtime.state = await runtime.loadState(runtime.activeVaultId);
-      if (await runtime.externalizeEmbeddedImages(runtime.state)) await runtime.persistStateNow();
+      if (runtime.saveTimer && !(await runtime.persistStateNow()))
+        throw new Error('Could not save pending changes before refreshing the workspace.');
+      await runtime.storageWriteChain;
+      runtime.setWorkspaceAccess('checking');
+      const loaded = await runtime.loadState(runtime.activeVaultId);
+      if (runtime.lifecycle.disposed) return;
+      runtime.state = loaded;
+      const permission = await runtime.localStorageGateway.getDirectoryPermission?.();
+      runtime.setWorkspaceAccess(runtime.accessModeForPermission(permission));
+      if (
+        runtime.workspaceAccess === 'writable' &&
+        (await runtime.externalizeEmbeddedImages(runtime.state))
+      )
+        await runtime.persistStateNow();
       runtime.clearAttachmentObjectUrls();
       runtime.invalidateAttachmentList();
       runtime.initializeHistoryForVault(runtime.activeVaultId, { reset: true });
@@ -1234,6 +1247,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
       runtime.renderAll();
       runtime.toast('Notes refreshed from folder');
     } catch (error) {
+      if (runtime.lifecycle.disposed) return;
+      runtime.setWorkspaceAccess('blocked');
       console.error('Could not refresh Markdown notes.', error);
       runtime.toast(error?.message || 'Could not refresh notes.');
     }
@@ -1474,7 +1489,9 @@ export function registerWorkspace(runtime: EditorRuntime) {
           }
         }
         if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-          await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+          await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+            allowDeletes: true,
+          });
         await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
       });
       runtime.lastSyncedWorkspace = runtime.clone(snapshot);
@@ -1498,7 +1515,9 @@ export function registerWorkspace(runtime: EditorRuntime) {
               ? runtime.serializeMarkdownWorkspace(rollback)
               : null;
             if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+                allowDeletes: true,
+              });
             await runtime.storageGateway.saveWorkspace(vaultId, rollback);
           });
           runtime.lastSyncedWorkspace = runtime.clone(oldWorkspace);
@@ -1515,7 +1534,9 @@ export function registerWorkspace(runtime: EditorRuntime) {
             snapshot.markdownFilesInitialized =
               Boolean(markdownFiles) || snapshot.markdownFilesInitialized;
             if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+                allowDeletes: true,
+              });
             await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
           });
           runtime.lastSyncedWorkspace = runtime.clone(snapshot);
@@ -1626,6 +1647,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         const pagePath = rootFolderPathForPage(page);
         if (pagePath === folderPath || pagePath.startsWith(prefix)) deletedPageIds.add(page.id);
       }
+      for (const id of deletedPageIds) runtime.confirmedPageDeletions.add(id);
       if (deletedPageIds.has(runtime.state.currentPageId)) runtime.cancelPageOperations();
       runtime.state.pages = runtime.state.pages.filter((page) => !deletedPageIds.has(page.id));
       runtime.state.openTabs = (runtime.state.openTabs || []).filter(
@@ -1662,6 +1684,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
 
   async function loadState(vaultId = runtime.activeVaultId, { fromGit = false } = {}) {
     let workspace = await runtime.storageGateway.loadWorkspace(vaultId);
+    if (runtime.lifecycle.disposed)
+      throw new DOMException('Workspace loading cancelled.', 'AbortError');
     if (runtime.localStorageGateway.hasDirectory?.()) {
       const permission = await runtime.localStorageGateway.getDirectoryPermission?.();
       if (permission !== 'readwrite' && permission !== 'read')
@@ -1669,6 +1693,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
           'The selected workspace cannot be verified. Choose it again and grant access.',
         );
       const disk = await runtime.localStorageGateway.readMarkdownFiles();
+      if (runtime.lifecycle.disposed)
+        throw new DOMException('Workspace loading cancelled.', 'AbortError');
       const markdownFilesWithoutLegacyMetadata =
         permission === 'readwrite' && !fromGit
           ? runtime.removeLegacyAppFrontmatter(disk.files)
@@ -1692,6 +1718,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
       }
       if (permission === 'readwrite' && !fromGit) {
         await runtime.storageGateway.saveWorkspace(vaultId, runtime.clone(workspace));
+        if (runtime.lifecycle.disposed)
+          throw new DOMException('Workspace loading cancelled.', 'AbortError');
         if (markdownFilesWithoutLegacyMetadata && runtime.localStorageGateway.writeMarkdownFiles) {
           try {
             await runtime.localStorageGateway.writeMarkdownFiles(
@@ -1742,6 +1770,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
     const meta = runtime.vaultRegistry.vaults.find((v) => v.id === vaultId);
     parsed.name = meta?.name || parsed.name || 'Vault';
     runtime.lastSyncedWorkspace = runtime.clone(parsed);
+    runtime.confirmedPageDeletions.clear();
     return parsed;
   }
 
@@ -1749,10 +1778,38 @@ export function registerWorkspace(runtime: EditorRuntime) {
     runtime.lifecycle.clearTimeout(runtime.saveTimer);
     runtime.saveTimer = null;
     const vaultId = runtime.activeVaultId;
-    if (!vaultId) return Promise.resolve(false);
+    if (
+      !vaultId ||
+      !runtime.lastSyncedWorkspace ||
+      runtime.lifecycle.disposed ||
+      runtime.workspaceAccess !== 'writable' ||
+      runtime.gitOperationActive
+    )
+      return Promise.resolve(false);
+    const workspaceRef = runtime.state;
+    const locationKey = runtime.workspaceLocationKey();
+    const isCurrentDocument = () =>
+      runtime.state === workspaceRef &&
+      runtime.activeVaultId === vaultId &&
+      runtime.workspaceAccess === 'writable' &&
+      runtime.workspaceLocationKey() === locationKey;
+    const confirmedDeletions = new Set(runtime.confirmedPageDeletions);
     const snapshot = runtime.clone(runtime.state);
     return runtime
       .queueStorageWrite(async () => {
+        // A queued save belongs to the document and folder that requested it.
+        if (!isCurrentDocument()) return false;
+        const pageIds = new Set(snapshot.pages.map((page) => page.id));
+        const unexpectedRemoval = runtime.lastSyncedWorkspace.pages.some(
+          (page) =>
+            !pageIds.has(page.id) &&
+            !confirmedDeletions.has(page.id) &&
+            !previousWorkspaceForHistory,
+        );
+        if (unexpectedRemoval)
+          throw new Error(
+            'Save blocked: notes disappeared without a confirmed deletion. Reload the workspace.',
+          );
         if (runtime.localStorageGateway.hasDirectory?.()) {
           const permission = await runtime.localStorageGateway.getDirectoryPermission?.();
           if (permission !== 'readwrite') {
@@ -1765,7 +1822,9 @@ export function registerWorkspace(runtime: EditorRuntime) {
             return false;
           }
         }
+        if (!isCurrentDocument()) return false;
         await runtime.externalizeEmbeddedImages(snapshot, runtime.state);
+        if (!isCurrentDocument()) return false;
         const markdownFiles = runtime.localStorageGateway.hasDirectory?.()
           ? runtime.serializeMarkdownWorkspace(snapshot)
           : null;
@@ -1773,6 +1832,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
           markdownFiles && previousWorkspaceForHistory
             ? await runtime.prepareHistoryFolderChanges(previousWorkspaceForHistory, snapshot)
             : [];
+        if (!isCurrentDocument()) return false;
         if (markdownFiles) {
           snapshot.markdownFilesInitialized = true;
           runtime.state.markdownFilesInitialized = true;
@@ -1782,10 +1842,14 @@ export function registerWorkspace(runtime: EditorRuntime) {
           }
         }
         if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-          await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+          await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+            allowDeletes: true,
+          });
         if (foldersToRemove.length) await runtime.removeHistoryFolders(foldersToRemove);
+        if (!isCurrentDocument()) return false;
         await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
         runtime.lastSyncedWorkspace = runtime.clone(snapshot);
+        for (const id of confirmedDeletions) runtime.confirmedPageDeletions.delete(id);
         return true;
       })
       .catch(async (error) => {
@@ -1797,15 +1861,25 @@ export function registerWorkspace(runtime: EditorRuntime) {
           }
         }
         console.error(`Could not save workspace to ${runtime.storageProviderLabel()}`, error);
-        runtime.toast(`Could not save workspace to ${runtime.storageProviderLabel()}.`);
+        runtime.toast(
+          error?.message || `Could not save workspace to ${runtime.storageProviderLabel()}.`,
+        );
         return false;
       });
   }
 
   function persistViewStateNow() {
     const vaultId = runtime.activeVaultId;
-    if (!vaultId || runtime.workspaceAccess !== 'writable') return Promise.resolve(false);
+    if (
+      !vaultId ||
+      !runtime.lastSyncedWorkspace ||
+      runtime.lifecycle.disposed ||
+      runtime.workspaceAccess !== 'writable'
+    )
+      return Promise.resolve(false);
     if (runtime.saveTimer) return runtime.persistStateNow();
+    const workspaceRef = runtime.state;
+    const locationKey = runtime.workspaceLocationKey();
     const snapshot = runtime.clone(runtime.state);
     return runtime
       .queueStorageWrite(async () => {
@@ -1813,6 +1887,12 @@ export function registerWorkspace(runtime: EditorRuntime) {
           const permission = await runtime.localStorageGateway.getDirectoryPermission?.();
           if (permission !== 'readwrite') return false;
         }
+        if (
+          runtime.state !== workspaceRef ||
+          runtime.activeVaultId !== vaultId ||
+          runtime.workspaceLocationKey() !== locationKey
+        )
+          return false;
         await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
         if (runtime.lastSyncedWorkspace)
           runtime.lastSyncedWorkspace = {
@@ -2034,6 +2114,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
       await runtime.saveVaultRegistry();
       runtime.state = runtime.makeBlankWorkspace();
       runtime.state.name = name;
+      runtime.lastSyncedWorkspace = runtime.clone(runtime.state);
+      runtime.confirmedPageDeletions.clear();
       runtime.initializeHistoryForVault(runtime.activeVaultId, { reset: true });
       await runtime.persistStateNow();
       runtime.applyTheme();
@@ -2148,8 +2230,11 @@ export function registerWorkspace(runtime: EditorRuntime) {
 
   async function hydrateWorkspace() {
     runtime.vaultRegistry = await runtime.loadVaultRegistry();
+    if (runtime.lifecycle.disposed) return;
     runtime.activeVaultId = runtime.vaultRegistry.activeVaultId;
-    runtime.state = await runtime.loadState(runtime.activeVaultId);
+    const loaded = await runtime.loadState(runtime.activeVaultId);
+    if (runtime.lifecycle.disposed) return;
+    runtime.state = loaded;
     if (typeof runtime.state.sidebarOpen !== 'boolean') runtime.state.sidebarOpen = true;
     if (typeof runtime.state.rightSidebarOpen !== 'boolean') runtime.state.rightSidebarOpen = true;
     if (!['files', 'favorites', 'git'].includes(runtime.state.leftPanelMode))
@@ -2160,7 +2245,6 @@ export function registerWorkspace(runtime: EditorRuntime) {
       runtime.state.mainView = 'page';
     if (!Number.isFinite(runtime.state.sidebarWidth)) runtime.state.sidebarWidth = 276;
     if (!Number.isFinite(runtime.state.rightSidebarWidth)) runtime.state.rightSidebarWidth = 286;
-    if (await runtime.externalizeEmbeddedImages(runtime.state)) await runtime.persistStateNow();
     runtime.initializeHistoryForVault(runtime.activeVaultId, { reset: true });
     runtime.lastSyncedWorkspace = runtime.clone(runtime.state);
     await runtime.refreshWorkspaceSelector();
@@ -2204,8 +2288,6 @@ export function registerWorkspace(runtime: EditorRuntime) {
       if (runtime.lifecycle.disposed) return;
       await runtime.refreshWorkspaceSelector();
       if (runtime.lifecycle.disposed) return;
-      const permission = (await runtime.localStorageGateway.getDirectoryPermission?.()) || 'none';
-      runtime.setWorkspaceAccess(runtime.accessModeForPermission(permission));
       await runtime.hydrateWorkspace();
       if (runtime.lifecycle.disposed) return;
       const currentPermission =
@@ -2213,6 +2295,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
       const currentMode = runtime.accessModeForPermission(currentPermission);
       if (currentMode === 'blocked') throw new Error('Workspace permission is unavailable.');
       runtime.setWorkspaceAccess(currentMode);
+      if (currentMode === 'writable' && (await runtime.externalizeEmbeddedImages(runtime.state)))
+        await runtime.persistStateNow();
       if (currentMode === 'readonly')
         runtime.toast(
           'Workspace en solo lectura. Pulsa “Conceder escritura” para solicitar permiso y editar.',

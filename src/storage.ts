@@ -42,7 +42,7 @@ export interface StorageGateway {
   readMarkdownFiles?(options?: {
     trackFiles?: boolean;
   }): Promise<{ files: MarkdownFile[]; directories: string[] }>;
-  writeMarkdownFiles?(files: MarkdownFile[]): Promise<void>;
+  writeMarkdownFiles?(files: MarkdownFile[], options?: { allowDeletes?: boolean }): Promise<void>;
   writeAttachment(path: string, blob: Blob): Promise<string>;
   readAttachment(path: string): Promise<Blob | null>;
   deleteAttachment(path: string): Promise<void>;
@@ -860,7 +860,10 @@ class IndexedDbStorageGateway implements StorageGateway {
     );
   }
 
-  async writeMarkdownFiles(files: MarkdownFile[]): Promise<void> {
+  async writeMarkdownFiles(
+    files: MarkdownFile[],
+    { allowDeletes = false }: { allowDeletes?: boolean } = {},
+  ): Promise<void> {
     const normalizedFiles = files.map((file) => ({
       ...file,
       path: normalizeRelativePath(file.path),
@@ -890,6 +893,14 @@ class IndexedDbStorageGateway implements StorageGateway {
     const existing = this.knownMarkdownFiles
       ? { files: [...this.knownMarkdownFiles].map(([path, content]) => ({ path, content })) }
       : await this.readMarkdownFiles();
+    // Loading/migrating a workspace must never turn an incomplete list into deletions.
+    if (
+      !allowDeletes &&
+      existing.files.some((file) => !nextPaths.has(file.path.toLocaleLowerCase()))
+    )
+      throw new Error(
+        'Save blocked: local notes would be deleted without an explicit edit. Reload the workspace.',
+      );
     let changed = false;
     try {
       for (const file of normalizedFiles) {

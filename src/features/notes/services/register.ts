@@ -759,7 +759,7 @@ export function registerNotes(runtime: EditorRuntime) {
               await writer.close();
             }
           }
-          await runtime.localStorageGateway.writeMarkdownFiles(files);
+          await runtime.localStorageGateway.writeMarkdownFiles(files, { allowDeletes: true });
           snapshot.markdownFilesInitialized = true;
         }
         await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
@@ -780,6 +780,7 @@ export function registerNotes(runtime: EditorRuntime) {
           if (parentDirectory) {
             await runtime.localStorageGateway.writeMarkdownFiles(
               runtime.serializeMarkdownWorkspace(previous),
+              { allowDeletes: true },
             );
             for (const name of created)
               await parentDirectory.removeEntry(name, { recursive: true });
@@ -947,7 +948,9 @@ export function registerNotes(runtime: EditorRuntime) {
           }
         }
         if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-          await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+          await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+            allowDeletes: true,
+          });
         await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
       });
       runtime.lastSyncedWorkspace = runtime.clone(snapshot);
@@ -972,7 +975,9 @@ export function registerNotes(runtime: EditorRuntime) {
               ? runtime.serializeMarkdownWorkspace(rollback)
               : null;
             if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+                allowDeletes: true,
+              });
             await runtime.storageGateway.saveWorkspace(vaultId, rollback);
           });
           runtime.lastSyncedWorkspace = runtime.clone(oldWorkspace);
@@ -989,7 +994,9 @@ export function registerNotes(runtime: EditorRuntime) {
             snapshot.markdownFilesInitialized =
               Boolean(markdownFiles) || snapshot.markdownFilesInitialized;
             if (markdownFiles && runtime.localStorageGateway.writeMarkdownFiles)
-              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles);
+              await runtime.localStorageGateway.writeMarkdownFiles(markdownFiles, {
+                allowDeletes: true,
+              });
             await runtime.storageGateway.saveWorkspace(vaultId, snapshot);
           });
           runtime.lastSyncedWorkspace = runtime.clone(snapshot);
@@ -1013,6 +1020,7 @@ export function registerNotes(runtime: EditorRuntime) {
   }
 
   function removePagesFromWorkspace(ids) {
+    for (const id of ids) runtime.confirmedPageDeletions.add(id);
     if (ids.has(runtime.state.currentPageId)) runtime.cancelPageOperations();
     runtime.state.pages = runtime.state.pages.filter((p) => !ids.has(p.id));
     runtime.state.openTabs = (runtime.state.openTabs || []).filter(
