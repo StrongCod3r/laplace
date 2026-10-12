@@ -1345,6 +1345,8 @@ export function registerEditor(runtime: EditorRuntime) {
     if (selection.cellPosition) {
       const table = runtime.findBlock(selection.blockId);
       if (!table || table.type !== 'table') return;
+      table.tableRows[selection.cellPosition.row][selection.cellPosition.col] =
+        selection.cellBlock.text;
       runtime.setTableCellInline(
         table,
         selection.cellPosition.row,

@@ -1752,10 +1752,23 @@ export function registerMarkdown(runtime: EditorRuntime) {
   }
 
   function inlineSelectionForAnchor(anchor) {
-    const content = anchor?.closest('.block-content[contenteditable="true"]'),
+    const content = anchor?.closest(
+        '.block-content[contenteditable="true"],[data-table-cell][contenteditable="true"]',
+      ),
       row = content?.closest('.block-row[data-block-id]'),
       block = runtime.findBlock(row?.dataset.blockId);
-    if (!content || !block || !runtime.isTextLikeBlock(block)) return null;
+    const cellPosition = content?.matches('[data-table-cell]')
+      ? runtime.tableCellCoordinates(content)
+      : null;
+    if (
+      !content ||
+      !block ||
+      (cellPosition ? block.type !== 'table' : !runtime.isTextLikeBlock(block))
+    )
+      return null;
+    const cellBlock = cellPosition
+      ? runtime.tableCellInlineBlock(block, cellPosition.row, cellPosition.col)
+      : null;
     try {
       const range = document.createRange();
       range.selectNodeContents(anchor);
@@ -1767,6 +1780,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
         rect = range.getBoundingClientRect();
       return {
         blockId: block.id,
+        ...(cellPosition ? { cellPosition, cellBlock } : {}),
         start,
         end,
         content,
@@ -1910,6 +1924,8 @@ export function registerMarkdown(runtime: EditorRuntime) {
 
   function editHoveredLink() {
     const anchor = runtime.hoveredLinkAnchor;
+    const pane = anchor?.closest('.dock-pane[data-editor-group]');
+    if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
     runtime.hideLinkHoverMenu();
     const selection = runtime.inlineSelectionForAnchor(anchor);
     if (selection) {
