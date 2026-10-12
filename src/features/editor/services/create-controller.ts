@@ -638,12 +638,12 @@ export function createWorkspaceController(): WorkspaceController {
     'Mod+W',
   ]);
   const DEFAULT_WORKSPACE = {
-    name: "StrongCod3r's Space",
+    name: 'Default Space',
     theme: 'system',
     pageFont: 'system',
     treeIconSize: 14,
-    spellcheckEnabled: true,
-    showCustomPageIcons: true,
+    spellcheckEnabled: false,
+    showCustomPageIcons: false,
     showFilesAndTabIcons: true,
     showBreadcrumbIcons: false,
     folderNotesEnabled: true,

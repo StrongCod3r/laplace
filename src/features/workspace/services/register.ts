@@ -125,8 +125,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
       theme: runtime.state?.theme || 'system',
       pageFont: 'system',
       treeIconSize: 14,
-      spellcheckEnabled: true,
-      showCustomPageIcons: true,
+      spellcheckEnabled: false,
+      showCustomPageIcons: false,
       showFilesAndTabIcons: true,
       showBreadcrumbIcons: false,
       folderNotesEnabled: true,
@@ -306,8 +306,8 @@ export function registerWorkspace(runtime: EditorRuntime) {
           : 14),
     );
     parsed.pageFont = runtime.normalizePageFont(parsed.pageFont);
-    parsed.spellcheckEnabled = parsed.spellcheckEnabled !== false;
-    parsed.showCustomPageIcons = parsed.showCustomPageIcons !== false;
+    parsed.spellcheckEnabled = parsed.spellcheckEnabled === true;
+    parsed.showCustomPageIcons = parsed.showCustomPageIcons === true;
     parsed.showFilesAndTabIcons = parsed.showFilesAndTabIcons !== false;
     parsed.showBreadcrumbIcons = parsed.showBreadcrumbIcons === true;
     parsed.folderNotesEnabled = parsed.folderNotesEnabled !== false;
