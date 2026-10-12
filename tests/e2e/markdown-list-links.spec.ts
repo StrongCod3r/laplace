@@ -95,6 +95,11 @@ for (const kind of ['number', 'bullet'] as const) {
         )
         .toContain('[http://60fps.design](http://60fps.design/)');
       await page.reload();
+      // Reopen the saved note without depending on the asynchronous tab-state save.
+      await page
+        .locator('#pageTree [data-action="open-page"]')
+        .filter({ hasText: /^Links$/ })
+        .click();
       await check();
       const popup = page.waitForEvent('popup');
       await rows.first().locator('a[data-inline-link]').click();

@@ -1290,8 +1290,10 @@ export function registerMarkdown(runtime: EditorRuntime) {
                 `<mark class="inline-bg-${runtime.escapeHtml(format.value || '')}">`,
               )
             : wrapper[0];
-      add(format.start, { kind: 'open', rank: wrapper[0].length, value: opening });
-      add(format.end, { kind: 'close', rank: wrapper[0].length, value: wrapper[1] });
+      // Code delimiters belong inside a link label, never around its Markdown syntax.
+      const rank = format.type === 'code' ? 0 : wrapper[0].length;
+      add(format.start, { kind: 'open', rank, value: opening });
+      add(format.end, { kind: 'close', rank, value: wrapper[1] });
     }
     let out = '';
     for (let i = 0; i <= text.length; i++) {

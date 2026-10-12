@@ -452,12 +452,14 @@ export function registerTables(runtime: EditorRuntime) {
         .map((row) =>
           [...row.children]
             .filter((cell) => /^(TD|TH)$/.test(cell.tagName))
-            .map(runtime.htmlTableCellText),
+            .map((cell) => runtime.richHtmlInlinePayload(cell, { tableCell: true })),
         )
         .filter((row) => row.length);
       if (!rows.length) return null;
       const cols = Math.max(...rows.map((row) => row.length));
-      return rows.map((row) => Array.from({ length: cols }, (_, i) => String(row[i] ?? '')));
+      return rows.map((row) =>
+        Array.from({ length: cols }, (_, i) => row[i] || { text: '', links: [], formats: [] }),
+      );
     } catch {
       return null;
     }
@@ -519,7 +521,9 @@ export function registerTables(runtime: EditorRuntime) {
   function clipboardTableMatrix(data) {
     const htmlMatrix = runtime.tableMatrixFromHtml(data?.getData?.('text/html'));
     if (htmlMatrix?.length) return htmlMatrix;
-    return runtime.tableMatrixFromTsv(data?.getData?.('text/plain'));
+    return runtime
+      .tableMatrixFromTsv(data?.getData?.('text/plain'))
+      ?.map((row) => row.map((text) => ({ text, links: [], formats: [] })));
   }
 
   function pasteTableMatrixIntoCell(cell, data) {
@@ -531,7 +535,7 @@ export function registerTables(runtime: EditorRuntime) {
     if (!matrix?.length) return false;
     const width = Math.max(1, ...matrix.map((r) => r.length));
     const normalized = matrix.map((r) =>
-      Array.from({ length: width }, (_, i) => String(r[i] ?? '')),
+      Array.from({ length: width }, (_, i) => r[i] || { text: '', links: [], formats: [] }),
     );
     runtime.normalizeSimpleTableBlock(block);
     const currentCols = block.tableRows[0]?.length || 1;
@@ -549,8 +553,13 @@ export function registerTables(runtime: EditorRuntime) {
     runtime.normalizeSimpleTableBlock(block);
     normalized.forEach((sourceRow, ri) =>
       sourceRow.forEach((value, ci) => {
-        block.tableRows[point.row + ri][point.col + ci] = value;
-        block.tableCellInline[point.row + ri][point.col + ci] = null;
+        block.tableRows[point.row + ri][point.col + ci] = value.text;
+        const inline = {};
+        if (value.formats?.length) inline.inlineFormats = value.formats;
+        if (value.links?.length) inline.inlineLinks = value.links;
+        block.tableCellInline[point.row + ri][point.col + ci] = Object.keys(inline).length
+          ? inline
+          : null;
       }),
     );
 
@@ -621,6 +630,22 @@ export function registerTables(runtime: EditorRuntime) {
     } catch {}
     const row = document.querySelector(`.simple-table-block[data-block-id="${id}"]`);
     row?.classList.add('table-selected');
+    return true;
+  }
+
+  function deleteSelectedTable() {
+    if (!runtime.selectedTableBlockId || runtime.workspaceAccess !== 'writable') return false;
+    const location = runtime.findBlockLocation(runtime.selectedTableBlockId);
+    const page = runtime.currentPage();
+    if (!page || location?.block?.type !== 'table') return false;
+    location.blocks.splice(location.index, 1);
+    runtime.ensureBlockList(location.blocks);
+    const next = location.blocks[Math.min(location.index, location.blocks.length - 1)];
+    runtime.clearSelectedTable();
+    runtime.clearTableCellSelection();
+    runtime.scheduleSave();
+    runtime.renderBlocks(page);
+    runtime.focusBlock(next.id, 0, runtime.els.blockEditor);
     return true;
   }
 
@@ -876,6 +901,7 @@ export function registerTables(runtime: EditorRuntime) {
     clearSelectedTableCells,
     clearSelectedTable,
     selectSimpleTable,
+    deleteSelectedTable,
     markdownTableCell,
     simpleTableMarkdown,
     simpleTableClipboardHtml,

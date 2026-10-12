@@ -2108,6 +2108,12 @@ export function registerEditor(runtime: EditorRuntime) {
 
     const content = e.target.closest?.('.block-content');
     if (content) {
+      const richHtml = String(e.clipboardData?.getData('text/html') || '');
+      // Preserve table structure and cell formatting before interpreting fallback text or links.
+      if (/<table[\s>]/i.test(richHtml) && runtime.pasteRichHtmlIntoBlock(content, richHtml)) {
+        e.preventDefault();
+        return;
+      }
       const linkPayload = runtime.clipboardLinkPayload(e.clipboardData);
       if (linkPayload && runtime.pasteLinkIntoBlock(content, linkPayload)) {
         e.preventDefault();
@@ -2126,7 +2132,6 @@ export function registerEditor(runtime: EditorRuntime) {
         e.preventDefault();
         return;
       }
-      const richHtml = String(e.clipboardData?.getData('text/html') || '');
       if (richHtml && runtime.pasteRichHtmlIntoBlock(content, richHtml)) {
         e.preventDefault();
         return;

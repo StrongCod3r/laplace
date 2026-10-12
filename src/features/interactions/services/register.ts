@@ -2665,6 +2665,11 @@ export function registerInteractions(runtime: EditorRuntime) {
         return;
       }
     }
+    if (runtime.selectedTableBlockId && e.key === 'Delete') {
+      e.preventDefault();
+      runtime.deleteSelectedTable();
+      return;
+    }
     if (runtime.selectedTableBlockId && e.key === 'Escape') {
       e.preventDefault();
       runtime.clearSelectedTable();
