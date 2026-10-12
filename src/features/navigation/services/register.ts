@@ -290,33 +290,34 @@ export function registerNavigation(runtime: EditorRuntime) {
   }
 
   function renderAll() {
-    runtime.applyPageFont();
-    runtime.syncCustomPageIconSettings();
-    runtime.syncFilesAndTabIconSettings();
-    runtime.syncBreadcrumbIconSettings();
-    runtime.syncFolderNoteSettings();
-    const docked =
-      runtime.state.mainView === 'page' &&
-      runtime.state.currentPageId !== '__home__' &&
-      runtime.editorGroups(runtime.state.editorLayout).length > 1;
-    runtime.els.editorTabs.parentElement.classList.toggle('docked', docked);
-    runtime.renderWorkspaceSelector();
-    runtime.renderVaultSelector();
-    runtime.renderSidebar();
+    // Normalize tabs and commit chrome before DOM adapters query the tree/selectors.
     runtime.renderTabs();
-    runtime.trackNavigationLocation();
-    if (runtime.state.mainView === 'attachments') runtime.renderAttachmentsView();
-    else if (runtime.state.mainView === 'graph') runtime.renderGraphView();
-    else if (runtime.state.currentPageId === '__home__') runtime.renderHome();
-    else if (docked) runtime.renderDockLayout();
-    else runtime.renderPage();
-    runtime.renderRightSidebar();
-    runtime.updateWorkspaceChrome();
-    runtime.syncNavigationButtons();
-    runtime.syncWorkspaceEditorAccess();
-    runtime.syncSpellcheckSettings();
-
-    runtime.publish();
+    runtime.deferPublication(() => {
+      runtime.applyPageFont();
+      runtime.syncCustomPageIconSettings();
+      runtime.syncFilesAndTabIconSettings();
+      runtime.syncBreadcrumbIconSettings();
+      runtime.syncFolderNoteSettings();
+      const docked =
+        runtime.state.mainView === 'page' &&
+        runtime.state.currentPageId !== '__home__' &&
+        runtime.editorGroups(runtime.state.editorLayout).length > 1;
+      runtime.els.editorTabs.parentElement.classList.toggle('docked', docked);
+      runtime.renderWorkspaceSelector();
+      runtime.renderVaultSelector();
+      runtime.renderSidebar();
+      runtime.trackNavigationLocation();
+      if (runtime.state.mainView === 'attachments') runtime.renderAttachmentsView();
+      else if (runtime.state.mainView === 'graph') runtime.renderGraphView();
+      else if (runtime.state.currentPageId === '__home__') runtime.renderHome();
+      else if (docked) runtime.renderDockLayout();
+      else runtime.renderPage();
+      runtime.renderRightSidebar();
+      runtime.updateWorkspaceChrome();
+      runtime.syncNavigationButtons();
+      runtime.syncWorkspaceEditorAccess();
+      runtime.syncSpellcheckSettings();
+    });
   }
 
   function renderTabs() {
@@ -402,8 +403,6 @@ export function registerNavigation(runtime: EditorRuntime) {
         .querySelector('.editor-tab.active')
         ?.scrollIntoView({ block: 'nearest', inline: 'nearest' }),
     );
-
-    runtime.publish();
   }
 
   function createTab(pageId, activate = true, groupId = runtime.state.activeEditorGroupId) {
@@ -458,7 +457,7 @@ export function registerNavigation(runtime: EditorRuntime) {
         runtime.cancelPageOperations();
       runtime.state.activeTabId = tab.id;
       runtime.state.mainView = 'graph';
-      runtime.scheduleSave();
+      runtime.scheduleSave('view');
       runtime.renderAll();
       return;
     }
@@ -467,7 +466,7 @@ export function registerNavigation(runtime: EditorRuntime) {
         runtime.cancelPageOperations();
       runtime.state.activeTabId = tab.id;
       runtime.state.mainView = 'attachments';
-      runtime.scheduleSave();
+      runtime.scheduleSave('view');
       runtime.renderAll();
       return;
     }
@@ -481,7 +480,7 @@ export function registerNavigation(runtime: EditorRuntime) {
     runtime.state.mainView = 'page';
     runtime.state.activeTabId = tab.id;
     runtime.state.currentPageId = tab.pageId;
-    runtime.scheduleSave();
+    runtime.scheduleSave('view');
     runtime.renderAll();
   }
 

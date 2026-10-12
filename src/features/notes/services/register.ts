@@ -12,34 +12,7 @@ export function registerNotes(runtime: EditorRuntime) {
       .forEach((btn) =>
         btn.classList.toggle('active', btn.dataset.rightMode === runtime.state.rightPanelMode),
       );
-    if (runtime.state.mainView === 'attachments') {
-      runtime.publish();
-      return;
-    }
-    if (runtime.state.mainView === 'graph') {
-      const graph = runtime.buildPageGraph();
-      runtime.publish();
-      return;
-    }
-    if (runtime.state.currentPageId === '__home__') {
-      runtime.publish();
-      return;
-    }
-    const page = runtime.currentPage();
-    if (!page) return;
-    if (runtime.state.rightPanelMode === 'backlinks') {
-      const linked = runtime.pagesLinkingTo(page.id);
-      const backlinkEmpty = runtime.htmlWithStyles(
-        `<div class="right-empty compact"><span>No backlinks yet.</span><small>Add a Link to page block from another note.</small></div>`,
-      );
-      runtime.publish();
-      return;
-    }
-    const heads = runtime
-      .flattenBlocks(page.blocks || [])
-      .filter((b) => ['h1', 'h2', 'h3'].includes(b.type) && (b.text || '').trim());
-    runtime.publish();
-
+    // The store builds the outline/backlinks; do not calculate them twice.
     runtime.publish();
   }
 
@@ -1121,7 +1094,7 @@ export function registerNotes(runtime: EditorRuntime) {
     runtime.state.mainView = 'page';
     if (newTab) runtime.createTab(id, true);
     else runtime.replaceActiveTab(id);
-    runtime.scheduleSave();
+    runtime.scheduleSave('view');
     runtime.renderAll();
   }
 

@@ -181,11 +181,12 @@ export function registerHistory(runtime: EditorRuntime) {
         runtime.restoreSynchronizedWorkspace();
       return;
     }
-    runtime.recordHistory(mode);
+    // Navigation changes view state, so it must not clone the vault into undo history.
+    if (mode !== 'view') runtime.recordHistory(mode);
     runtime.lifecycle.clearTimeout(runtime.saveTimer);
     runtime.saveTimer = runtime.lifecycle.timeout(runtime.persistStateNow, 120);
 
-    runtime.publish();
+    if (mode !== 'view') runtime.publish();
   }
 
   async function undoWorkspace() {

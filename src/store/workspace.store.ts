@@ -292,11 +292,12 @@ export function publishWorkspace(
     Math.ceil(runtime.attachmentListItems.length / runtime.ATTACHMENT_GALLERY_PAGE_SIZE),
   );
   const galleryPage = Math.max(0, Math.min(runtime.attachmentGalleryPage, pageCount - 1));
-  const referencesByAttachment = attachmentReferences(
-    document.pages,
-    runtime.attachmentListItems,
-    (path) => runtime.normalizeAttachmentPath(path),
-  );
+  const referencesByAttachment =
+    document.mainView === 'attachments'
+      ? attachmentReferences(document.pages, runtime.attachmentListItems, (path) =>
+          runtime.normalizeAttachmentPath(path),
+        )
+      : (new Map() as ReturnType<typeof attachmentReferences>);
   const gallery: GalleryModel = {
     items: runtime.attachmentListItems
       .slice(

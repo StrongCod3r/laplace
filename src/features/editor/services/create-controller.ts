@@ -30,11 +30,21 @@ import { registerCommands } from '@/features/commands/services/register';
 
 export function createWorkspaceController(): WorkspaceController {
   const lifecycle = new ControllerLifecycle();
+  let publicationDepth = 0;
   const runtime: EditorRuntime = {
     lifecycle,
     publish: () => {
-      if (!lifecycle.disposed)
+      if (!lifecycle.disposed && publicationDepth === 0)
         publishWorkspace(state, workspaceAccess, workspaceLocations, activeVaultId, runtime);
+    },
+    deferPublication: (update) => {
+      publicationDepth++;
+      try {
+        update();
+      } finally {
+        publicationDepth--;
+        runtime.publish();
+      }
     },
   };
   Object.defineProperties(runtime, {

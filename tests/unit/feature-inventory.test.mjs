@@ -10,7 +10,7 @@ test('every migrated algorithm is registered and its runtime dependencies exist'
   const expected = Object.values(inventory.features).flat();
   assert.equal(expected.length, inventory.total);
   assert.equal(new Set(expected).size, inventory.total);
-  const available = new Set([...expected, 'lifecycle', 'publish']);
+  const available = new Set([...expected, 'lifecycle', 'publish', 'deferPublication']);
   const controller = ts.createSourceFile(
     'controller.ts',
     readFileSync(

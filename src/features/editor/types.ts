@@ -42,6 +42,7 @@ export interface WorkspaceController {
 export interface EditorRuntime {
   lifecycle: ControllerLifecycle;
   publish(): void;
+  deferPublication(update: () => void): void;
   selectImageBlock?: (id: string) => boolean;
   clearSelectedImageBlock?: () => void;
   copySelectedImageBlockToClipboard?: (event: ClipboardEvent) => boolean;
