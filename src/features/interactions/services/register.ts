@@ -4063,10 +4063,11 @@ export function registerInteractions(runtime: EditorRuntime) {
       ? runtime.folderNoteFolderForPage(page)
       : null;
     if (folderNote) {
+      // The folder lives in its parent; the Markdown note lives inside the folder.
       const folderConflict = runtime.directoryNameConflict(
         title,
         runtime.folderParentPath(folderNote.path),
-        { pageId: page.id, folderId: folderNote.id, checkFolders: false },
+        { folderId: folderNote.id, checkPages: false },
       );
       if (folderConflict) return folderConflict;
       return runtime.directoryNameConflict(title, folderNote.path, {

@@ -504,25 +504,17 @@ export function registerNotes(runtime: EditorRuntime) {
       runtime.toast('This note is already a folder.');
       return false;
     }
-    const name = String(page.title || 'Untitled'),
-      folderPath = runtime.implicitPageFolderPath(page);
-    const validationError = runtime.validateFilesystemName(name, 3);
-    if (validationError) {
-      runtime.toast(validationError);
-      return false;
-    }
-    const conflict = runtime.directoryNameConflict(name, folderPath, {
-      pageId: page.id,
-      checkPages: false,
-    });
-    if (conflict) {
-      runtime.toast(
-        conflict.kind === 'note'
-          ? `A note named "${conflict.name}" already exists in that folder.`
-          : `A folder named "${conflict.name}" already exists in that folder.`,
+    const originalName = String(page.title || 'Untitled'),
+      parentPath = runtime.pageFolderPath(page),
+      name = runtime.uniqueDirectoryName(
+        originalName,
+        parentPath,
+        { checkPages: false },
+        3,
+        'suffix',
       );
-      return false;
-    }
+    if (!name) return false;
+    const folderPath = [parentPath, name].filter(Boolean).join('/');
     const workspaceRef = runtime.state;
     if (
       !(await runtime.askDeleteConfirmation(
@@ -538,15 +530,17 @@ export function registerNotes(runtime: EditorRuntime) {
       runtime.gitOperationActive ||
       runtime.workspaceLocationSwitching ||
       runtime.pageById(pageId) !== page ||
-      runtime.implicitPageFolderPath(page) !== folderPath ||
+      String(page.title || 'Untitled') !== originalName ||
+      runtime.pageFolderPath(page) !== parentPath ||
       runtime.representedFolderForPage(page) ||
-      runtime.directoryNameConflict(name, folderPath, { pageId: page.id, checkPages: false })
+      runtime.directoryNameConflict(name, parentPath, { checkPages: false })
     )
       return false;
     const folder = runtime.ensureFolderEntries(folderPath);
     if (!folder) return false;
     const parent = page.parentId ? runtime.pageById(page.parentId) : null,
       children = runtime.childrenOf(page.id).slice();
+    page.title = name;
     page.parentId = null;
     page.folderId = folder.id;
     page.folderNote = runtime.state.folderNotesEnabled;
