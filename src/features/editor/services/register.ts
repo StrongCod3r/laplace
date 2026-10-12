@@ -3,6 +3,70 @@
 import type { EditorRuntime } from '@/features/editor/types';
 
 export function registerEditor(runtime: EditorRuntime) {
+  let inlineSelectionScrollPending = false;
+
+  function inlineSelectionViewportRect(selection = runtime.inlineSelectionState) {
+    const content = selection?.content;
+    if (!content?.isConnected) return null;
+    const range = document.createRange();
+    const start = runtime.textNodePointForOffset(content, selection.start);
+    const end = runtime.textNodePointForOffset(content, selection.end);
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    const clip = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    for (let parent = content.parentElement; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      const rect = parent.getBoundingClientRect();
+      if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+        clip.left = Math.max(clip.left, rect.left + parent.clientLeft);
+        clip.right = Math.min(clip.right, rect.left + parent.clientLeft + parent.clientWidth);
+      }
+      if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+        clip.top = Math.max(clip.top, rect.top + parent.clientTop);
+        clip.bottom = Math.min(clip.bottom, rect.top + parent.clientTop + parent.clientHeight);
+      }
+    }
+    const visible = [...range.getClientRects()]
+      .map((rect) => ({
+        left: Math.max(rect.left, clip.left),
+        right: Math.min(rect.right, clip.right),
+        top: Math.max(rect.top, clip.top),
+        bottom: Math.min(rect.bottom, clip.bottom),
+      }))
+      .filter((rect) => rect.right > rect.left && rect.bottom > rect.top);
+    if (!visible.length) return null;
+    const rect = {
+      left: Math.min(...visible.map((rect) => rect.left)),
+      right: Math.max(...visible.map((rect) => rect.right)),
+      top: Math.min(...visible.map((rect) => rect.top)),
+      bottom: Math.max(...visible.map((rect) => rect.bottom)),
+    };
+    return { ...rect, width: rect.right - rect.left, height: rect.bottom - rect.top };
+  }
+
+  function onInlineSelectionScroll(event) {
+    const selection = runtime.inlineSelectionState;
+    if (
+      !selection ||
+      inlineSelectionScrollPending ||
+      (event.target !== document && !event.target?.contains?.(selection.content))
+    )
+      return;
+    inlineSelectionScrollPending = true;
+    runtime.lifecycle.frame(() => {
+      inlineSelectionScrollPending = false;
+      const rect = runtime.inlineSelectionViewportRect();
+      const panel = runtime.standaloneLinkEditorOpen
+        ? runtime.els.linkEditPanel
+        : runtime.els.textFormatToolbar;
+      if (!panel || !runtime.inlineSelectionState) return;
+      panel.classList.toggle('hidden', !rect);
+      if (!rect) return;
+      runtime.inlineSelectionState.rect = rect;
+      if (runtime.standaloneLinkEditorOpen) runtime.positionLinkEditPanel(rect);
+      else runtime.positionTextFormatToolbar(rect);
+    });
+  }
   function renderPage() {
     runtime.els.editorDock?.classList.add('hidden');
     runtime.bindEditorElements(null);
@@ -1117,6 +1181,11 @@ export function registerEditor(runtime: EditorRuntime) {
   function positionTextFormatToolbar(rect = runtime.inlineSelectionState?.rect) {
     const toolbar = runtime.els.textFormatToolbar;
     if (!toolbar || !rect || toolbar.classList.contains('hidden')) return;
+    rect = runtime.inlineSelectionViewportRect();
+    if (!rect) {
+      toolbar.classList.add('hidden');
+      return;
+    }
     const box = toolbar.getBoundingClientRect(),
       margin = 8;
     let left = rect.left + (rect.width - box.width) / 2;
@@ -2306,6 +2375,8 @@ export function registerEditor(runtime: EditorRuntime) {
   }
 
   Object.assign(runtime, {
+    inlineSelectionViewportRect,
+    onInlineSelectionScroll,
     renderPage,
     renderBlocks,
     syncImageCropAspectChecks,

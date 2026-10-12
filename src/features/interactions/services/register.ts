@@ -113,6 +113,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       document,
       'scroll',
       (e) => {
+        runtime.onInlineSelectionScroll(e);
         if (e.target?.matches?.('[data-code-editor]')) runtime.syncCodeScroll(e.target);
         if (e.target?.matches?.('#editorView, .dock-scroll'))
           runtime.captureEditorScrollPosition(e.target);
