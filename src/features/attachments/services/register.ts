@@ -12,6 +12,8 @@ export function registerAttachments(runtime: EditorRuntime) {
   let imageViewerOpenGeneration = 0;
   let selectedImageBlockId = null;
   let imageBlockClipboard = null;
+  let imageBlockClipboardToken = null;
+  const imageBlockClipboardType = 'application/x-laplace-image-block';
   let attachmentCleanupRunning = false;
 
   function clearSelectedImageBlock() {
@@ -55,9 +57,13 @@ export function registerAttachments(runtime: EditorRuntime) {
 
   function setImageBlockClipboardData(event, block) {
     imageBlockClipboard = runtime.clone(block);
+    imageBlockClipboardToken = runtime.uid('clipboard');
     event?.preventDefault?.();
     const alt = String(block.alt || block.caption || 'Image');
     const source = String(block.src || '');
+    try {
+      event?.clipboardData?.setData?.(imageBlockClipboardType, imageBlockClipboardToken);
+    } catch {}
     try {
       event?.clipboardData?.setData?.('text/plain', source ? `![${alt}](${source})` : alt);
     } catch {}
@@ -111,6 +117,8 @@ export function registerAttachments(runtime: EditorRuntime) {
     const editor = runtime.els.blockEditor;
     if (
       !imageBlockClipboard ||
+      !imageBlockClipboardToken ||
+      event.clipboardData?.getData(imageBlockClipboardType) !== imageBlockClipboardToken ||
       runtime.workspaceAccess !== 'writable' ||
       !editor?.contains?.(event.target)
     )
@@ -534,14 +542,6 @@ export function registerAttachments(runtime: EditorRuntime) {
 
     const source = runtime.normalizeAttachmentPath(attachment.path);
     const alt = attachment.name.replace(/\.[^.]+$/, '') || 'Image';
-    imageBlockClipboard = {
-      id: runtime.uid('b'),
-      type: 'image',
-      src: source,
-      caption: '',
-      alt,
-    };
-
     try {
       const escapedPath = runtime.markdownEscapeLinkUrl(runtime.markdownAssetPath(source));
       const markdown = `![${runtime.markdownEscapeLinkLabel(alt)}](${escapedPath})`;

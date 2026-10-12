@@ -800,13 +800,20 @@ export function registerEditor(runtime: EditorRuntime) {
     if (!runtime.activePageLinkBlockId) return;
     const list = runtime.els.blockMenu.querySelector('[data-page-link-picker-list]');
     if (!list) return;
-    const key = runtime.wikiTitleKey(query);
-    const currentId = runtime.currentPage()?.id;
+    const search = query.trim();
+    const inCurrentFolder = search.startsWith('./');
+    const key = runtime.wikiTitleKey(inCurrentFolder ? search.slice(2) : search);
+    const currentPage = runtime.currentPage();
+    const currentId = currentPage?.id;
+    const currentFolder = runtime.pageFolderPath(currentPage);
     const pageLocation = (page) => runtime.pageFolderPath(page) || 'Vault root';
     const pages = runtime.state.pages
       .filter((page) => {
         if (page.id === currentId) return false;
-        const searchable = `${page.title || 'Untitled'} ${pageLocation(page)}`;
+        if (inCurrentFolder && runtime.pageFolderPath(page) !== currentFolder) return false;
+        const searchable = inCurrentFolder
+          ? page.title || 'Untitled'
+          : `${page.title || 'Untitled'} ${pageLocation(page)}`;
         return !key || runtime.wikiTitleKey(searchable).includes(key);
       })
       .sort(
@@ -865,13 +872,17 @@ export function registerEditor(runtime: EditorRuntime) {
   }
 
   function setPageLinkTarget(blockId, pageId) {
-    const block = runtime.findBlock(blockId),
+    const location = runtime.findBlockLocation(blockId),
+      block = location?.block,
       target = runtime.pageById(pageId);
     if (!block || block.type !== 'page-link' || !target) return;
     block.pageId = target.id;
+    const next = runtime.newTextBlock();
+    location.blocks.splice(location.index + 1, 0, next);
     runtime.scheduleSave();
     runtime.hideFloatingMenus();
     runtime.renderBlocks(runtime.currentPage());
+    runtime.focusBlock(next.id, 0, runtime.els.blockEditor);
   }
 
   function isListBlock(block) {
