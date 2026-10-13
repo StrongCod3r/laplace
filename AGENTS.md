@@ -91,6 +91,8 @@ Important historical regression: enabling writes before loading finished and sav
 
 ## Editor behaviors to preserve
 
+The inline emoji picker requires a letter immediately after `:` (for example, `:s`). A bare colon or whitespace within the token must not open the picker; returning to either state must hide it.
+
 ### Clipboard and tables
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.

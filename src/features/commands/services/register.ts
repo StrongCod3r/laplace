@@ -17,11 +17,11 @@ export function registerCommands(runtime: EditorRuntime) {
       return;
     }
     const query = before.slice(colon + 1);
-    if (query.length > 28 || /[\s:/\\]/.test(query)) {
+    if (!/^[a-z]/i.test(query) || query.length > 28 || /[\s:/\\]/.test(query)) {
       if (runtime.activeEmojiBlockId === b.id) runtime.hideEmojiMenu();
       return;
     }
-    // Avoid triggering inside common URL schemes while still allowing normal prose such as "status:".
+    // Require a letter after the colon and avoid triggering inside common URL schemes.
     const prefix = before.slice(Math.max(0, colon - 8), colon).toLowerCase();
     if (/https?$/.test(prefix)) {
       runtime.hideEmojiMenu();
