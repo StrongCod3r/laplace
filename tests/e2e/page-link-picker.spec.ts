@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 for (const folder of ['', 'Docs']) {
-  test(`Link to page ./ filters direct siblings in ${folder || 'the vault root'}`, async ({ page }) => {
+  test(`Link to page ./ includes descendant folder notes in ${folder || 'the vault root'}`, async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       Object.defineProperty(window, 'showDirectoryPicker', {
         configurable: true,
@@ -14,9 +16,16 @@ for (const folder of ['', 'Docs']) {
     await page.evaluate(async () => {
       const root = await navigator.storage.getDirectory();
       for (const path of [
-        'Root source.md', 'Shared root.md', 'Other root.md',
-        'Docs/Docs source.md', 'Docs/Shared sibling.md', 'Docs/Other sibling.md',
-        'Docs/Nested/Shared nested.md', 'Elsewhere/Shared outside.md',
+        'Root source.md',
+        'Shared root.md',
+        'Other root.md',
+        'Docs/Docs source.md',
+        'Docs/Shared sibling.md',
+        'Docs/Other sibling.md',
+        'Docs/Nested/Shared nested.md',
+        'Docs/Nested/Nested.md',
+        'DocsExtra/Shared prefix outside.md',
+        'Elsewhere/Shared outside.md',
       ]) {
         const parts = path.split('/');
         const name = parts.pop()!;
@@ -30,31 +39,56 @@ for (const folder of ['', 'Docs']) {
       }
     });
     await page.locator('#chooseDirectoryBtn').click();
-    await expect(page.locator('#pageTree .page-tree-row')).toHaveCount(8);
+    await expect(page.locator('#pageTree .page-tree-row')).toHaveCount(9);
     await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);
-    await page.locator('#pageTree .tree-page-btn').filter({
-      hasText: folder ? 'Docs source' : 'Root source',
-    }).click();
+    await page
+      .locator('#pageTree .tree-page-btn')
+      .filter({
+        hasText: folder ? 'Docs source' : 'Root source',
+      })
+      .click();
     await page.locator('#blockEditor .block-content').first().fill('/');
     await page.locator('[data-slash-type="page-link"]').click();
     const search = page.locator('[data-page-link-search]');
     const titles = page.locator('[data-page-link-pick] .page-link-picker-title');
     await search.fill('./');
-    await expect(titles).toHaveText(folder
-      ? ['Other sibling', 'Shared sibling']
-      : ['Other root', 'Shared root']);
+    await expect(titles).toHaveText(
+      folder
+        ? ['Other sibling', 'Shared sibling', 'Nested', 'Shared nested']
+        : [
+            'Docs source',
+            'Other sibling',
+            'Shared sibling',
+            'Nested',
+            'Shared nested',
+            'Shared prefix outside',
+            'Shared outside',
+            'Other root',
+            'Shared root',
+          ],
+    );
     await search.fill('./shared');
-    await expect(titles).toHaveText([folder ? 'Shared sibling' : 'Shared root']);
+    await expect(titles).toHaveText(
+      folder
+        ? ['Shared sibling', 'Shared nested']
+        : [
+            'Shared sibling',
+            'Shared nested',
+            'Shared prefix outside',
+            'Shared outside',
+            'Shared root',
+          ],
+    );
+    await search.fill('./Nested/');
+    await expect(titles).toHaveText(['Nested', 'Shared nested']);
     await search.fill('./missing');
     await expect(titles).toHaveCount(0);
     await expect(page.locator('.page-link-picker-empty')).toBeVisible();
     await search.fill('Shared');
-    await expect(titles).toHaveCount(4);
-    await search.fill('./shared');
+    await expect(titles).toHaveCount(5);
+    await search.fill('./Nested/Nested');
     await search.press('Enter');
-    await expect(page.locator('#blockEditor [data-page-link-open]')).toHaveText(
-      folder ? 'Shared sibling' : 'Shared root',
-    );
+    await expect(page.locator('#blockEditor [data-page-link-open]')).toHaveText('Nested');
     await expect(page.locator('#blockEditor .block-content').last()).toBeFocused();
   });
 }

@@ -874,9 +874,20 @@ export function registerEditor(runtime: EditorRuntime) {
     const pages = runtime.state.pages
       .filter((page) => {
         if (page.id === currentId) return false;
-        if (inCurrentFolder && runtime.pageFolderPath(page) !== currentFolder) return false;
+        const folder = runtime.pageFolderPath(page);
+        if (
+          inCurrentFolder &&
+          currentFolder &&
+          folder !== currentFolder &&
+          !folder.startsWith(`${currentFolder}/`)
+        )
+          return false;
+        const relativeFolder =
+          folder === currentFolder
+            ? ''
+            : folder.slice(currentFolder ? currentFolder.length + 1 : 0);
         const searchable = inCurrentFolder
-          ? page.title || 'Untitled'
+          ? [relativeFolder, page.title || 'Untitled'].filter(Boolean).join('/')
           : `${page.title || 'Untitled'} ${pageLocation(page)}`;
         return !key || runtime.wikiTitleKey(searchable).includes(key);
       })
