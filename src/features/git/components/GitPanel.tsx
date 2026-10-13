@@ -7,6 +7,7 @@ import type { GitChange, GitSettings, GitStatus } from '../services/git-client';
 import type { GitClient } from '../services/git-worker-client';
 import { emptyGitStatus, hasGitRepository } from '../services/repository-detection';
 import styles from './GitPanel.module.css';
+import notesStyles from '@/features/notes/components/Notes.module.css';
 import { GitRepositoryDialog, type GitAuthentication } from './GitRepositoryDialog';
 import { GitActionMenu } from './GitActionMenu';
 import { GitFileIcon } from './GitFileIcon';
@@ -248,7 +249,7 @@ export function GitPanel() {
   useEffect(() => {
     if (!visible || location?.kind !== 'directory' || !controller || running.current) return;
     const version = ++generation.current;
-    setBusy('Reading changes…');
+    setBusy('Reading changesâ€¦');
     setError('');
     let candidate: GitClient | null = null;
     void (async () => {
@@ -567,14 +568,14 @@ export function GitPanel() {
     running.current = true;
     const version = generation.current;
     const descriptions = {
-      refresh: 'Reading changes…',
-      configure: 'Saving settings…',
-      fetch: 'Fetching remote…',
-      commit: 'Creating commit…',
-      sync: 'Synchronizing…',
-      stage: 'Staging files…',
-      unstage: 'Unstaging files…',
-      discard: 'Discarding changes…',
+      refresh: 'Reading changesâ€¦',
+      configure: 'Saving settingsâ€¦',
+      fetch: 'Fetching remoteâ€¦',
+      commit: 'Creating commitâ€¦',
+      sync: 'Synchronizingâ€¦',
+      stage: 'Staging filesâ€¦',
+      unstage: 'Unstaging filesâ€¦',
+      discard: 'Discarding changesâ€¦',
     };
     setBusy(descriptions[action]);
     setError('');
@@ -733,9 +734,9 @@ export function GitPanel() {
     (location?.kind === 'directory' && clientLocation.current !== location.id);
   const loadingText =
     busy ||
-    (automaticRunning ? 'Automatic commit in progress…' : '') ||
-    (refreshing ? 'Updating changes…' : '') ||
-    (gitBusy ? 'Processing repository…' : '');
+    (automaticRunning ? 'Automatic commit in progressâ€¦' : '') ||
+    (refreshing ? 'Updating changesâ€¦' : '') ||
+    (gitBusy ? 'Processing repositoryâ€¦' : '');
   const writable = access === 'writable' && !disabled;
   const diverged = Boolean(status?.incoming.length && status.outgoing.length);
 
@@ -869,7 +870,7 @@ export function GitPanel() {
     )
       return;
     running.current = true;
-    setBusy('Saving automatic commit settings…');
+    setBusy('Saving automatic commit settingsâ€¦');
     let locked = false;
     try {
       await autoRead.current?.catch(() => undefined);
@@ -925,14 +926,14 @@ export function GitPanel() {
           {autoCommitSettings.enabled
             ? `Every ${autoCommitSettings.intervalMinutes} minute${autoCommitSettings.intervalMinutes === 1 ? '' : 's'}`
             : 'Off'}
-          {autoCommitSettings.enabled && autoCommitSettings.autoPush ? ' · Auto push on' : ''}
+          {autoCommitSettings.enabled && autoCommitSettings.autoPush ? ' Â· Auto push on' : ''}
         </p>
       )}
       {status?.initialized && (
         <p className={styles.menuInfo}>
           {location?.name}
           <br />
-          {status.branch || 'Detached HEAD'} · {status.remote}/{status.remoteBranch}
+          {status.branch || 'Detached HEAD'} Â· {status.remote}/{status.remoteBranch}
         </p>
       )}
     </>
@@ -953,7 +954,7 @@ export function GitPanel() {
         <h2
           title={
             status?.initialized
-              ? `${location?.name} · ${status.branch || 'Detached HEAD'} · ${status.remote}/${status.remoteBranch}`
+              ? `${location?.name} Â· ${status.branch || 'Detached HEAD'} Â· ${status.remote}/${status.remoteBranch}`
               : undefined
           }
         >
@@ -1004,152 +1005,154 @@ export function GitPanel() {
           <span>{loadingText}</span>
         </div>
       )}
-      {location?.kind !== 'directory' ? (
-        <div className={styles.empty}>
-          <p>Git is not initialized in this workspace.</p>
-        </div>
-      ) : (
-        <>
-          {status && !status.initialized && (
-            <div className={styles.empty}>
-              <p>Git is not initialized in this workspace.</p>
-            </div>
-          )}
-          {status?.initialized && (
-            <>
-              <div id="gitRepositoryContent">
-                <div className={styles.composer}>
-                  <label className={styles.messageLabel}>
-                    <span>Commit message</span>
-                    <textarea
-                      rows={3}
-                      value={message}
-                      placeholder="Enter a commit message"
-                      disabled={disabled}
-                      onInput={(event) => setMessage(event.currentTarget.value)}
-                      onKeyDown={(event) => {
-                        if (
-                          (event.ctrlKey || event.metaKey) &&
-                          event.key === 'Enter' &&
-                          canCommit
-                        ) {
-                          event.preventDefault();
-                          void run('commit');
-                        }
-                      }}
-                    />
-                  </label>
-                  <div className={styles.commitActions}>
-                    <button
-                      className={styles.commitButton}
-                      type="button"
-                      aria-label="Commit local changes"
-                      title="Commit all local changes (Ctrl+Enter)"
-                      disabled={!canCommit}
-                      onClick={() => void run('commit')}
-                    >
-                      <Icon name="check" size="18" /> Commit
-                    </button>
-                    <GitActionMenu label="More commit actions" commit>
+      <div className={`sidebar-scroll ${notesStyles['sidebar-scroll']}`}>
+        {location?.kind !== 'directory' ? (
+          <div className={styles.empty}>
+            <p>Git is not initialized in this workspace.</p>
+          </div>
+        ) : (
+          <>
+            {status && !status.initialized && (
+              <div className={styles.empty}>
+                <p>Git is not initialized in this workspace.</p>
+              </div>
+            )}
+            {status?.initialized && (
+              <>
+                <div id="gitRepositoryContent">
+                  <div className={styles.composer}>
+                    <label className={styles.messageLabel}>
+                      <span>Commit message</span>
+                      <textarea
+                        rows={3}
+                        value={message}
+                        placeholder="Enter a commit message"
+                        disabled={disabled}
+                        onInput={(event) => setMessage(event.currentTarget.value)}
+                        onKeyDown={(event) => {
+                          if (
+                            (event.ctrlKey || event.metaKey) &&
+                            event.key === 'Enter' &&
+                            canCommit
+                          ) {
+                            event.preventDefault();
+                            void run('commit');
+                          }
+                        }}
+                      />
+                    </label>
+                    <div className={styles.commitActions}>
                       <button
+                        className={styles.commitButton}
                         type="button"
+                        aria-label="Commit local changes"
+                        title="Commit all local changes (Ctrl+Enter)"
                         disabled={!canCommit}
                         onClick={() => void run('commit')}
                       >
-                        <Icon name="check" size="16" /> Commit local changes
+                        <Icon name="check" size="18" /> Commit
                       </button>
-                      <button type="button" disabled={!canSync} onClick={() => void run('sync')}>
-                        <Icon name="refresh-cw" size="16" /> Commit and Sync
-                      </button>
-                    </GitActionMenu>
+                      <GitActionMenu label="More commit actions" commit>
+                        <button
+                          type="button"
+                          disabled={!canCommit}
+                          onClick={() => void run('commit')}
+                        >
+                          <Icon name="check" size="16" /> Commit local changes
+                        </button>
+                        <button type="button" disabled={!canSync} onClick={() => void run('sync')}>
+                          <Icon name="refresh-cw" size="16" /> Commit and Sync
+                        </button>
+                      </GitActionMenu>
+                    </div>
                   </div>
-                </div>
-                {status.stagedChanges.length > 0 && (
+                  {status.stagedChanges.length > 0 && (
+                    <details className={styles.fileGroup} open>
+                      <summary>
+                        <Icon name="chevron-right" className={styles.disclosure} size="16" />
+                        <span>Staged Changes</span>
+                        <span className={styles.count}>{status.stagedChanges.length}</span>
+                      </summary>
+                      <Changes
+                        changes={status.stagedChanges}
+                        {...fileInteractions('staged')}
+                        onPreview={(path) => void showPreview(path, 'staged')}
+                      />
+                    </details>
+                  )}
                   <details className={styles.fileGroup} open>
                     <summary>
                       <Icon name="chevron-right" className={styles.disclosure} size="16" />
-                      <span>Staged Changes</span>
-                      <span className={styles.count}>{status.stagedChanges.length}</span>
+                      <span>Changes</span>
+                      <span className={styles.count}>{status.unstagedChanges.length}</span>
                     </summary>
-                    <Changes
-                      changes={status.stagedChanges}
-                      {...fileInteractions('staged')}
-                      onPreview={(path) => void showPreview(path, 'staged')}
-                    />
-                  </details>
-                )}
-                <details className={styles.fileGroup} open>
-                  <summary>
-                    <Icon name="chevron-right" className={styles.disclosure} size="16" />
-                    <span>Changes</span>
-                    <span className={styles.count}>{status.unstagedChanges.length}</span>
-                  </summary>
-                  {status.unstagedChanges.length ? (
-                    <Changes
-                      changes={status.unstagedChanges}
-                      {...fileInteractions('unstaged')}
-                      onPreview={(path) => void showPreview(path, 'unstaged')}
-                    />
-                  ) : !status.changes.length ? (
-                    <p className={styles.hint}>There are no pending local changes.</p>
-                  ) : null}
-                </details>
-                {(['outgoing', 'incoming'] as const)
-                  .filter((direction) => status[direction].length > 0)
-                  .map((direction) => (
-                    <details
-                      className={`${styles.fileGroup} ${styles.commits}`}
-                      key={direction}
-                      open
-                    >
-                      <summary>
-                        <Icon name="chevron-right" className={styles.disclosure} size="16" />
-                        <span>
-                          {direction === 'outgoing' ? 'Outgoing commits' : 'Incoming commits'}
-                        </span>
-                        <span className={styles.count}>{status[direction].length}</span>
-                      </summary>
-                      <ul className={styles.commitList}>
-                        {status[direction].map((entry) => (
-                          <li key={entry.oid}>
-                            <code>{entry.oid.slice(0, 7)}</code>
-                            <span>{entry.commit.message.split('\n')[0]}</span>
-                          </li>
-                        ))}
-                      </ul>
+                    {status.unstagedChanges.length ? (
                       <Changes
-                        changes={
-                          direction === 'outgoing' ? status.outgoingFiles : status.incomingFiles
-                        }
-                        {...fileInteractions(direction)}
-                        onPreview={(path) => void showPreview(path, direction)}
+                        changes={status.unstagedChanges}
+                        {...fileInteractions('unstaged')}
+                        onPreview={(path) => void showPreview(path, 'unstaged')}
                       />
-                    </details>
-                  ))}
-              </div>
-            </>
-          )}
-          {error && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className={styles.feedback} role="status">
-              {notice}
-            </p>
-          )}
-          {status?.initialized && access !== 'writable' && !gitBusy && (
-            <p className={styles.hint}>Grant write access to create commits and synchronize.</p>
-          )}
-          {diverged && (
-            <p className={styles.error}>
-              The branches have diverged. Integrate the commits using desktop Git before
-              synchronizing.
-            </p>
-          )}
-        </>
-      )}
+                    ) : !status.changes.length ? (
+                      <p className={styles.hint}>There are no pending local changes.</p>
+                    ) : null}
+                  </details>
+                  {(['outgoing', 'incoming'] as const)
+                    .filter((direction) => status[direction].length > 0)
+                    .map((direction) => (
+                      <details
+                        className={`${styles.fileGroup} ${styles.commits}`}
+                        key={direction}
+                        open
+                      >
+                        <summary>
+                          <Icon name="chevron-right" className={styles.disclosure} size="16" />
+                          <span>
+                            {direction === 'outgoing' ? 'Outgoing commits' : 'Incoming commits'}
+                          </span>
+                          <span className={styles.count}>{status[direction].length}</span>
+                        </summary>
+                        <ul className={styles.commitList}>
+                          {status[direction].map((entry) => (
+                            <li key={entry.oid}>
+                              <code>{entry.oid.slice(0, 7)}</code>
+                              <span>{entry.commit.message.split('\n')[0]}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <Changes
+                          changes={
+                            direction === 'outgoing' ? status.outgoingFiles : status.incomingFiles
+                          }
+                          {...fileInteractions(direction)}
+                          onPreview={(path) => void showPreview(path, direction)}
+                        />
+                      </details>
+                    ))}
+                </div>
+              </>
+            )}
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
+            {notice && (
+              <p className={styles.feedback} role="status">
+                {notice}
+              </p>
+            )}
+            {status?.initialized && access !== 'writable' && !gitBusy && (
+              <p className={styles.hint}>Grant write access to create commits and synchronize.</p>
+            )}
+            {diverged && (
+              <p className={styles.error}>
+                The branches have diverged. Integrate the commits using desktop Git before
+                synchronizing.
+              </p>
+            )}
+          </>
+        )}
+      </div>
       {fileMenu && visible && fileMenu.workspaceId === location?.id && (
         <GitFileContextMenu
           key={fileMenu.comparison + fileMenu.paths.join('|') + fileMenu.x + ':' + fileMenu.y}

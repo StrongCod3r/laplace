@@ -20,20 +20,8 @@
 .sidebar-scroll {
   flex: 1;
   overflow-x: hidden;
-  overflow-y: hidden;
-  padding: 5px 8px 16px;
-  scrollbar-width: none;
-}
-
-.sidebar-scroll:not(:global(.can-scroll))::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.sidebar-scroll:global(.can-scroll) {
   overflow-y: auto;
-  scrollbar-width: thin;
+  padding: 5px 8px 16px;
 }
 
 .sidebar-section {
@@ -41,6 +29,8 @@
 }
 
 .section-title {
+  flex-shrink: 0;
+  background: var(--sidebar);
   height: 27px;
   display: flex;
   align-items: center;
@@ -384,13 +374,13 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   background: var(--hover);
 }
 
-.backlink-item>span:first-child {
+.backlink-item > span:first-child {
   width: 19px;
   flex: none;
   text-align: center;
 }
 
-.backlink-item>span:last-child {
+.backlink-item > span:last-child {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -471,7 +461,15 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 }
 
 .left-sidebar-view {
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-panels {
+  flex: 1;
+  min-height: 0;
 }
 
 .git-sidebar {
@@ -487,7 +485,17 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 }
 
 .left-sidebar-view .sidebar-section:first-child {
-  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+}
+
+.left-sidebar-view .section-title {
+  height: 35px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
 }
 
 .left-sidebar-empty {
@@ -502,19 +510,19 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   color: var(--muted);
 }
 
-.left-sidebar-empty>span {
+.left-sidebar-empty > span {
   font-size: 28px;
   color: var(--faint);
   margin-bottom: 4px;
 }
 
-.left-sidebar-empty>b {
+.left-sidebar-empty > b {
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
 }
 
-.left-sidebar-empty>small {
+.left-sidebar-empty > small {
   font-size: 11px;
   line-height: 1.45;
   max-width: 170px;
@@ -530,24 +538,26 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   min-height: 0;
 }
 
-.sidebar-scroll:global(.can-scroll),
+.sidebar-scroll,
 .right-sidebar-content {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
 }
 
-.sidebar-scroll:global(.can-scroll)::-webkit-scrollbar,
+.sidebar-scroll::-webkit-scrollbar,
 .right-sidebar-content::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-.sidebar-scroll:global(.can-scroll)::-webkit-scrollbar-track,
-.right-sidebar-content::-webkit-scrollbar-track {
+.sidebar-scroll::-webkit-scrollbar-track,
+.sidebar-scroll::-webkit-scrollbar-corner,
+.right-sidebar-content::-webkit-scrollbar-track,
+.right-sidebar-content::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-.sidebar-scroll:global(.can-scroll)::-webkit-scrollbar-thumb,
+.sidebar-scroll::-webkit-scrollbar-thumb,
 .right-sidebar-content::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--muted) 42%, transparent);
   border: 3px solid transparent;
@@ -555,7 +565,7 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   border-radius: 999px;
 }
 
-.sidebar-scroll:global(.can-scroll)::-webkit-scrollbar-thumb:hover,
+.sidebar-scroll::-webkit-scrollbar-thumb:hover,
 .right-sidebar-content::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--muted) 68%, transparent);
   border: 3px solid transparent;
@@ -621,7 +631,7 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   font-size: 12px;
 }
 
-.folder-select-btn>span:first-child {
+.folder-select-btn > span:first-child {
   flex: none;
   width: 18px;
   text-align: center;
@@ -629,7 +639,7 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   line-height: 18px;
 }
 
-.folder-select-btn>span.folder-icon {
+.folder-select-btn > span.folder-icon {
   width: var(--tree-icon-size, 14px);
   height: var(--tree-icon-size, 14px);
   font-size: var(--tree-icon-size, 14px);

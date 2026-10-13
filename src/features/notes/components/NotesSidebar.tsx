@@ -5,7 +5,6 @@ import { useWorkspaceStore } from '@/store/workspace.store';
 import { WorkspaceSelector } from '@/features/workspace/components/WorkspaceSelector';
 import { FilesTree } from './FilesTree';
 import { GitPanel } from '@/features/git/components/GitPanel';
-import { useLayoutEffect, useRef } from 'preact/hooks';
 
 const styles = notesStyles;
 
@@ -22,27 +21,6 @@ export function NotesSidebar() {
     );
   const shouldCollapse = tree.length > 0 && allExpanded(tree);
   const expandCollapseLabel = shouldCollapse ? 'Collapse all' : 'Expand all';
-  const scroll = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const element = scroll.current;
-    if (mode !== 'git' || !element) return;
-    let frame = 0;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        element.classList.toggle('can-scroll', element.scrollHeight > element.clientHeight + 1);
-      });
-    };
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    const panel = element.querySelector('#gitPanel');
-    if (panel) observer.observe(panel);
-    update();
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, [mode]);
   return (
     <aside
       id="sidebar"
@@ -51,7 +29,7 @@ export function NotesSidebar() {
         `sidebar ${mode === 'git' ? 'git-sidebar' : ''} ${open ? '' : 'collapsed'}`,
       )}
     >
-      <div ref={scroll} className={withModuleClasses(styles, 'sidebar-scroll')}>
+      <div className={withModuleClasses(styles, 'sidebar-panels')}>
         <GitPanel />
         <div
           className={withModuleClasses(
@@ -113,7 +91,9 @@ export function NotesSidebar() {
                 </button>
               </div>
             </div>
-            <FilesTree />
+            <div className={withModuleClasses(styles, 'sidebar-scroll')}>
+              <FilesTree />
+            </div>
           </section>
         </div>
         <div
@@ -127,7 +107,9 @@ export function NotesSidebar() {
             <div className={withModuleClasses(styles, 'section-title')}>
               <span>Favorites</span>
             </div>
-            <FilesTree favorites />
+            <div className={withModuleClasses(styles, 'sidebar-scroll')}>
+              <FilesTree favorites />
+            </div>
           </section>
         </div>
       </div>

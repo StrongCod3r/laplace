@@ -119,6 +119,8 @@ Page or tab switching should avoid work proportional to the entire workspace con
 
 Use theme variables and check light and dark themes. Keep global states toggled by the engine (`hidden`, `active`, `selected`, `dim`, `collapsed`) compatible with CSS Modules.
 
+Lay out Files, Favorites, and Git as a static header above a separate scrollable content container. Headers must remain outside the scroll container; do not use sticky positioning. Keep header actions and Git progress indicators outside the scrolling content.
+
 ## Theme-aware scrollbars
 
 Every scrollable view, panel, menu and dialog must style its scrollbar using the current theme variables (for example, `var(--muted)`), including overlays rendered through portals. Follow the existing thin scrollbar style with a transparent track and rounded thumb, and cover both `scrollbar-width` / `scrollbar-color` and `::-webkit-scrollbar` selectors, including hover and corner states. Check light and dark themes when adding or changing a scrollable container.

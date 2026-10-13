@@ -223,7 +223,9 @@ export function registerNotes(runtime: EditorRuntime) {
   }
 
   function updateSidebarOverflow() {
-    const scroller = document.querySelector('.sidebar-scroll');
+    const scroller = document.querySelector(
+      '#sidebar [data-left-panel]:not(.hidden) .sidebar-scroll',
+    );
     if (!scroller) return;
     // Measure from a clean, non-scrollable state so a stale scrollbar cannot keep itself alive.
     scroller.classList.remove('can-scroll');

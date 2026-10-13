@@ -1,4 +1,5 @@
 .panel {
+  --sc-background: #f3f3f3;
   --sc-text: var(--text);
   --sc-muted: var(--muted);
   --sc-input: #fff;
@@ -10,10 +11,13 @@
   color: var(--sc-text);
   font-family: inherit;
   font-size: 13px;
-  padding-bottom: 8px;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 :global(body.dark) .panel {
+  --sc-background: #252526;
   --sc-text: #ccc;
   --sc-muted: #999;
   --sc-input: #3c3c3c;
@@ -62,6 +66,11 @@
   align-items: center;
 }
 .header {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 3;
+  background: var(--sc-background);
+  border-bottom: 1px solid var(--border);
   height: 35px;
   padding: 0 6px 0 8px;
   justify-content: space-between;
@@ -86,9 +95,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex-shrink: 0;
   padding: 8px 10px;
   background: var(--panel);
   color: var(--sc-muted);
