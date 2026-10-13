@@ -6,6 +6,17 @@ export function registerEditor(runtime: EditorRuntime) {
   let inlineSelectionScrollPending = false;
 
   function inlineSelectionViewportRect(selection = runtime.inlineSelectionState) {
+    if (selection?.segments) {
+      const rects = selection.segments
+        .map((segment) => runtime.inlineSelectionViewportRect(segment))
+        .filter(Boolean);
+      if (!rects.length) return null;
+      const left = Math.min(...rects.map((rect) => rect.left));
+      const right = Math.max(...rects.map((rect) => rect.right));
+      const top = Math.min(...rects.map((rect) => rect.top));
+      const bottom = Math.max(...rects.map((rect) => rect.bottom));
+      return { left, right, top, bottom, width: right - left, height: bottom - top };
+    }
     const content = selection?.content;
     if (!content?.isConnected) return null;
     const range = document.createRange();
@@ -1079,7 +1090,34 @@ export function registerEditor(runtime: EditorRuntime) {
     }
   }
 
+  function captureMultiInlineSelection(range = null) {
+    const segments = runtime.multiBlockSelection?.active
+      ? runtime
+          .multiSelectionSegments()
+          .map(({ block, content, start, end }) => ({ blockId: block.id, content, start, end }))
+      : [
+          ...runtime.els.blockEditor.querySelectorAll('.block-content[contenteditable="true"]'),
+        ].flatMap((content) => {
+          if (!range?.intersectsNode(content)) return [];
+          const blockId = content.closest('.block-row').dataset.blockId;
+          if (!runtime.isTextLikeBlock(runtime.findBlock(blockId))) return [];
+          const part = range.cloneRange();
+          if (!content.contains(range.startContainer)) part.setStart(content, 0);
+          if (!content.contains(range.endContainer))
+            part.setEnd(content, content.childNodes.length);
+          const start = runtime.localTextOffset(content, part.startContainer, part.startOffset);
+          const end = runtime.localTextOffset(content, part.endContainer, part.endOffset);
+          return end > start ? [{ blockId, content, start, end }] : [];
+        });
+    if (segments.length < 2) return null;
+    const selection = { ...segments[0], segments };
+    selection.rect =
+      runtime.inlineSelectionViewportRect(selection) || segments[0].content.getBoundingClientRect();
+    return selection;
+  }
+
   function captureInlineSelection() {
+    if (runtime.multiBlockSelection?.active) return captureMultiInlineSelection();
     const sel = window.getSelection();
     if (!sel?.rangeCount || sel.isCollapsed) return null;
     const range = sel.getRangeAt(0);
@@ -1097,6 +1135,14 @@ export function registerEditor(runtime: EditorRuntime) {
     const endContent = endEl?.closest?.(
       '.block-content[contenteditable="true"],[data-table-cell][contenteditable="true"]',
     );
+    if (
+      content &&
+      endContent &&
+      content !== endContent &&
+      runtime.els.blockEditor?.contains(content) &&
+      runtime.els.blockEditor?.contains(endContent)
+    )
+      return captureMultiInlineSelection(range);
     if (!content || content !== endContent || !runtime.els.blockEditor?.contains(content))
       return null;
     const row = content.closest('.block-row[data-block-id]'),
@@ -1214,18 +1260,23 @@ export function registerEditor(runtime: EditorRuntime) {
     if (!toolbar || !selection) return;
     const block = runtime.inlineSelectionBlock(selection);
     if (!block) return;
+    const segments = selection.segments || [selection];
     const label = toolbar.querySelector('[data-format-type-label]');
     if (label)
-      label.textContent = selection.cellPosition
-        ? 'Table cell'
-        : runtime.blockTypeLabel(block.type);
+      label.textContent = selection.segments
+        ? 'Multiple blocks'
+        : selection.cellPosition
+          ? 'Table cell'
+          : runtime.blockTypeLabel(block.type);
     const hideTypeControl = Boolean(selection.cellPosition);
     const typeControl = toolbar.querySelector('[data-format-type-control]');
     if (typeControl) typeControl.hidden = hideTypeControl;
     const typeSeparator = toolbar.querySelector('[data-format-type-separator]');
     if (typeSeparator) typeSeparator.hidden = hideTypeControl;
     toolbar.querySelectorAll('[data-format-block-type]').forEach((btn) => {
-      const active = btn.dataset.formatBlockType === block.type;
+      const active = segments.every(
+        (segment) => runtime.inlineSelectionBlock(segment)?.type === btn.dataset.formatBlockType,
+      );
       btn.classList.toggle('active', active);
       let check = btn.querySelector('.format-type-check');
       if (active && !check) {
@@ -1237,19 +1288,22 @@ export function registerEditor(runtime: EditorRuntime) {
       }
       if (!active) check?.remove();
     });
-    toolbar
-      .querySelectorAll('[data-format-inline]')
-      .forEach((btn) =>
-        btn.classList.toggle(
-          'active',
+    toolbar.querySelectorAll('[data-format-inline]').forEach((btn) =>
+      btn.classList.toggle(
+        'active',
+        segments.every((segment) =>
           runtime.selectionFullyFormatted(
-            block,
-            selection.start,
-            selection.end,
+            runtime.inlineSelectionBlock(segment),
+            segment.start,
+            segment.end,
             btn.dataset.formatInline,
           ),
         ),
-      );
+      ),
+    );
+    toolbar
+      .querySelector('[data-format-link-toggle]')
+      ?.classList.toggle('hidden', Boolean(selection.segments));
     toolbar
       .querySelector('[data-format-link-toggle]')
       ?.classList.toggle(
@@ -1363,10 +1417,6 @@ export function registerEditor(runtime: EditorRuntime) {
       if (runtime.inlinePointerSelectionActive || runtime.inlineKeyboardSelectionActive) return;
       if (runtime.standaloneLinkEditorOpen) return;
       if (runtime.els.textFormatToolbar?.contains(document.activeElement)) return;
-      if (runtime.multiBlockSelection?.active) {
-        runtime.hideTextFormatToolbar();
-        return;
-      }
       const selection = runtime.captureInlineSelection();
       if (selection) {
         const previous = runtime.inlineSelectionState;
@@ -1390,6 +1440,37 @@ export function registerEditor(runtime: EditorRuntime) {
   function restoreInlineSelection(selection = runtime.inlineSelectionState, { show = true } = {}) {
     if (!selection) return;
     runtime.lifecycle.frame(() => {
+      if (selection.segments) {
+        const segments = selection.segments
+          .map((segment) => ({
+            ...segment,
+            content: runtime.els.blockEditor.querySelector(
+              `.block-row[data-block-id="${segment.blockId}"] .block-content`,
+            ),
+          }))
+          .filter((segment) => segment.content);
+        if (segments.length < 2) return;
+        const first = segments[0],
+          last = segments.at(-1);
+        runtime.clearMultiBlockSelection();
+        runtime.multiBlockSelection = {
+          anchor: {
+            content: first.content,
+            ...runtime.textNodePointForOffset(first.content, first.start),
+          },
+          focus: {
+            content: last.content,
+            ...runtime.textNodePointForOffset(last.content, last.end),
+          },
+          active: true,
+          dragging: false,
+        };
+        runtime.renderMultiBlockSelection();
+        const restored = { ...selection, ...first, segments };
+        restored.rect = runtime.inlineSelectionViewportRect(restored) || selection.rect;
+        if (show) runtime.showTextFormatToolbar(restored);
+        return;
+      }
       const content = selection.cellPosition
         ? document.querySelector(
             `.block-row[data-block-id="${selection.blockId}"] [data-table-cell="${selection.cellPosition.row}:${selection.cellPosition.col}"]`,
@@ -1443,6 +1524,27 @@ export function registerEditor(runtime: EditorRuntime) {
     const selection = runtime.inlineSelectionState,
       block = runtime.inlineSelectionBlock(selection);
     if (!selection || !block) return;
+    if (selection.segments) {
+      const remove = selection.segments.every((segment) =>
+        runtime.selectionFullyFormatted(
+          runtime.inlineSelectionBlock(segment),
+          segment.start,
+          segment.end,
+          type,
+        ),
+      );
+      for (const segment of selection.segments)
+        runtime.setInlineFormatRange(
+          runtime.inlineSelectionBlock(segment),
+          segment.start,
+          segment.end,
+          type,
+          '',
+          remove ? 'remove' : 'set',
+        );
+      runtime.commitInlineFormatting(selection);
+      return;
+    }
     if (runtime.setInlineFormatRange(block, selection.start, selection.end, type, '', 'toggle'))
       runtime.commitInlineFormatting(selection);
   }
@@ -1451,6 +1553,20 @@ export function registerEditor(runtime: EditorRuntime) {
     const selection = runtime.inlineSelectionState,
       block = runtime.inlineSelectionBlock(selection);
     if (!selection || !block) return;
+    if (selection.segments) {
+      for (const segment of selection.segments)
+        runtime.setInlineFormatRange(
+          runtime.inlineSelectionBlock(segment),
+          segment.start,
+          segment.end,
+          type,
+          value,
+          value === 'default' ? 'remove' : 'set',
+        );
+      runtime.closeTextFormatPopovers();
+      runtime.commitInlineFormatting(selection);
+      return;
+    }
     runtime.setInlineFormatRange(
       block,
       selection.start,
@@ -1481,14 +1597,17 @@ export function registerEditor(runtime: EditorRuntime) {
       'callout',
     ]);
     if (!allowed.has(type)) return;
-    block.type = type;
-    if (type === 'todo' && typeof block.checked !== 'boolean') block.checked = false;
-    else if (type !== 'todo') delete block.checked;
-    if (type === 'toggle' && typeof block.open !== 'boolean') block.open = false;
-    else if (type !== 'toggle') delete block.open;
-    if (runtime.isListBlock(block))
-      runtime.setListIndentLevel(block, runtime.listIndentLevel(block));
-    else delete block.indent;
+    for (const segment of selection.segments || [selection]) {
+      const block = runtime.inlineSelectionBlock(segment);
+      block.type = type;
+      if (type === 'todo' && typeof block.checked !== 'boolean') block.checked = false;
+      else if (type !== 'todo') delete block.checked;
+      if (type === 'toggle' && typeof block.open !== 'boolean') block.open = false;
+      else if (type !== 'toggle') delete block.open;
+      if (runtime.isListBlock(block))
+        runtime.setListIndentLevel(block, runtime.listIndentLevel(block));
+      else delete block.indent;
+    }
     runtime.closeTextFormatPopovers();
     runtime.commitInlineFormatting(selection);
   }
@@ -1550,6 +1669,7 @@ export function registerEditor(runtime: EditorRuntime) {
   }
 
   function openInlineLinkPopover({ focusTitle = false, standalone = false } = {}) {
+    if (runtime.inlineSelectionState?.segments) return;
     runtime.hideLinkHoverMenu();
     const toolbar = runtime.els.textFormatToolbar,
       selection = runtime.inlineSelectionState;
@@ -1663,7 +1783,13 @@ export function registerEditor(runtime: EditorRuntime) {
     const selection = runtime.inlineSelectionState,
       block = runtime.inlineSelectionBlock(selection);
     if (!selection || !block) return;
-    runtime.clearInlineFormattingRange(block, selection.start, selection.end, { links: true });
+    for (const segment of selection.segments || [selection])
+      runtime.clearInlineFormattingRange(
+        runtime.inlineSelectionBlock(segment),
+        segment.start,
+        segment.end,
+        { links: true },
+      );
     runtime.closeTextFormatPopovers();
     runtime.commitInlineFormatting(selection);
   }

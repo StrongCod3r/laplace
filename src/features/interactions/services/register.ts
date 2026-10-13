@@ -1898,6 +1898,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       window.getSelection()?.removeAllRanges();
     } catch {}
     runtime.renderMultiBlockSelection();
+    runtime.scheduleTextFormatToolbarFromSelection();
   }
 
   function multiSelectionSegments() {
