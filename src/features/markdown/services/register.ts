@@ -1337,12 +1337,14 @@ export function registerMarkdown(runtime: EditorRuntime) {
 
   function markdownForBlocks(blocks, workspace, paths) {
     const lines = [];
+    const listNumbers = new Map<number, number>();
     let previousType = '';
     for (const block of blocks || []) {
       // Adjacent tables need a separator so their rows do not merge on reload.
       if (block.type === 'table' && previousType === 'table') lines.push('');
       previousType = block.type;
       runtime.normalizeLegacyLinkBlock(block);
+      if (block.type !== 'bullet' && block.type !== 'number') listNumbers.clear();
       const text = runtime.markdownInlineForBlock(block, workspace, paths);
       if (['text', 'h1', 'h2', 'h3'].includes(block.type))
         lines.push(
@@ -1355,8 +1357,15 @@ export function registerMarkdown(runtime: EditorRuntime) {
                 : text,
         );
       else if (block.type === 'bullet' || block.type === 'number') {
-        const indent = '  '.repeat(runtime.listIndentLevel(block));
-        const marker = block.type === 'number' ? '1. ' : '- ';
+        const depth = runtime.listIndentLevel(block);
+        // Nested items have their own counter and do not increment the parent list.
+        for (const level of listNumbers.keys())
+          if (level > depth || (level === depth && block.type === 'bullet'))
+            listNumbers.delete(level);
+        const number = (listNumbers.get(depth) || 0) + 1;
+        if (block.type === 'number') listNumbers.set(depth, number);
+        const indent = '  '.repeat(depth);
+        const marker = block.type === 'number' ? `${number}. ` : '- ';
         const continuation = indent + ' '.repeat(marker.length);
         lines.push(indent + marker + text.replace(/<br>/g, '\n' + continuation));
       } else if (block.type === 'todo') lines.push(`- [${block.checked ? 'x' : ' '}] ${text}`);

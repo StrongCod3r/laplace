@@ -43,7 +43,7 @@ export interface EditorRuntime {
   lifecycle: ControllerLifecycle;
   publish(): void;
   deferPublication(update: () => void): void;
-  captureHistoryBeforeInput(event: InputEvent): void;
+  captureHistoryBeforeInput(event: Pick<InputEvent, 'inputType'>): void;
   togglePagePlainText(): void;
   syncPlainTextView(root: HTMLElement | null, page: unknown, tabId?: string): void;
   selectImageBlock?: (id: string) => boolean;

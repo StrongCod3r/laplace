@@ -35,6 +35,9 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
     registerEditor(runtime);
     registerMarkdown(runtime);
     registerInteractions(runtime);
+    const { attachListContinuation, detachListContinuation } = await server.ssrLoadModule(
+      '/src/features/interactions/services/list-continuation.ts',
+    );
     const workspace = { pages: [] };
     for (const kind of ['number', 'bullet']) {
       const marker = kind === 'number' ? '1. ' : '- ';
@@ -66,8 +69,64 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
             [1, 2, 3],
           );
         content = runtime.markdownForBlocks(blocks, workspace, new Map()) + '\n';
+        if (kind === 'number')
+          assert.deepEqual(
+            [...content.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1])),
+            [1, 2, 3],
+          );
         assert.ok(
           content.includes('\n' + padding + 'Intermediate **bold** [link](https://example.com/)'),
+        );
+      }
+    }
+    for (const marker of ['- ', '1. ']) {
+      const blocks = runtime.parseMarkdownFile({
+        path: 'Detached.md',
+        content: `${marker}First\n\tIntermediate **bold** [link](https://example.com) [[Target|wiki]]\n${marker}Next\n`,
+      }).blocks;
+      const original = structuredClone(blocks[0]);
+      const split = detachListContinuation(blocks[0], 'First\n'.length, 'detached');
+      assert.ok(split);
+      assert.deepEqual(blocks[0], original, 'splitting must not mutate its source');
+      assert.equal(split[0].id, original.id);
+      assert.equal(split[1].type, 'text');
+      assert.equal(split[1].text, 'Intermediate bold link wiki');
+      const joined = attachListContinuation(split[0], split[1]);
+      assert.deepEqual(
+        joined,
+        original,
+        'Tab must reverse outdenting without losing inline metadata',
+      );
+      assert.equal(
+        attachListContinuation(split[1], split[0]),
+        null,
+        'only ordinary text after a list item can be attached',
+      );
+      for (const [key, label] of [
+        ['inlineLinks', 'link'],
+        ['inlineFormats', 'bold'],
+        ['wikiLinks', 'wiki'],
+      ]) {
+        const range = split[1][key][0];
+        assert.equal(split[1].text.slice(range.start, range.end), label);
+      }
+      let saved = runtime.markdownForBlocks([...split, blocks[1]], workspace, new Map());
+      for (let reload = 0; reload < 3; reload++) {
+        const restored = runtime.parseMarkdownFile({
+          path: 'Detached.md',
+          content: saved + '\n',
+        }).blocks;
+        assert.deepEqual(
+          restored.map((block) => [block.type, block.text]),
+          [
+            [original.type, 'First'],
+            ['text', 'Intermediate bold link wiki'],
+            [original.type, 'Next'],
+          ],
+        );
+        saved = runtime.markdownForBlocks(restored, workspace, new Map());
+        assert.ok(
+          saved.includes('\nIntermediate **bold** [link](https://example.com/) [[Target|wiki]]\n'),
         );
       }
     }
@@ -82,6 +141,34 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
         ['number', 'Child\nchild text', 1],
         ['number', 'Next', 0],
       ],
+    );
+    assert.equal(
+      runtime.markdownForBlocks(nestedContinuation, workspace, new Map()),
+      '1. Parent\n   parent text\n  1. Child\n     child text\n2. Next',
+    );
+    const longList = Array.from({ length: 12 }, (_, index) => ({
+      id: `number-${index}`,
+      type: 'number',
+      text: `Item ${index + 1}${index === 9 ? '\nContinuation 10' : ''}`,
+    }));
+    const longMarkdown = runtime.markdownForBlocks(longList, workspace, new Map());
+    assert.deepEqual(
+      [...longMarkdown.matchAll(/^(\d+)\. /gm)].map((match) => Number(match[1])),
+      Array.from({ length: 12 }, (_, index) => index + 1),
+    );
+    assert.ok(longMarkdown.includes('10. Item 10\n    Continuation 10\n11. Item 11'));
+    const mixedList = runtime.parseMarkdownBlocks(
+      '1. One\n  1. Child one\n  1. Child two\n1. Two\n- Bullet\n1. New one\nText\n1. Another one',
+    );
+    const mixedNumbers = [
+      ...runtime.markdownForBlocks(mixedList, workspace, new Map()).matchAll(/^\s*(\d+)\. /gm),
+    ].map((match) => Number(match[1]));
+    assert.deepEqual(mixedNumbers, [1, 1, 2, 2, 1, 1]);
+    assert.deepEqual(
+      mixedNumbers,
+      mixedList
+        .filter((block) => block.type === 'number')
+        .map((block) => runtime.numberForBlock(block.id, mixedList)),
     );
     const multiline = [
       { id: 'first', type: 'number', text: 'First\n\nlast\n' },

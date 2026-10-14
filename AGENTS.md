@@ -101,6 +101,16 @@ Typing a Markdown list prefix at the beginning of existing text must convert the
 
 Cutting or deleting all text from a list item must leave a single empty line. Browser-inserted `<br>` placeholders must not increase its height; preserve intentional continuation lines and native editing behavior.
 
+Backspace at the start of a list continuation, or Shift+Tab after removing any explicit indentation, detaches that continuation and its following lines into ordinary text. Preserve surrounding list items, inline formats, links, wikilinks, caret history, and Markdown round trips in both main and split editors.
+
+For a nonempty list item, Backspace at its start or Shift+Tab on its first line reduces one nesting level. At the root level it removes the marker and converts the item to ordinary text, preserving its ID and inline metadata without merging adjacent items. Nested outdenting keeps descendant indentation relative to the item.
+
+Tab on an ordinary text block immediately after a list item attaches that text as a continuation of the preceding item, equivalent to Shift+Enter. Preserve inline formatting, links, wikilinks, caret offsets, remaining siblings, undo/redo, and Markdown persistence. Shift+Tab reverses the attachment by detaching the continuation.
+
+Serialized numbered lists use consecutive markers matching the editor, with independent counters per nesting level. Continuation lines do not advance the counter, and their indentation follows the actual marker width, including multi-digit numbers. Apply this to saved Markdown and the plain text view.
+
+Gutter block reordering normalizes list indentation in the affected source and destination containers. A list item moved to the beginning, or after a non-list block, starts at the root level; no item may skip more than one nesting level relative to the preceding list item. Preserve the original structure through undo/redo.
+
 ### Clipboard and tables
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.

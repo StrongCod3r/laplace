@@ -4,6 +4,7 @@ import { APP_NAME } from './../../../app-identity';
 import type { EditorRuntime } from '@/features/editor/types';
 import { createEditorVerticalNavigation } from '@/features/editor/services/vertical-navigation';
 import { useWorkspaceStore } from '@/store/workspace.store';
+import { attachListContinuation, detachListContinuation } from './list-continuation';
 
 export function registerInteractions(runtime: EditorRuntime) {
   let previousTextInputKey: string | null = null;
@@ -2454,6 +2455,66 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
   }
 
+  function finishListIndentChange(blockId: string, caret: number): void {
+    runtime.hideFloatingMenus();
+    runtime.renderBlocks(runtime.currentPage());
+    const target = [...runtime.els.blockEditor.querySelectorAll('.block-row')]
+      .find((row) => row.dataset.blockId === blockId)
+      ?.querySelector('.block-content');
+    if (target) {
+      target.focus({ preventScroll: true });
+      runtime.setCaretOffset(target, caret);
+    }
+    runtime.scheduleSave();
+  }
+
+  function outdentListContinuation(content: HTMLElement, lineStart: number): boolean {
+    if (runtime.workspaceAccess !== 'writable') return false;
+    const location = runtime.findBlockLocation(content.closest('.block-row')?.dataset.blockId);
+    if (!location) return false;
+    const split = detachListContinuation(location.block, lineStart, runtime.uid('b'));
+    if (!split) return false;
+    const caret = runtime.getCaretOffset(content);
+    runtime.flushHistoryPending();
+    runtime.captureHistoryBeforeInput({ inputType: 'deleteContentBackward' });
+    location.blocks.splice(location.index, 1, ...split);
+    finishListIndentChange(split[1].id, Math.max(0, caret - lineStart));
+    return true;
+  }
+
+  function outdentListItem(content: HTMLElement): boolean {
+    if (runtime.workspaceAccess !== 'writable') return false;
+    const location = runtime.findBlockLocation(content.closest('.block-row')?.dataset.blockId);
+    if (!location || !runtime.isListBlock(location.block)) return false;
+    const block = location.block;
+    const caret = runtime.getCaretOffset(content);
+    runtime.flushHistoryPending();
+    runtime.captureHistoryBeforeInput({ inputType: 'deleteContentBackward' });
+    if (runtime.listIndentLevel(block) > 0)
+      runtime.changeListIndent(location.blocks, location.index, -1);
+    else {
+      block.type = 'text';
+      delete block.indent;
+    }
+    finishListIndentChange(block.id, caret);
+    return true;
+  }
+
+  function indentTextIntoList(content: HTMLElement): boolean {
+    if (runtime.workspaceAccess !== 'writable') return false;
+    const location = runtime.findBlockLocation(content.closest('.block-row')?.dataset.blockId);
+    if (!location || location.index === 0) return false;
+    const previous = location.blocks[location.index - 1];
+    const joined = attachListContinuation(previous, location.block);
+    if (!joined) return false;
+    const caret = String(previous.text || '').length + 1 + runtime.getCaretOffset(content);
+    runtime.flushHistoryPending();
+    runtime.captureHistoryBeforeInput({ inputType: 'insertText' });
+    location.blocks.splice(location.index - 1, 2, joined);
+    finishListIndentChange(joined.id, caret);
+    return true;
+  }
+
   function onKeyDown(e) {
     if (runtime.gitOperationActive) return;
     const gitDiff = useWorkspaceStore.getState().gitDiff;
@@ -3014,6 +3075,24 @@ export function registerInteractions(runtime: EditorRuntime) {
     const blocks = location.blocks,
       index = location.index;
     if (
+      e.key === 'Backspace' &&
+      !mod &&
+      !e.altKey &&
+      runtime.isListBlock(b) &&
+      window.getSelection()?.isCollapsed
+    ) {
+      const caret = runtime.getCaretOffset(content);
+      const lineStart = caret > 0 ? (b.text || '').lastIndexOf('\n', caret - 1) + 1 : 0;
+      if (lineStart > 0 && caret === lineStart && outdentListContinuation(content, lineStart)) {
+        e.preventDefault();
+        return;
+      }
+      if (caret === 0 && b.text && outdentListItem(content)) {
+        e.preventDefault();
+        return;
+      }
+    }
+    if (
       !e.ctrlKey &&
       !e.metaKey &&
       !e.altKey &&
@@ -3062,6 +3141,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       const lineStart = caret > 0 ? (b.text || '').lastIndexOf('\n', caret - 1) + 1 : 0;
       if (lineStart > 0) {
         const leading = (b.text || '').slice(lineStart).match(/^(?:\t| {1,4})/)?.[0] || '';
+        if (e.shiftKey && !leading && outdentListContinuation(content, lineStart)) return;
         const removed = e.shiftKey ? leading.length : 0;
         const inserted = e.shiftKey ? '' : '\t';
         runtime.replaceBlockRangeWithInlineLink(b, lineStart, lineStart + removed, inserted, null);
@@ -3071,7 +3151,11 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.focusBlock(b.id, Math.max(lineStart, caret + inserted.length - removed));
         return;
       }
-      if (runtime.changeListIndent(blocks, index, e.shiftKey ? -1 : 1)) {
+      if (e.shiftKey) {
+        outdentListItem(content);
+        return;
+      }
+      if (runtime.changeListIndent(blocks, index, 1)) {
         runtime.hideFloatingMenus();
         runtime.scheduleSave();
         runtime.renderBlocks(page);
@@ -3081,6 +3165,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     if (e.key === 'Tab') {
       e.preventDefault();
+      if (!e.shiftKey && !mod && !e.altKey) indentTextIntoList(content);
       return;
     }
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -3740,6 +3825,8 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     if (!page.blocks.length) page.blocks.push(runtime.newTextBlock());
 
+    for (const list of new Set([fromLoc.blocks, destination, ...emptiedLists]))
+      runtime.normalizeListIndentation(list);
     runtime.scheduleSave();
     runtime.renderBlocks(page);
     runtime.clearDragState();
@@ -4255,6 +4342,10 @@ export function registerInteractions(runtime: EditorRuntime) {
     onAuxClick,
     onInput,
     onChange,
+    finishListIndentChange,
+    outdentListContinuation,
+    outdentListItem,
+    indentTextIntoList,
     onKeyDown,
     onDragStart,
     onDragOver,

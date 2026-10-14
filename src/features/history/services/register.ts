@@ -214,7 +214,7 @@ export function registerHistory(runtime: EditorRuntime) {
     if (mode !== 'view') runtime.publish();
   }
 
-  function captureHistoryBeforeInput(event: InputEvent) {
+  function captureHistoryBeforeInput(event: Pick<InputEvent, 'inputType'>) {
     if (runtime.workspaceAccess !== 'writable' || !/^(insert|delete)/.test(event.inputType)) return;
     beforeInputFocus = { vaultId: runtime.activeVaultId, focus: captureHistoryEditorFocus() };
   }

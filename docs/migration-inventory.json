@@ -1,5 +1,5 @@
 {
-  "total": 652,
+  "total": 656,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -566,6 +566,10 @@
       "onAuxClick",
       "onInput",
       "onChange",
+      "finishListIndentChange",
+      "outdentListContinuation",
+      "outdentListItem",
+      "indentTextIntoList",
       "onKeyDown",
       "onDragStart",
       "pageLinkDropEditorAt",

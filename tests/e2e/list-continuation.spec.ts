@@ -26,12 +26,327 @@ async function openList(page: Page, markdown: string) {
 
 async function saveAndReload(page: Page) {
   await page.evaluate(async () => {
-    const url = '/laplace/src/store/workspace.store.ts';
+    const url = new URL('src/store/workspace.store.ts', location.href).href;
     const { useWorkspaceStore } = await import(url);
     if (!(await useWorkspaceStore.getState().controller.flush())) throw new Error('Save failed');
   });
   await page.reload();
-  await expect(page.locator('#pageTitle')).toHaveText('List');
+  await expect(page.locator('#pageTitle:visible, .dock-pane.active [data-dock-title]')).toHaveText(
+    'List',
+  );
+}
+
+for (const docked of [false, true]) {
+  for (const kind of ['number', 'bullet']) {
+    test(`gutter dragging a nested ${kind} to the start normalizes its indentation in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+      page,
+    }) => {
+      const marker = kind === 'number' ? '1. ' : '- ';
+      await openList(page, `${marker}A\n  ${marker}**B**\n${marker}C\n`);
+      if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+      const editor = page.locator(docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor');
+      const rows = editor.locator(':scope > .block-row');
+      const movedId = await rows.nth(1).getAttribute('data-block-id');
+      await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '1');
+      await rows.nth(1).hover();
+      await rows
+        .nth(1)
+        .locator('[data-block-action="drag"]')
+        .dragTo(rows.first(), { targetPosition: { x: 60, y: 2 } });
+      const verify = async () => {
+        await expect(rows.locator(':scope > .block-content')).toHaveText(['B', 'A', 'C']);
+        await expect(rows).toHaveCount(3);
+        for (const row of await rows.all())
+          await expect(row).toHaveAttribute('data-list-indent', '0');
+        await expect(rows.first()).toHaveAttribute('data-block-id', movedId!);
+        await expect(rows.first().locator('strong')).toHaveText('B');
+        if (kind === 'number')
+          await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
+      };
+      await verify();
+      const content = editor.locator(`[data-block-id="${movedId}"] .block-content`);
+      await content.click({ position: { x: 3, y: 8 } });
+      await content.press('Control+z');
+      await expect(rows.locator(':scope > .block-content')).toHaveText(['A', 'B', 'C']);
+      await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '1');
+      if (kind === 'number')
+        await expect(rows.locator('.list-prefix')).toHaveText(['1.', '1.', '2.']);
+      await expect(content).toBeFocused();
+      await content.press('Control+Shift+z');
+      await verify();
+      const saved = await page.evaluate(async () => {
+        const url = new URL('src/store/workspace.store.ts', location.href).href;
+        const { useWorkspaceStore } = await import(url);
+        if (!(await useWorkspaceStore.getState().controller.flush()))
+          throw new Error('Save failed');
+        const root = await navigator.storage.getDirectory();
+        return (await (await root.getFileHandle('List.md')).getFile()).text();
+      });
+      expect(saved).toBe(kind === 'number' ? '1. **B**\n2. A\n3. C\n' : '- **B**\n- A\n- C\n');
+      await saveAndReload(page);
+      // IDs may be reconstructed from Markdown on reload; formatting and structure must persist.
+      await expect(rows.locator(':scope > .block-content')).toHaveText(['B', 'A', 'C']);
+      for (const row of await rows.all())
+        await expect(row).toHaveAttribute('data-list-indent', '0');
+      if (kind === 'number')
+        await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
+    });
+  }
+}
+
+test('numbered Markdown and plain text use sequential markers with continuation lines', async ({
+  page,
+}) => {
+  await openList(page, '1. sadsadsa\n   sadsad\n1. asdsadsa\n');
+  const first = page.locator('#blockEditor .block-content').first();
+  await first.click({ position: { x: 3, y: 8 } });
+  await first.press('End');
+  await page.keyboard.type('!');
+  const expected = '1. sadsadsa!\n   sadsad\n2. asdsadsa\n';
+  for (let reload = 0; reload < 2; reload++) {
+    const saved = await page.evaluate(async () => {
+      const url = new URL('src/store/workspace.store.ts', location.href).href;
+      const { useWorkspaceStore } = await import(url);
+      if (!(await useWorkspaceStore.getState().controller.flush())) throw new Error('Save failed');
+      const root = await navigator.storage.getDirectory();
+      return (await (await root.getFileHandle('List.md')).getFile()).text();
+    });
+    expect(saved).toBe(expected);
+    const toggle = page.locator('#breadcrumbs [data-page-plain-text-toggle]');
+    await toggle.click();
+    await expect(page.locator('#pageEditor [data-plain-text-content]')).toHaveText(expected);
+    await toggle.click();
+    await saveAndReload(page);
+    await page
+      .locator('#pageTree [data-action="open-page"]')
+      .filter({ hasText: /^List$/ })
+      .click();
+    await expect(page.locator('#blockEditor .list-prefix')).toHaveText(['1.', '2.']);
+    await expect(first).toHaveText('sadsadsa!\nsadsad');
+  }
+});
+
+for (const docked of [false, true]) {
+  for (const kind of ['bullet', 'number']) {
+    for (const key of ['Backspace', 'Shift+Tab']) {
+      test(`${key} removes a ${kind} marker without merging items in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+        page,
+      }) => {
+        const marker = kind === 'bullet' ? '- ' : '1. ';
+        await openList(
+          page,
+          `${marker}text0\n${marker}text1 **bold** [link](https://example.com) [[Target|wiki]]\n${marker}text2\n`,
+        );
+        if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+        const editor = page.locator(
+          docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor',
+        );
+        const rows = editor.locator(':scope > .block-row');
+        const content = rows.nth(1).locator('.block-content');
+        const id = await rows.nth(1).getAttribute('data-block-id');
+        await content.click({ position: { x: 3, y: 8 } });
+        await content.press('Home');
+        await content.press(key);
+        const verify = async () => {
+          await expect(rows).toHaveCount(3);
+          await expect(rows.nth(0)).toHaveAttribute('data-type', kind);
+          await expect(rows.nth(0).locator('.block-content')).toHaveText('text0');
+          await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
+          await expect(content).toHaveText('text1 bold link wiki');
+          await expect(content.locator('strong')).toHaveText('bold');
+          await expect(content.locator('.inline-link')).toHaveText('link');
+          await expect(content.locator('[data-wiki-page-title]')).toHaveText('wiki');
+          await expect(rows.nth(2)).toHaveAttribute('data-type', kind);
+          await expect(rows.nth(2).locator('.block-content')).toHaveText('text2');
+        };
+        await verify();
+        await expect(rows.nth(1)).toHaveAttribute('data-block-id', id!);
+        await expect(content).toBeFocused();
+        await content.press('Control+z');
+        await expect(rows.nth(1)).toHaveAttribute('data-type', kind);
+        await expect(content).toHaveText('text1 bold link wiki');
+        await expect(content).toBeFocused();
+        await content.press('Control+Shift+z');
+        await verify();
+        await expect(content).toBeFocused();
+        await saveAndReload(page);
+        await verify();
+      });
+    }
+  }
+}
+
+for (const docked of [false, true]) {
+  for (const kind of ['bullet', 'number']) {
+    test(`Tab reattaches normal text as a ${kind} continuation in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+      page,
+    }) => {
+      const marker = kind === 'bullet' ? '- ' : '1. ';
+      await openList(
+        page,
+        `${marker}text0\n${marker}text1 **bold** [link](https://example.com) [[Target|wiki]]\n${marker}text2\n`,
+      );
+      if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+      const editor = page.locator(docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor');
+      const rows = editor.locator(':scope > .block-row');
+      const normal = rows.nth(1).locator('.block-content');
+      await normal.click({ position: { x: 3, y: 8 } });
+      await normal.press('Home');
+      await normal.press('Backspace');
+      await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
+      await expect(normal).toBeFocused();
+      await normal.press('Tab');
+      const first = rows.first().locator('.block-content');
+      const verify = async () => {
+        await expect(rows).toHaveCount(2);
+        await expect(rows.first()).toHaveAttribute('data-type', kind);
+        await expect(first).toHaveText('text0\ntext1 bold link wiki');
+        await expect(first.locator('strong')).toHaveText('bold');
+        await expect(first.locator('.inline-link')).toHaveText('link');
+        await expect(first.locator('[data-wiki-page-title]')).toHaveText('wiki');
+        await expect(rows.last()).toHaveAttribute('data-type', kind);
+        await expect(rows.last().locator('.block-content')).toHaveText('text2');
+      };
+      await verify();
+      await expect(first).toBeFocused();
+      const caret = () =>
+        first.evaluate((element) => {
+          const selection = window.getSelection();
+          if (!selection?.focusNode || !element.contains(selection.focusNode)) return -1;
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          range.setEnd(selection.focusNode, selection.focusOffset);
+          return range.toString().length;
+        });
+      await expect.poll(caret).toBe('text0\n'.length);
+      await first.press('Control+z');
+      await expect(rows).toHaveCount(3);
+      await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
+      await expect(normal).toHaveText('text1 bold link wiki');
+      await expect(normal).toBeFocused();
+      await normal.press('Control+Shift+z');
+      await verify();
+      await expect(first).toBeFocused();
+      await expect.poll(caret).toBe('text0\n'.length);
+      await first.press('Shift+Tab');
+      await expect(rows).toHaveCount(3);
+      await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
+      await expect(normal).toBeFocused();
+      await normal.press('Tab');
+      await verify();
+      await saveAndReload(page);
+      await verify();
+    });
+  }
+}
+
+test('Backspace removes the first marker and Shift+Tab removes the last marker', async ({
+  page,
+}) => {
+  await openList(page, '- text0\n- text1\n- text2\n');
+  const rows = page.locator('#blockEditor > .block-row');
+  const first = rows.first().locator('.block-content');
+  await first.click();
+  await first.press('Home');
+  await first.press('Backspace');
+  await expect(rows.first()).toHaveAttribute('data-type', 'text');
+  await expect(first).toHaveText('text0');
+  const last = rows.last().locator('.block-content');
+  await last.click();
+  await last.press('End');
+  await last.press('Shift+Tab');
+  await expect(rows.last()).toHaveAttribute('data-type', 'text');
+  await expect(last).toHaveText('text2');
+  await expect(rows.nth(1)).toHaveAttribute('data-type', 'bullet');
+  await expect(rows).toHaveCount(3);
+});
+
+for (const key of ['Backspace', 'Shift+Tab']) {
+  test(`${key} reduces a nested list level before removing its marker`, async ({ page }) => {
+    await openList(page, '- parent\n  - child\n    - leaf\n- next\n');
+    const rows = page.locator('#blockEditor > .block-row');
+    const child = rows.nth(1).locator('.block-content');
+    await child.click();
+    await child.press('Home');
+    await child.press(key);
+    await expect(rows.nth(1)).toHaveAttribute('data-type', 'bullet');
+    await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '0');
+    await expect(rows.nth(2)).toHaveAttribute('data-list-indent', '1');
+    await expect(child).toBeFocused();
+    await child.press('Control+z');
+    await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '1');
+    await expect(rows.nth(2)).toHaveAttribute('data-list-indent', '2');
+    await expect(child).toBeFocused();
+    await child.press('Control+Shift+z');
+    await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '0');
+    await expect(child).toBeFocused();
+    await child.press(key);
+    await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
+    await expect(child).toHaveText('child');
+    await expect(rows.first().locator('.block-content')).toHaveText('parent');
+    await expect(rows.last().locator('.block-content')).toHaveText('next');
+    await expect(rows).toHaveCount(4);
+  });
+}
+
+for (const docked of [false, true]) {
+  for (const kind of ['bullet', 'number']) {
+    for (const key of ['Backspace', 'Shift+Tab']) {
+      test(`${key} detaches a ${kind} continuation in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+        page,
+      }) => {
+        const marker = kind === 'bullet' ? '- ' : '1. ';
+        const indent = kind === 'bullet' ? '  ' : '\t';
+        await openList(
+          page,
+          `${marker}text1\n${indent}continuation **bold** [link](https://example.com) [[Target|wiki]]\n${marker}text2\n`,
+        );
+        if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+        const editor = page.locator(
+          docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor',
+        );
+        const rows = editor.locator(':scope > .block-row');
+        const first = rows.first().locator('.block-content');
+        await first.click();
+        await first.evaluate((element) => {
+          const range = document.createRange();
+          range.setStart(element.firstChild!, 'text1\n'.length);
+          range.collapse(true);
+          const selection = window.getSelection()!;
+          selection.removeAllRanges();
+          selection.addRange(range);
+        });
+        await first.press(key);
+        const continuation = rows.nth(1).locator('.block-content');
+        const verify = async () => {
+          await expect(rows).toHaveCount(3);
+          await expect(rows.nth(0)).toHaveAttribute('data-type', kind);
+          await expect(first).toHaveText('text1');
+          await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
+          await expect(continuation).toHaveText('continuation bold link wiki');
+          await expect(continuation.locator('strong')).toHaveText('bold');
+          await expect(continuation.locator('.inline-link')).toHaveText('link');
+          await expect(continuation.locator('[data-wiki-page-title]')).toHaveText('wiki');
+          await expect(rows.nth(2)).toHaveAttribute('data-type', kind);
+          await expect(rows.nth(2).locator('.block-content')).toHaveText('text2');
+          expect((await continuation.boundingBox())!.x).toBeLessThan(
+            (await first.boundingBox())!.x,
+          );
+        };
+        await verify();
+        await expect(continuation).toBeFocused();
+        await continuation.press('Control+z');
+        await expect(rows).toHaveCount(2);
+        await expect(first).toHaveText('text1\ncontinuation bold link wiki');
+        await expect(first).toBeFocused();
+        await first.press('Control+Shift+z');
+        await verify();
+        await expect(continuation).toBeFocused();
+        await saveAndReload(page);
+        await verify();
+      });
+    }
+  }
 }
 
 for (const docked of [false, true]) {
