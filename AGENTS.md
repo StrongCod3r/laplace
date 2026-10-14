@@ -91,6 +91,8 @@ Important historical regression: enabling writes before loading finished and sav
 
 ## Editor behaviors to preserve
 
+The plain text toggle beside Page options displays read-only Markdown using the existing serializer, including user frontmatter. Its state is local to each tab for the controller session. Preserve the editor DOM when toggling and refresh source previews when the same note changes in another pane.
+
 The inline emoji picker requires a letter immediately after `:` (for example, `:s`). A bare colon or whitespace within the token must not open the picker; returning to either state must hide it.
 
 ### Clipboard and tables

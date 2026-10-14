@@ -1,5 +1,5 @@
 {
-  "total": 640,
+  "total": 648,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -129,6 +129,9 @@
       "redoWorkspace"
     ],
     "navigation": [
+      "plainTextKey",
+      "syncPlainTextView",
+      "togglePagePlainText",
       "groupTabs",
       "selectedGroupTab",
       "bindEditorElements",
@@ -310,6 +313,8 @@
       "renderHome"
     ],
     "editor": [
+      "inlineSelectionViewportRect",
+      "onInlineSelectionScroll",
       "renderPage",
       "replaceRenderedBlockMarkup",
       "renderBlocks",
@@ -360,6 +365,7 @@
       "blockTypeLabel",
       "textNodePointForOffset",
       "selectTextOffsets",
+      "captureMultiInlineSelection",
       "captureInlineSelection",
       "inlineSelectionBlock",
       "activeSelectionLink",
@@ -465,6 +471,7 @@
       "clearSelectedTableCells",
       "clearSelectedTable",
       "selectSimpleTable",
+      "deleteSelectedTable",
       "markdownTableCell",
       "simpleTableMarkdown",
       "simpleTableClipboardHtml",
@@ -617,6 +624,7 @@
       "markdownInlineForBlock",
       "markdownForBlocks",
       "filePathForWorkspacePage",
+      "markdownForPage",
       "serializeMarkdownWorkspace",
       "parseMarkdownFile",
       "removeLegacyAppFrontmatter",

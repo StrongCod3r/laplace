@@ -1444,6 +1444,15 @@ export function registerMarkdown(runtime: EditorRuntime) {
     return path;
   }
 
+  function markdownForPage(page, workspace, paths) {
+    const body = runtime.markdownForBlocks(page.blocks || [], workspace, paths);
+    const customFrontmatter = Array.isArray(page.frontmatter)
+      ? page.frontmatter.filter((line) => !APP_FRONTMATTER_PATTERN.test(line)).join('\n')
+      : '';
+    const frontmatter = customFrontmatter.trim() ? `---\n${customFrontmatter}\n---\n\n` : '';
+    return `${frontmatter}${body}${body ? '\n' : ''}`;
+  }
+
   function serializeMarkdownWorkspace(workspace) {
     const memo = new Map(),
       used = new Set();
@@ -1452,12 +1461,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
     return (workspace.pages || []).map((page) => {
       const path = memo.get(page.id);
       page.filePath = path;
-      const body = runtime.markdownForBlocks(page.blocks || [], workspace, memo);
-      const customFrontmatter = Array.isArray(page.frontmatter)
-        ? page.frontmatter.filter((line) => !APP_FRONTMATTER_PATTERN.test(line)).join('\n')
-        : '';
-      const frontmatter = customFrontmatter.trim() ? `---\n${customFrontmatter}\n---\n\n` : '';
-      return { path, content: `${frontmatter}${body}${body ? '\n' : ''}` };
+      return { path, content: runtime.markdownForPage(page, workspace, memo) };
     });
   }
 
@@ -2015,6 +2019,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
     markdownPageBlockReference,
     markdownInlineForBlock,
     markdownForBlocks,
+    markdownForPage,
     filePathForWorkspacePage,
     serializeMarkdownWorkspace,
     parseMarkdownFile,

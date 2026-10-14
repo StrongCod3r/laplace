@@ -165,6 +165,7 @@ export function registerEditor(runtime: EditorRuntime) {
     runtime.lifecycle.frame(runtime.syncAllSimpleTableHandles);
     if (page.id === runtime.state.currentPageId) runtime.renderRightSidebar();
     runtime.syncWorkspaceEditorAccess();
+    runtime.syncPlainTextView(runtime.els.blockEditor.closest('.page'), page);
   }
 
   function syncImageCropAspectChecks(root) {
@@ -192,6 +193,7 @@ export function registerEditor(runtime: EditorRuntime) {
       )
         return;
       const blocks = root.querySelector('[data-dock-blocks]');
+      runtime.syncPlainTextView(root, page, root.dataset.tabId);
       if (blocks) {
         replaceRenderedBlockMarkup(blocks, page.blocks);
         runtime.syncSpellcheckElements(blocks);

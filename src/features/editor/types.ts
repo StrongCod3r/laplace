@@ -43,6 +43,8 @@ export interface EditorRuntime {
   lifecycle: ControllerLifecycle;
   publish(): void;
   deferPublication(update: () => void): void;
+  togglePagePlainText(): void;
+  syncPlainTextView(root: HTMLElement | null, page: unknown, tabId?: string): void;
   selectImageBlock?: (id: string) => boolean;
   clearSelectedImageBlock?: () => void;
   copySelectedImageBlockToClipboard?: (event: ClipboardEvent) => boolean;

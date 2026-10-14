@@ -682,6 +682,13 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.activateTab(tab.dataset.tabId);
       return;
     }
+    const plainTextToggle = e.target.closest('[data-page-plain-text-toggle]');
+    if (plainTextToggle) {
+      const pane = plainTextToggle.closest('.dock-pane[data-editor-group]');
+      if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
+      runtime.togglePagePlainText();
+      return;
+    }
     const pageMenuTrigger = e.target.closest('[data-page-menu-trigger]');
     if (pageMenuTrigger) {
       runtime.showPageMenu(pageMenuTrigger, pageMenuTrigger.dataset.pageMenuTrigger);

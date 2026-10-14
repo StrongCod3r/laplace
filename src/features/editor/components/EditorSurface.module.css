@@ -3,6 +3,23 @@
   overflow: auto;
   scrollbar-gutter: stable;
 }
+:global(.page[data-plain-text='true']) > :global(.note-inline-header),
+:global(.page[data-plain-text='true']) > :global(.page-comments),
+:global(.page[data-plain-text='true']) > :global(.block-editor),
+:global(.page[data-plain-text='true']) > :global(.empty-hint) {
+  display: none !important;
+}
+.plain-text-content {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+  user-select: text;
+}
 .editor-view {
   position: absolute;
   top: 75px;

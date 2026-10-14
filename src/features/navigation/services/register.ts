@@ -5,6 +5,50 @@ import { useWorkspaceStore } from '@/store/workspace.store';
 
 export function registerNavigation(runtime: EditorRuntime) {
   let editorScrollSaveTimer = null;
+  const plainTextTabs = new Set<string>();
+
+  function plainTextKey(page, tabId = runtime.state.activeTabId) {
+    return JSON.stringify([runtime.activeVaultId, tabId, page.id]);
+  }
+
+  function syncPlainTextView(root, page, tabId = runtime.state.activeTabId) {
+    if (!root || !page) return;
+    const enabled = plainTextTabs.has(plainTextKey(page, tabId));
+    root.dataset.plainText = String(enabled);
+    let preview = root.querySelector('[data-plain-text-content]');
+    if (enabled) {
+      if (!preview) {
+        root.insertAdjacentHTML(
+          'beforeend',
+          runtime.htmlWithStyles(
+            '<pre class="plain-text-content" data-plain-text-content tabindex="0" aria-label="Markdown source"></pre>',
+          ),
+        );
+        preview = root.querySelector('[data-plain-text-content]');
+      }
+      const memo = new Map();
+      const paths = {
+        get: (id) => {
+          const target = runtime.pageById(id);
+          return target ? runtime.filePathForWorkspacePage(target, runtime.state, memo) : undefined;
+        },
+      };
+      preview.textContent = runtime.markdownForPage(runtime.clone(page), runtime.state, paths);
+    }
+    if (preview) preview.hidden = !enabled;
+  }
+
+  function togglePagePlainText() {
+    const page = runtime.currentPage();
+    if (!page) return;
+    runtime.cancelPageOperations();
+    const key = plainTextKey(page);
+    if (plainTextTabs.has(key)) plainTextTabs.delete(key);
+    else plainTextTabs.add(key);
+    const root = runtime.els.blockEditor.closest('.page');
+    syncPlainTextView(root, page);
+    runtime.renderBreadcrumbs(page);
+  }
 
   function groupTabs(groupId) {
     return runtime.state.openTabs.filter((tab) => tab.groupId === groupId);
@@ -121,6 +165,7 @@ export function registerNavigation(runtime: EditorRuntime) {
           .join('');
         runtime.hydrateAttachmentImages(blocks);
         root.querySelector('[data-dock-empty]').style.display = 'none';
+        runtime.syncPlainTextView(root, page, root.dataset.tabId);
       }
     });
     const active = [...runtime.els.editorDock.querySelectorAll('[data-dock-page]')].find(
@@ -801,24 +846,35 @@ export function registerNavigation(runtime: EditorRuntime) {
 
   function breadcrumbBarMarkup(page, groupId = runtime.state.activeEditorGroupId) {
     if (!page) return '';
-    return `${runtime.navigationHistoryButtonsMarkup(groupId)}${runtime.breadcrumbMarkup(page)}${runtime.pageMenuButtonMarkup(page)}`;
+    return `${runtime.navigationHistoryButtonsMarkup(groupId)}${runtime.breadcrumbMarkup(page)}${runtime.pageMenuButtonMarkup(page, groupId)}`;
   }
 
-  function pageMenuButtonMarkup(page) {
+  function pageMenuButtonMarkup(page, groupId = runtime.state.activeEditorGroupId) {
+    const group = runtime.editorGroup(runtime.state.editorLayout, groupId);
+    const tabId = group ? runtime.selectedGroupTab(group)?.id : runtime.state.activeTabId;
+    const enabled = plainTextTabs.has(plainTextKey(page, tabId));
     return runtime.htmlWithStyles(
-      `<button type="button" class="breadcrumb-page-menu-button" data-page-menu-trigger="${page.id}" title="Page options" aria-label="Page options" aria-haspopup="menu" aria-expanded="false">${runtime.iconMarkup('ellipsis-vertical', '15px', 'more-dots-icon vertical')}</button>`,
+      `<button type="button" class="breadcrumb-plain-text-button" data-page-plain-text-toggle title="${enabled ? 'Show editor' : 'Show plain text'}" aria-label="Plain text" aria-pressed="${enabled}">${runtime.iconMarkup('code', '15px')}</button><button type="button" class="breadcrumb-page-menu-button" data-page-menu-trigger="${page.id}" title="Page options" aria-label="Page options" aria-haspopup="menu" aria-expanded="false">${runtime.iconMarkup('ellipsis-vertical', '15px', 'more-dots-icon vertical')}</button>`,
     );
   }
 
   function updateBreadcrumbBar(container, page) {
-    const button = container.querySelector('[data-page-menu-trigger]');
+    const button = container.querySelector('[data-page-plain-text-toggle]');
+    const menu = container.querySelector('[data-page-menu-trigger]');
     container.querySelectorAll('.crumb,.crumb-sep').forEach((item) => item.remove());
     if (!page) {
       button?.remove();
+      menu?.remove();
       return;
     }
     if (button) {
-      button.dataset.pageMenuTrigger = page.id;
+      const groupId =
+        container.closest('.dock-pane')?.dataset.editorGroup || runtime.state.activeEditorGroupId;
+      const group = runtime.editorGroup(runtime.state.editorLayout, groupId);
+      const enabled = plainTextTabs.has(plainTextKey(page, runtime.selectedGroupTab(group)?.id));
+      button.setAttribute('aria-pressed', String(enabled));
+      button.title = enabled ? 'Show editor' : 'Show plain text';
+      if (menu) menu.dataset.pageMenuTrigger = page.id;
       button.insertAdjacentHTML('beforebegin', runtime.breadcrumbMarkup(page));
     } else container.innerHTML = runtime.breadcrumbBarMarkup(page);
   }
@@ -835,6 +891,8 @@ export function registerNavigation(runtime: EditorRuntime) {
   }
 
   Object.assign(runtime, {
+    syncPlainTextView,
+    togglePagePlainText,
     groupTabs,
     selectedGroupTab,
     bindEditorElements,

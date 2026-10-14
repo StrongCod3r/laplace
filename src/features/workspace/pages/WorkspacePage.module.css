@@ -145,18 +145,26 @@
   opacity: 0.38;
   cursor: default;
 }
-.breadcrumb-page-menu-button {
+.breadcrumb-page-menu-button,
+.breadcrumb-plain-text-button {
   width: 26px;
   height: 26px;
   flex: none;
   display: grid;
   place-items: center;
-  margin-left: auto;
   padding: 0;
   border: 0;
   border-radius: 5px;
   background: transparent;
   color: var(--muted);
+}
+.breadcrumb-plain-text-button {
+  margin-left: auto;
+}
+.breadcrumb-plain-text-button:hover,
+.breadcrumb-plain-text-button[aria-pressed='true'] {
+  background: var(--hover);
+  color: var(--text);
 }
 .breadcrumb-page-menu-button:hover,
 .breadcrumb-page-menu-button[aria-expanded='true'] {
