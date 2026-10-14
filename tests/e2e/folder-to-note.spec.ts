@@ -98,7 +98,7 @@ for (const parent of ['', 'Parent']) {
     await openFixture(page, parent);
     const path = [parent, 'Docs'].filter(Boolean).join('/');
     const before = await page.evaluate(async () => {
-      const modulePath = '/src/store/workspace.store.ts';
+      const modulePath = new URL('src/store/workspace.store.ts', location.href).pathname;
       const { useWorkspaceStore } = await import(modulePath);
       return useWorkspaceStore.getState().controller.getDocument().pages;
     });
@@ -107,7 +107,7 @@ for (const parent of ['', 'Parent']) {
     await expect(page.locator('#pageTitle')).toHaveText('Docs 1');
     await expect(page.locator(`.folder-tree-row[data-folder-path="${path}"]`)).toHaveCount(0);
     const snapshot = await page.evaluate(async () => {
-      const modulePath = '/src/store/workspace.store.ts';
+      const modulePath = new URL('src/store/workspace.store.ts', location.href).pathname;
       const { useWorkspaceStore } = await import(modulePath);
       await useWorkspaceStore.getState().controller.flush();
       return useWorkspaceStore.getState().controller.getDocument();
@@ -157,7 +157,7 @@ test('an empty folder converts to an ordinary editable note', async ({ page }) =
   await expect(page.locator('.folder-tree-row[data-folder-path="Docs"]')).toHaveCount(0);
   await page.locator('#blockEditor .block-content').first().fill('Converted empty folder.');
   await page.evaluate(async () => {
-    const modulePath = '/src/store/workspace.store.ts';
+    const modulePath = new URL('src/store/workspace.store.ts', location.href).pathname;
     const { useWorkspaceStore } = await import(modulePath);
     await useWorkspaceStore.getState().controller.flush();
   });
@@ -179,7 +179,7 @@ test('Convert to Note preserves the folder note in a browser workspace', async (
   await expect(page.locator('.folder-tree-row[data-folder-path="Browser folder"]')).toHaveCount(0);
   await expect(page.locator('#blockEditor')).toContainText('Keep the folder note.');
   await page.evaluate(async () => {
-    const modulePath = '/src/store/workspace.store.ts';
+    const modulePath = new URL('src/store/workspace.store.ts', location.href).pathname;
     const { useWorkspaceStore } = await import(modulePath);
     await useWorkspaceStore.getState().controller.flush();
   });

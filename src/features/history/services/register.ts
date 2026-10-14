@@ -1,14 +1,29 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import {
+  HISTORY_NAVIGATION_KEYS,
+  preserveHistoryNavigation,
+  type HistoryEditorFocus,
+} from './editor-context';
 
 export function registerHistory(runtime: EditorRuntime) {
+  const snapshotFocus = new WeakMap<object, HistoryEditorFocus>();
+  let beforeInputFocus: { vaultId: string; focus: HistoryEditorFocus | null } | null = null;
+
+  function cloneHistorySnapshot(snapshot, focus = snapshotFocus.get(snapshot)) {
+    const copy = runtime.clone(snapshot);
+    if (focus) snapshotFocus.set(copy, runtime.clone(focus));
+    return copy;
+  }
+
   function snapshotsEqual(a, b) {
     try {
       const comparable = (snapshot) => {
         const value = runtime.clone(snapshot || {});
         delete value.markdownFilesInitialized;
         delete value.editorScrollPositions;
+        for (const key of HISTORY_NAVIGATION_KEYS) delete value[key];
         for (const page of value.pages || []) delete page.filePath;
         return value;
       };
@@ -44,8 +59,8 @@ export function registerHistory(runtime: EditorRuntime) {
     }
   }
 
-  function pushUndoSnapshot(history, snapshot) {
-    history.undo.push(runtime.clone(snapshot));
+  function pushUndoSnapshot(history, snapshot, focus = snapshotFocus.get(snapshot)) {
+    history.undo.push(cloneHistorySnapshot(snapshot, focus));
     if (history.undo.length > runtime.HISTORY_LIMIT)
       history.undo.splice(0, history.undo.length - runtime.HISTORY_LIMIT);
   }
@@ -59,7 +74,7 @@ export function registerHistory(runtime: EditorRuntime) {
     history.pending = null;
     if (!runtime.snapshotsEqual(before, after)) {
       runtime.pushUndoSnapshot(history, before);
-      history.present = runtime.clone(after);
+      history.present = cloneHistorySnapshot(after);
       history.redo = [];
     }
   }
@@ -68,9 +83,19 @@ export function registerHistory(runtime: EditorRuntime) {
     if (runtime.historySuspended) return;
     const history = runtime.historyForVault();
     const current = runtime.clone(runtime.state);
+    const afterFocus = captureHistoryEditorFocus();
+    const beforeFocus =
+      beforeInputFocus?.vaultId === runtime.activeVaultId
+        ? beforeInputFocus.focus
+        : snapshotFocus.get(history.present) || afterFocus;
+    beforeInputFocus = null;
+    if (afterFocus) snapshotFocus.set(current, afterFocus);
     if (mode === 'merge') {
       if (!history.pending)
-        history.pending = { before: runtime.clone(history.present), after: current };
+        history.pending = {
+          before: cloneHistorySnapshot(history.present, beforeFocus),
+          after: current,
+        };
       else history.pending.after = current;
       runtime.lifecycle.clearTimeout(runtime.historyTimer);
       const vaultId = runtime.activeVaultId;
@@ -82,7 +107,7 @@ export function registerHistory(runtime: EditorRuntime) {
     }
     runtime.flushHistoryPending(runtime.activeVaultId);
     if (!runtime.snapshotsEqual(history.present, current)) {
-      runtime.pushUndoSnapshot(history, history.present);
+      runtime.pushUndoSnapshot(history, history.present, beforeFocus);
       history.present = current;
       history.redo = [];
     }
@@ -189,26 +214,105 @@ export function registerHistory(runtime: EditorRuntime) {
     if (mode !== 'view') runtime.publish();
   }
 
+  function captureHistoryBeforeInput(event: InputEvent) {
+    if (runtime.workspaceAccess !== 'writable' || !/^(insert|delete)/.test(event.inputType)) return;
+    beforeInputFocus = { vaultId: runtime.activeVaultId, focus: captureHistoryEditorFocus() };
+  }
+
+  function captureHistoryEditorFocus(): HistoryEditorFocus | null {
+    const active = document.activeElement;
+    if (!active || runtime.state.mainView !== 'page') return null;
+    const context = {
+      pageId: runtime.state.currentPageId,
+      groupId: runtime.state.activeEditorGroupId,
+    };
+    const offset = (element) => {
+      const selection = window.getSelection();
+      if (!selection?.focusNode || !element.contains(selection.focusNode)) return 0;
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.setEnd(selection.focusNode, selection.focusOffset);
+      return range.toString().length;
+    };
+    if (active === runtime.els.pageTitle)
+      return { ...context, kind: 'title', offset: offset(active) };
+    if (!runtime.els.blockEditor?.contains(active)) return null;
+    const blockId = active.closest('.block-row')?.dataset.blockId;
+    if (active.matches('[data-code-editor]'))
+      return { ...context, kind: 'code', blockId, offset: active.selectionEnd || 0 };
+    if (active.matches('[data-table-cell]'))
+      return {
+        ...context,
+        kind: 'table',
+        blockId,
+        cell: active.dataset.tableCell,
+        offset: offset(active),
+      };
+    if (active.matches('.block-content'))
+      return { ...context, kind: 'block', blockId, offset: offset(active) };
+    return null;
+  }
+
+  function restoreHistoryEditorFocus(focus: HistoryEditorFocus | null) {
+    if (!focus) return;
+    const workspace = runtime.state;
+    runtime.lifecycle.frame(() => {
+      if (
+        runtime.state !== workspace ||
+        runtime.state.currentPageId !== focus.pageId ||
+        runtime.state.activeEditorGroupId !== focus.groupId
+      )
+        return;
+      const root = runtime.els.blockEditor;
+      const row = [...root.querySelectorAll('.block-row')].find(
+        (item) => item.dataset.blockId === focus.blockId,
+      );
+      const target =
+        focus.kind === 'title'
+          ? runtime.els.pageTitle
+          : focus.kind === 'code'
+            ? row?.querySelector('[data-code-editor]')
+            : focus.kind === 'table'
+              ? [...(row?.querySelectorAll('[data-table-cell]') || [])].find(
+                  (cell) => cell.dataset.tableCell === focus.cell,
+                )
+              : row?.querySelector('.block-content') || root.querySelector('.block-content');
+      if (!target || target.getAttribute('contenteditable') === 'false') return;
+      target.focus({ preventScroll: true });
+      if (focus.kind === 'code')
+        target.selectionStart = target.selectionEnd = Math.min(focus.offset, target.value.length);
+      else runtime.setCaretOffset(target, focus.offset);
+    });
+  }
+
   async function undoWorkspace() {
     runtime.flushHistoryPending(runtime.activeVaultId);
     const history = runtime.historyForVault();
     if (!history.undo.length) return;
     const previousWorkspace = runtime.clone(runtime.state),
       previous = history.undo.pop();
-    previous.editorScrollPositions = runtime.clone(runtime.state.editorScrollPositions || {});
-    history.redo.push(runtime.clone(history.present));
+    const currentFocus = captureHistoryEditorFocus();
+    const storedFocus = snapshotFocus.get(previous);
+    const focus =
+      storedFocus?.pageId === runtime.state.currentPageId
+        ? { ...storedFocus, groupId: runtime.state.activeEditorGroupId }
+        : currentFocus;
+    history.redo.push(cloneHistorySnapshot(history.present));
     runtime.historySuspended = true;
-    runtime.state = runtime.normalizeWorkspace(runtime.clone(previous));
-    history.present = runtime.clone(runtime.state);
+    runtime.state = runtime.normalizeWorkspace(
+      preserveHistoryNavigation(runtime.clone(previous), previousWorkspace),
+    );
+    history.present = cloneHistorySnapshot(runtime.state, focus);
     history.pending = null;
     try {
       runtime.applyTheme();
       runtime.renderAll();
-      await runtime.persistStateNow(previousWorkspace);
-      runtime.toast('Undo');
+      restoreHistoryEditorFocus(focus);
     } finally {
       runtime.historySuspended = false;
     }
+    await runtime.persistStateNow(previousWorkspace);
+    runtime.toast('Undo');
   }
 
   async function redoWorkspace() {
@@ -217,23 +321,32 @@ export function registerHistory(runtime: EditorRuntime) {
     if (!history.redo.length) return;
     const previousWorkspace = runtime.clone(runtime.state),
       next = history.redo.pop();
-    next.editorScrollPositions = runtime.clone(runtime.state.editorScrollPositions || {});
+    const currentFocus = captureHistoryEditorFocus();
+    const storedFocus = snapshotFocus.get(next);
+    const focus =
+      storedFocus?.pageId === runtime.state.currentPageId
+        ? { ...storedFocus, groupId: runtime.state.activeEditorGroupId }
+        : currentFocus;
     runtime.pushUndoSnapshot(history, history.present);
     runtime.historySuspended = true;
-    runtime.state = runtime.normalizeWorkspace(runtime.clone(next));
-    history.present = runtime.clone(runtime.state);
+    runtime.state = runtime.normalizeWorkspace(
+      preserveHistoryNavigation(runtime.clone(next), previousWorkspace),
+    );
+    history.present = cloneHistorySnapshot(runtime.state, focus);
     history.pending = null;
     try {
       runtime.applyTheme();
       runtime.renderAll();
-      await runtime.persistStateNow(previousWorkspace);
-      runtime.toast('Redo');
+      restoreHistoryEditorFocus(focus);
     } finally {
       runtime.historySuspended = false;
     }
+    await runtime.persistStateNow(previousWorkspace);
+    runtime.toast('Redo');
   }
 
   Object.assign(runtime, {
+    cloneHistorySnapshot,
     snapshotsEqual,
     historyForVault,
     initializeHistoryForVault,
@@ -246,6 +359,9 @@ export function registerHistory(runtime: EditorRuntime) {
     prepareHistoryFolderChanges,
     removeHistoryFolders,
     scheduleSave,
+    captureHistoryBeforeInput,
+    captureHistoryEditorFocus,
+    restoreHistoryEditorFocus,
     undoWorkspace,
     redoWorkspace,
   });

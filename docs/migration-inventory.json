@@ -1,5 +1,5 @@
 {
-  "total": 648,
+  "total": 652,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -113,6 +113,7 @@
       "insertTextAtSelection"
     ],
     "history": [
+      "cloneHistorySnapshot",
       "snapshotsEqual",
       "historyForVault",
       "initializeHistoryForVault",
@@ -125,6 +126,9 @@
       "prepareHistoryFolderChanges",
       "removeHistoryFolders",
       "scheduleSave",
+      "captureHistoryBeforeInput",
+      "captureHistoryEditorFocus",
+      "restoreHistoryEditorFocus",
       "undoWorkspace",
       "redoWorkspace"
     ],

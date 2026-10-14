@@ -2104,6 +2104,7 @@ export function registerEditor(runtime: EditorRuntime) {
   }
 
   function onBeforeInput(e) {
+    runtime.captureHistoryBeforeInput(e);
     if (
       !e.isComposing &&
       e.inputType === 'insertParagraph' &&

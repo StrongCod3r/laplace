@@ -56,19 +56,12 @@ for (const docked of [false, true]) {
     await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
     await expect.poll(async () => (await content.boundingBox())!.height).toBe(before!.height);
     await content.press('Control+z');
-    await page
-      .locator('#pageTree [data-action="open-page"]')
-      .filter({ hasText: /^List$/ })
-      .click();
     await expect(content).toHaveText('hola2');
+    await expect(content).toBeFocused();
     await content.press('Control+Shift+z');
-    await page
-      .locator('#pageTree [data-action="open-page"]')
-      .filter({ hasText: /^List$/ })
-      .click();
     await expect(content).toHaveText('');
     await expect.poll(async () => (await content.boundingBox())!.height).toBe(before!.height);
-    await content.click();
+    await expect(content).toBeFocused();
     await page.keyboard.type('replacement');
     await expect(content).toHaveText('replacement');
   });

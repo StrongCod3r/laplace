@@ -6,6 +6,7 @@ import { createEditorVerticalNavigation } from '@/features/editor/services/verti
 import { useWorkspaceStore } from '@/store/workspace.store';
 
 export function registerInteractions(runtime: EditorRuntime) {
+  let previousTextInputKey: string | null = null;
   const verticalNavigation = createEditorVerticalNavigation();
   function bindEvents() {
     if (runtime.eventsBound) return;
@@ -2299,6 +2300,15 @@ export function registerInteractions(runtime: EditorRuntime) {
       const row = content.closest('.block-row');
       const b = runtime.findBlock(row.dataset.blockId);
       if (!b) return;
+      const inputKind = e.inputType?.startsWith('delete') ? 'delete' : 'insert';
+      const inputKey = JSON.stringify([
+        runtime.activeVaultId,
+        runtime.state.currentPageId,
+        b.id,
+        inputKind,
+      ]);
+      if (inputKey !== previousTextInputKey) runtime.flushHistoryPending();
+      previousTextInputKey = inputKey;
       b.text = content.innerText.replace(/\n$/, '');
       delete b.wikiLinks;
       b.inlineLinks = runtime.inlineLinksFromContent(content, b.text);
