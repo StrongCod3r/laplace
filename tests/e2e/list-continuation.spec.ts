@@ -20,6 +20,8 @@ async function openList(page: Page, markdown: string) {
     .locator('#pageTree [data-action="open-page"]')
     .filter({ hasText: /^List$/ })
     .click();
+  await expect(page.locator('#pageTitle')).toHaveText('List');
+  await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);
 }
 
 async function saveAndReload(page: Page) {
@@ -30,6 +32,46 @@ async function saveAndReload(page: Page) {
   });
   await page.reload();
   await expect(page.locator('#pageTitle')).toHaveText('List');
+}
+
+for (const docked of [false, true]) {
+  test(`cutting all text from a list item keeps its height and numbering in ${docked ? 'a docked' : 'the main'} editor`, async ({
+    page,
+  }) => {
+    await openList(page, '1. hola1\n2. hola2\n3. hola3\n');
+    if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+    await page.evaluate(async () => {
+      const url = new URL('src/store/workspace.store.ts', window.location.href).href;
+      const { useWorkspaceStore } = await import(url);
+      await useWorkspaceStore.getState().controller.flush();
+    });
+    const editor = page.locator(docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor');
+    const rows = editor.locator('[data-type="number"]');
+    const content = rows.nth(1).locator('.block-content');
+    const before = await content.boundingBox();
+    await content.click();
+    await content.press('Control+a');
+    await content.press('Control+x');
+    await expect(content).toHaveText('');
+    await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
+    await expect.poll(async () => (await content.boundingBox())!.height).toBe(before!.height);
+    await content.press('Control+z');
+    await page
+      .locator('#pageTree [data-action="open-page"]')
+      .filter({ hasText: /^List$/ })
+      .click();
+    await expect(content).toHaveText('hola2');
+    await content.press('Control+Shift+z');
+    await page
+      .locator('#pageTree [data-action="open-page"]')
+      .filter({ hasText: /^List$/ })
+      .click();
+    await expect(content).toHaveText('');
+    await expect.poll(async () => (await content.boundingBox())!.height).toBe(before!.height);
+    await content.click();
+    await page.keyboard.type('replacement');
+    await expect(content).toHaveText('replacement');
+  });
 }
 
 test('indented intermediate text belongs to its numbered item after Markdown reload', async ({
@@ -63,12 +105,15 @@ test('Enter and Tab add intermediate text while nonempty items can still form su
   await first.click();
   await first.press('End');
   await first.press('Enter');
+  await expect(rows.nth(1).locator('.block-content')).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(rows).toHaveCount(1);
   await page.keyboard.insertText('Intermediate text');
   await page.keyboard.press('Enter');
+  await expect(rows.nth(1).locator('.block-content')).toBeFocused();
   await page.keyboard.insertText('Second item');
   await page.keyboard.press('Enter');
+  await expect(rows.nth(2).locator('.block-content')).toBeFocused();
   await page.keyboard.insertText('Third item');
   await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
   await first.click();

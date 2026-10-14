@@ -11,6 +11,7 @@
 }
 .plain-text-content {
   margin: 0;
+  outline: none;
   color: var(--text);
   font-family: var(--font-mono, monospace);
   font-size: 14px;

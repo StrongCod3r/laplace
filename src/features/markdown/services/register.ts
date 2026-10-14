@@ -56,10 +56,12 @@ export function registerMarkdown(runtime: EditorRuntime) {
     if (!context) return false;
     const { block, blocks, index, caret, root } = context;
     const text = content.innerText.replace(/\n$/, '');
-    if (caret !== text.length) return false;
+    // Let the browser insert a space inside existing text before inspecting its prefix.
+    if (trigger !== 'input' && caret !== text.length) return false;
     const source = trigger === 'space' ? text + ' ' : text;
     const shortcut = markdownBlockShortcut(text, block.type, trigger);
     if (shortcut) {
+      if (caret !== text.length && caret !== shortcut.prefixLength) return false;
       rememberMarkdownSource(block, source);
       const remaining = source.slice(shortcut.prefixLength);
       const prefix = shortcut.prefixText || '';
@@ -101,7 +103,13 @@ export function registerMarkdown(runtime: EditorRuntime) {
         const next = runtime.newTextBlock();
         blocks.splice(index + 1, 0, next);
         finishMarkdownTyping(next, root, 0);
-      } else finishMarkdownTyping(block, root, block.text.length);
+      } else
+        finishMarkdownTyping(
+          block,
+          root,
+          prefix.length +
+            Math.max(0, caret + (trigger === 'space' ? 1 : 0) - shortcut.prefixLength),
+        );
       return true;
     }
     if (trigger !== 'enter' || block.type !== 'text') return false;

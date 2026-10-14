@@ -95,6 +95,10 @@ The plain text toggle beside Page options displays read-only Markdown using the 
 
 The inline emoji picker requires a letter immediately after `:` (for example, `:s`). A bare colon or whitespace within the token must not open the picker; returning to either state must hide it.
 
+Typing a Markdown list prefix at the beginning of existing text must convert the block when the prefix is completed. Preserve the remaining text, inline formatting, links, and caret position, and support undo/redo of the conversion.
+
+Cutting or deleting all text from a list item must leave a single empty line. Browser-inserted `<br>` placeholders must not increase its height; preserve intentional continuation lines and native editing behavior.
+
 ### Clipboard and tables
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.

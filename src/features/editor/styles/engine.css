@@ -552,6 +552,11 @@
   line-height: inherit;
 }
 
+/* Browser deletion placeholders must not add a line to an empty block. */
+.block-content[data-empty='true'] br:not([data-caret-placeholder]) {
+  display: none;
+}
+
 .block-row[data-type='callout'] .block-content[data-placeholder]:focus[data-empty='true']::after {
   left: 2px;
 }
