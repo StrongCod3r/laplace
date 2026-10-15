@@ -143,6 +143,8 @@ Use theme variables and check light and dark themes. Keep global states toggled 
 
 Lay out Files, Favorites, and Git as a static header above a separate scrollable content container. Headers must remain outside the scroll container; do not use sticky positioning. Keep header actions and Git progress indicators outside the scrolling content.
 
+The Files, Favorites, and Git ribbon buttons toggle their associated left panel: clicking the visible panel's button hides the sidebar; clicking another panel's button opens that panel. There is no separate left sidebar toggle button in the ribbon.
+
 ## Theme-aware scrollbars
 
 Every scrollable view, panel, menu and dialog must style its scrollbar using the current theme variables (for example, `var(--muted)`), including overlays rendered through portals. Follow the existing thin scrollbar style with a transparent track and rounded thumb, and cover both `scrollbar-width` / `scrollbar-color` and `::-webkit-scrollbar` selectors, including hover and corner states. Check light and dark themes when adding or changing a scrollable container.

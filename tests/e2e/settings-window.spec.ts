@@ -26,7 +26,8 @@ test('Settings floats above the workspace, drags within the viewport, and closes
   const after = await window.boundingBox();
   expect(after!.x - before!.x).toBeCloseTo(110, 0);
   expect(after!.y - before!.y).toBeCloseTo(65, 0);
-  await page.locator('[data-ribbon-action="toggle-left"]').click();
+  await page.locator('[data-ribbon-action="files"]').click();
+  await expect(page.locator('#sidebar')).toHaveClass(/collapsed/);
   await expect(window).toBeVisible();
   await drag(-2000, -2000);
   const upper = await window.boundingBox();

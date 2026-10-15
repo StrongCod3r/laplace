@@ -18,15 +18,6 @@ export function Ribbon() {
     >
       <div className={withModuleClasses(styles, 'ribbon-top')}>
         <button
-          className={withModuleClasses(styles, 'ribbon-btn')}
-          data-ribbon-action="toggle-left"
-          title="Toggle left sidebar"
-          aria-label="Toggle left sidebar"
-          aria-expanded={open}
-        >
-          <Icon name={open ? 'panel-left-close' : 'panel-left-open'} />
-        </button>
-        <button
           className={withModuleClasses(
             styles,
             `ribbon-btn ${open && panel === 'files' ? 'active' : ''}`,

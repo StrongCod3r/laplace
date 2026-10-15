@@ -540,16 +540,11 @@ export function registerInteractions(runtime: EditorRuntime) {
     const ribbon = e.target.closest('[data-ribbon-action]');
     if (ribbon) {
       const action = ribbon.dataset.ribbonAction;
-      if (action === 'toggle-left') {
-        runtime.state.sidebarOpen = !runtime.state.sidebarOpen;
-        runtime.scheduleSave();
-        runtime.updateWorkspaceChrome();
-        return;
-      }
       if (action === 'files' || action === 'favorites' || action === 'git') {
+        runtime.state.sidebarOpen =
+          !runtime.state.sidebarOpen || runtime.state.leftPanelMode !== action;
         runtime.state.leftPanelMode = action;
-        runtime.state.sidebarOpen = true;
-        runtime.scheduleSave();
+        runtime.scheduleSave('view');
         runtime.renderSidebar();
         runtime.updateWorkspaceChrome();
         return;

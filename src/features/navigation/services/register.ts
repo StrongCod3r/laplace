@@ -650,11 +650,6 @@ export function registerNavigation(runtime: EditorRuntime) {
         String(runtime.state.rightSidebarOpen),
       );
     }
-    const leftSidebarToggle = document.querySelector('[data-ribbon-action="toggle-left"]');
-    if (leftSidebarToggle) {
-      runtime.publish();
-      leftSidebarToggle.setAttribute('aria-expanded', String(runtime.state.sidebarOpen));
-    }
     if (runtime.els.revealCurrentFileBtn)
       runtime.els.revealCurrentFileBtn.disabled = !runtime.activeTabPageForFiles();
     document
