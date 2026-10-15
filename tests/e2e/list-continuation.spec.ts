@@ -489,7 +489,7 @@ test('indented intermediate text belongs to its numbered item after Markdown rel
   }
 });
 
-test('Enter and Tab add intermediate text while nonempty items can still form sublists', async ({
+test('Shift+Enter adds intermediate text while marked items can form sublists', async ({
   page,
 }) => {
   await openList(page, '1. First item\n');
@@ -497,9 +497,8 @@ test('Enter and Tab add intermediate text while nonempty items can still form su
   const first = rows.first().locator('.block-content');
   await first.click();
   await first.press('End');
-  await first.press('Enter');
-  await expect(rows.nth(1).locator('.block-content')).toBeFocused();
-  await page.keyboard.press('Tab');
+  await first.press('Shift+Enter');
+  await expect(first).toBeFocused();
   await expect(rows).toHaveCount(1);
   await page.keyboard.insertText('Intermediate text');
   await page.keyboard.press('Enter');
@@ -510,9 +509,17 @@ test('Enter and Tab add intermediate text while nonempty items can still form su
   await page.keyboard.insertText('Third item');
   await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
   await first.click();
-  await first.press('Control+End');
+  await first.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+  });
   await first.press('Shift+Enter');
+  await expect(first).toBeFocused();
   await page.keyboard.press('Tab');
+  await expect(first).toBeFocused();
   await page.keyboard.insertText('Another continuation');
   await page.keyboard.press('Shift+Tab');
   await expect(rows).toHaveCount(3);
@@ -529,6 +536,50 @@ test('Enter and Tab add intermediate text while nonempty items can still form su
   await expect(first).toContainText('Intermediate text');
   await expect(first).toContainText('Another continuation');
 });
+
+for (const docked of [false, true]) {
+  for (const kind of ['bullet', 'number']) {
+    test(`Tab preserves an empty ${kind} marker when nesting in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+      page,
+    }) => {
+      const marker = kind === 'number' ? '1. ' : '- ';
+      await openList(page, `${marker}Parent\n${marker}Sibling\n`);
+      if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+      const editor = page.locator(docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor');
+      const rows = editor.locator(':scope > .block-row');
+      const first = rows.first().locator('.block-content');
+      await first.click({ position: { x: 3, y: 8 } });
+      await first.press('End');
+      await first.press('Enter');
+      const child = rows.nth(1).locator('.block-content');
+      const id = await rows.nth(1).getAttribute('data-block-id');
+      await expect(child).toBeFocused();
+      await child.press('Tab');
+      const verify = async () => {
+        await expect(rows).toHaveCount(3);
+        await expect(rows.nth(1)).toHaveAttribute('data-type', kind);
+        await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '1');
+        await expect(rows.nth(1).locator('.list-prefix')).toBeVisible();
+        await expect(child).toHaveText('');
+        await expect(rows.last().locator('.block-content')).toHaveText('Sibling');
+        if (kind === 'number')
+          await expect(rows.locator('.list-prefix')).toHaveText(['1.', '1.', '2.']);
+      };
+      await verify();
+      await expect(rows.nth(1)).toHaveAttribute('data-block-id', id!);
+      await child.press('Control+z');
+      await expect(rows.nth(1)).toHaveAttribute('data-list-indent', '0');
+      await child.press('Control+Shift+z');
+      await verify();
+      await saveAndReload(page);
+      await verify();
+      await child.click({ position: { x: 3, y: 8 } });
+      await page.keyboard.type('Child');
+      await expect(child).toHaveText('Child');
+      await expect(rows.nth(1).locator('.list-prefix')).toBeVisible();
+    });
+  }
+}
 
 test('one Shift+Enter immediately shows a continuation line and moves the caret', async ({
   page,

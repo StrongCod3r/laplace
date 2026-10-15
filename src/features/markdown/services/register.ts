@@ -795,7 +795,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
     const pushText = (type, text, extra = {}) => {
       const payload = preserveInline ? runtime.parseMarkdownInlinePayload(text) : null;
       const cleaned = payload?.text ?? runtime.markdownInlineText(text);
-      if (!cleaned && type !== 'text' && type !== 'todo') return;
+      if (!cleaned && !['text', 'todo', 'bullet', 'number'].includes(type)) return;
       const block = { id: runtime.uid('b'), type, text: cleaned, ...extra };
       if (payload?.links.length) block.inlineLinks = payload.links;
       if (payload?.formats.length) block.inlineFormats = payload.formats;

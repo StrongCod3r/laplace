@@ -111,6 +111,8 @@ Backspace at the start of a list continuation, or Shift+Tab after removing any e
 
 For a nonempty list item, Backspace at its start or Shift+Tab on its first line reduces one nesting level. At the root level it removes the marker and converts the item to ordinary text, preserving its ID and inline metadata without merging adjacent items. Nested outdenting keeps descendant indentation relative to the item.
 
+Tab on the first line of a marked list item increases its nesting level while preserving its marker, including empty items created with Enter. Keep empty list items through Markdown reloads. Shift+Enter creates unmarked continuation lines.
+
 Tab on an ordinary text block immediately after a list item attaches that text as a continuation of the preceding item, equivalent to Shift+Enter. Preserve inline formatting, links, wikilinks, caret offsets, remaining siblings, undo/redo, and Markdown persistence. Shift+Tab reverses the attachment by detaching the continuation.
 
 Tab also attaches multiple selected ordinary text blocks as continuations in one operation. When invoked from a later text block in a consecutive run below a list item, include the preceding text blocks in that run through the focused block. Do not consume unselected following blocks or cross a different block type.
