@@ -11,6 +11,14 @@ test('math syntax and Markdown preserve LaTeX without interpreting its inline pu
   });
   try {
     const { inlineMathRanges } = await server.ssrLoadModule('/src/features/math/syntax.ts');
+    const { slashTokenAtCaret } = await server.ssrLoadModule(
+      '/src/features/commands/services/slash-token.ts',
+    );
+    assert.deepEqual(slashTokenAtCaret('Before /eq after', 10), { start: 7, end: 10, query: 'eq' });
+    assert.deepEqual(slashTokenAtCaret('line\n/eq', 8), { start: 5, end: 8, query: 'eq' });
+    assert.equal(slashTokenAtCaret('/', 0), null);
+    assert.equal(slashTokenAtCaret('https://example.com/eq', 22), null);
+    assert.equal(slashTokenAtCaret('folder/eq', 9), null);
     const { registerMarkdown } = await server.ssrLoadModule(
       '/src/features/markdown/services/register.ts',
     );

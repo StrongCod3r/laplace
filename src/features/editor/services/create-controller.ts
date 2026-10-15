@@ -834,7 +834,7 @@ export function createWorkspaceController(): WorkspaceController {
     { type: 'code', icon: 'code', name: 'Code', desc: 'Code snippet', group: 'Advanced' },
     {
       type: 'inline-equation',
-      icon: 'sigma',
+      icon: 'radical',
       name: 'Inline equation',
       desc: 'Insert and edit a LaTeX equation',
       group: 'Advanced',

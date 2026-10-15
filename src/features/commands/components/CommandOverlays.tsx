@@ -91,7 +91,7 @@ export const CommandOverlays = memo(function CommandOverlays() {
           title="Inline equation"
           aria-label="Inline equation"
         >
-          <Icon name="sigma" size="16" />
+          <Icon name="radical" size="16" />
         </button>
         <div style={{ position: 'relative' }} data-format-type-control>
           <button

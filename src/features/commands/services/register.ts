@@ -1,8 +1,17 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { slashTokenAtCaret } from './slash-token';
+import { inlineMathRanges } from '@/features/math/syntax';
 
 export function registerCommands(runtime: EditorRuntime) {
+  let slashContext: {
+    content: HTMLElement;
+    start: number;
+    end: number;
+    original: string;
+    inlineOnly: boolean;
+  } | null = null;
   function updateEmojiMenu(content, b) {
     if (!runtime.els.emojiMenu || runtime.activeSlashBlockId === b.id) {
       runtime.hideEmojiMenu();
@@ -101,18 +110,52 @@ export function registerCommands(runtime: EditorRuntime) {
     runtime.emojiIndex = 0;
   }
 
-  function showSlashMenu(row, b) {
-    runtime.activeSlashBlockId = b.id;
+  function showSlashMenu(row, b, content = row?.querySelector('.block-content')) {
+    const text = String(b.text || '');
+    const token = content?.isContentEditable
+      ? slashTokenAtCaret(text, runtime.getCaretOffset(content))
+      : null;
+    if (
+      !token ||
+      inlineMathRanges(text).some((math) => math.start <= token.start && math.end >= token.end) ||
+      runtime
+        .inlineFormatsForBlock(b)
+        .some(
+          (format) =>
+            format.type === 'code' && format.start <= token.start && format.end >= token.end,
+        )
+    ) {
+      runtime.hideSlashMenu();
+      return false;
+    }
+    slashContext = {
+      content,
+      start: token.start,
+      end: token.end,
+      original: text,
+      inlineOnly:
+        content.matches('[data-table-cell]') ||
+        token.start > 0 ||
+        token.end < text.length ||
+        text.includes('\n'),
+    };
+    runtime.activeSlashBlockId = row.dataset.blockId;
     runtime.slashIndex = 0;
-    runtime.els.slashSearch.value = (b.text || '').slice(1);
+    runtime.els.slashSearch.value = token.query;
     runtime.renderSlashResults(runtime.els.slashSearch.value);
-    const rect = row.getBoundingClientRect();
-    runtime.els.slashMenu.style.left = `${Math.min(rect.left, window.innerWidth - 325)}px`;
-    runtime.els.slashMenu.style.top = `${Math.min(rect.bottom + 2, window.innerHeight - 450)}px`;
+    const selection = window.getSelection();
+    const caret = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+    caret?.collapse(true);
+    const rect = caret?.getBoundingClientRect();
+    const anchor = rect?.height ? rect : content.getBoundingClientRect();
     runtime.els.slashMenu.classList.remove('hidden');
+    runtime.els.slashMenu.style.left = `${Math.max(8, Math.min(anchor.left, window.innerWidth - 325))}px`;
+    runtime.els.slashMenu.style.top = `${Math.max(8, Math.min(anchor.bottom + 2, window.innerHeight - runtime.els.slashMenu.offsetHeight - 8))}px`;
+    return true;
   }
 
   function hideSlashMenu() {
+    slashContext = null;
     runtime.activeSlashBlockId = null;
     runtime.els.slashMenu.classList.add('hidden');
   }
@@ -133,9 +176,11 @@ export function registerCommands(runtime: EditorRuntime) {
       code: '```',
       divider: '---',
     };
-    const items = runtime.BLOCK_TYPES.filter((x) => runtime.blockTypeMatchesQuery(x, query)).sort(
-      (a, b) => runtime.blockTypeSearchRank(a, query) - runtime.blockTypeSearchRank(b, query),
-    );
+    const items = runtime.BLOCK_TYPES.filter(
+      (x) =>
+        (!slashContext?.inlineOnly || x.type === 'inline-equation') &&
+        runtime.blockTypeMatchesQuery(x, query),
+    ).sort((a, b) => runtime.blockTypeSearchRank(a, query) - runtime.blockTypeSearchRank(b, query));
     runtime.slashIndex = 0;
     const groups = [...new Set(items.map((x) => x.group))];
     let html = '';
@@ -161,17 +206,22 @@ export function registerCommands(runtime: EditorRuntime) {
   }
 
   function applySlashType(type) {
+    const context = slashContext;
     const b = runtime.findBlock(runtime.activeSlashBlockId);
     if (!b) return;
     const parent = runtime.currentPage();
     if (type === 'inline-equation') {
-      const content = runtime.els.blockEditor.querySelector(
-        `.block-row[data-block-id="${b.id}"] .block-content`,
-      );
+      if (!context?.content.isConnected) return runtime.hideSlashMenu();
+      const cell = context.content.matches('[data-table-cell]')
+        ? runtime.tableCellCoordinates(context.content)
+        : null;
+      const original = cell ? b.tableRows?.[cell.row]?.[cell.col] : b.text;
+      if (String(original || '') !== context.original) return runtime.hideSlashMenu();
       runtime.hideSlashMenu();
-      runtime.openInlineEquation(content, { start: 0, end: String(b.text || '').length }, '');
+      runtime.openInlineEquation(context.content, { start: context.start, end: context.end }, '');
       return;
     }
+    if (context?.inlineOnly) return;
     b.type = type;
     b.text = '';
     if (!runtime.isListBlock(b)) delete b.indent;

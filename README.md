@@ -44,7 +44,7 @@ The build checks TypeScript and writes the static site to `public/`. Open the UR
 
 ## Math
 
-Use `/equation` and choose **Inline equation** to open a LaTeX field with a live preview. Press Enter or **Done** to insert the formula, or Escape to cancel. Click an existing equation to edit or remove it. You can also select text and use **Inline equation** in the formatting toolbar. These edits support undo/redo and work in split panes and table cells.
+Use `/equation` and choose **Inline equation** (the square root icon) to open a LaTeX field with a live preview. The command works at the start of a block or after a space within a paragraph or table cell, replacing only the command at the cursor. Press Enter or **Done** to insert the formula, or Escape to cancel. Click an existing equation to edit or remove it. You can also select text and use **Inline equation** in the formatting toolbar. These edits support undo/redo and work in split panes and table cells.
 
 Typing `$x^2 + y^2 = z^2$` or `\(\frac{a}{b}\)` remains supported. Formulas stay rendered while editing the surrounding paragraph; placing the text cursor inside a formula reveals its original source for direct editing.
 

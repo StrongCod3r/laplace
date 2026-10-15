@@ -2518,11 +2518,10 @@ export function registerInteractions(runtime: EditorRuntime) {
       }
       runtime.scheduleSave('merge');
       if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(b.type)) runtime.renderRightSidebar();
-      if (b.text.startsWith('/') && !b.text.includes('\n')) {
-        runtime.showSlashMenu(row, b);
+      if (!e.isComposing && runtime.showSlashMenu(row, b, content)) {
         runtime.hideEmojiMenu();
       } else {
-        if (runtime.activeSlashBlockId === b.id) runtime.hideSlashMenu();
+        if (e.isComposing) runtime.hideSlashMenu();
         runtime.updateEmojiMenu(content, b);
       }
       runtime.els.emptyHint.style.display = 'none';
@@ -2538,6 +2537,8 @@ export function registerInteractions(runtime: EditorRuntime) {
         const text = e.target.innerText.replace(/\n$/, '');
         b.tableRows[ri][ci] = text;
         runtime.syncTableCellInlineFromContent(b, ri, ci, e.target, text);
+        if (e.isComposing) runtime.hideSlashMenu();
+        else runtime.showSlashMenu(row, runtime.tableCellInlineBlock(b, ri, ci), e.target);
       }
       runtime.scheduleSave('merge');
       runtime.lifecycle.frame(() => runtime.syncSimpleTableHandles(row));
