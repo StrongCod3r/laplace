@@ -229,6 +229,10 @@ export function registerSettings(runtime: EditorRuntime) {
   }
 
   function runShortcutAction(action) {
+    if (action === 'reopenClosedTab') {
+      runtime.reopenClosedTab();
+      return;
+    }
     if (action === 'undo') {
       void runtime.undoWorkspace();
       return;

@@ -1,11 +1,13 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import type { EditorTab } from '@/features/workspace/types';
 import { useWorkspaceStore } from '@/store/workspace.store';
 
 export function registerNavigation(runtime: EditorRuntime) {
   let editorScrollSaveTimer = null;
   const plainTextTabs = new Set<string>();
+  const closedTabs = new Map<string, { tab: EditorTab; index: number }[]>();
 
   function plainTextKey(page, tabId = runtime.state.activeTabId) {
     return JSON.stringify([runtime.activeVaultId, tabId, page.id]);
@@ -535,6 +537,10 @@ export function registerNavigation(runtime: EditorRuntime) {
     if (index < 0) return;
     const wasActive = runtime.state.activeTabId === tabId;
     const groupId = runtime.state.openTabs[index].groupId;
+    const history = closedTabs.get(runtime.activeVaultId) || [];
+    history.push({ tab: { ...runtime.state.openTabs[index] }, index });
+    if (history.length > 50) history.shift();
+    closedTabs.set(runtime.activeVaultId, history);
     if (wasActive) runtime.cancelPageOperations();
     runtime.state.openTabs.splice(index, 1);
     if (wasActive) {
@@ -562,8 +568,23 @@ export function registerNavigation(runtime: EditorRuntime) {
       }
     }
     runtime.repairEditorGroups();
-    runtime.scheduleSave();
+    runtime.scheduleSave('view');
     runtime.renderAll();
+  }
+
+  function reopenClosedTab(): boolean {
+    const history = closedTabs.get(runtime.activeVaultId);
+    while (history?.length) {
+      const { tab, index } = history.pop()!;
+      if (runtime.state.openTabs.some((item) => item.id === tab.id)) continue;
+      if (tab.kind === 'page' && !runtime.pageById(tab.pageId)) continue;
+      if (!runtime.editorGroup(runtime.state.editorLayout, tab.groupId))
+        tab.groupId = runtime.state.activeEditorGroupId;
+      runtime.state.openTabs.splice(Math.min(index, runtime.state.openTabs.length), 0, tab);
+      runtime.activateTab(tab.id);
+      return true;
+    }
+    return false;
   }
 
   function cycleTab(direction = 1) {
@@ -911,6 +932,7 @@ export function registerNavigation(runtime: EditorRuntime) {
     replaceActiveTab,
     activateTab,
     closeTab,
+    reopenClosedTab,
     cycleTab,
     openGraphTab,
     openAttachmentsTab,

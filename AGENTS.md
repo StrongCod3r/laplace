@@ -133,6 +133,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Navigation and performance
 
+Ctrl/Cmd+Alt+T reopens the most recently closed tab and is configurable under Reopen closed tab. Keep a bounded closure history per vault in controller memory, restore its tab position and group when available, and skip notes that no longer exist. If the original group has closed, reopen in the active group.
+
 Page or tab switching should avoid work proportional to the entire workspace content. Preserve batched snapshot publication and tab updates. Navigation changes use `scheduleSave('view')` to avoid cloning all notes or adding content entries to undo/redo. Do not scan attachments during navigation when the view does not need them.
 
 ## Preferences and styles

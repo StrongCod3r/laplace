@@ -1,5 +1,5 @@
 {
-  "total": 658,
+  "total": 659,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -159,6 +159,7 @@
       "replaceActiveTab",
       "activateTab",
       "closeTab",
+      "reopenClosedTab",
       "cycleTab",
       "openGraphTab",
       "openAttachmentsTab",

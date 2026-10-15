@@ -22,6 +22,7 @@ export type WorkspaceAction =
   | 'saveBrowserWorkspaceLocally'
   | 'activateTab'
   | 'closeTab'
+  | 'reopenClosedTab'
   | 'cancelPageOperations'
   | 'requestCloseSelectedWorkspace'
   | 'resetAppSettings'
