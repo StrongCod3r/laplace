@@ -203,7 +203,7 @@
 }
 .global-right-sidebar-toggle {
   position: fixed;
-  top: 5px;
+  top: calc((var(--workspace-toolbar-height) - 29px) / 2);
   right: 6px;
   z-index: 70;
   width: 29px;
@@ -253,8 +253,8 @@
   position: relative;
 }
 .topbar {
-  top: 39px;
-  height: 36px;
+  top: var(--workspace-toolbar-height);
+  height: var(--workspace-toolbar-height);
   padding: 0 6px 0 10px;
   background: var(--workspace);
   z-index: 18;

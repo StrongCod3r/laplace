@@ -2834,7 +2834,7 @@
 
 .editor-dock {
   position: absolute;
-  inset: 75px 0 0;
+  inset: var(--workspace-header-height) 0 0;
   display: flex;
   min-width: 0;
   min-height: 0;
@@ -2932,7 +2932,7 @@
 
 .dock-tabs {
   display: flex;
-  flex: 0 0 39px;
+  flex: 0 0 var(--workspace-toolbar-height);
   min-width: 0;
   border-bottom: 1px solid var(--border);
   background: var(--tab-bg, var(--sidebar));
@@ -2977,7 +2977,7 @@
 }
 
 .dock-breadcrumbs {
-  flex: 0 0 36px;
+  flex: 0 0 var(--workspace-toolbar-height);
   padding: 0 6px 0 18px;
   overflow: hidden;
   white-space: nowrap;

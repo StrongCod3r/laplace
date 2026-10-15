@@ -1,6 +1,6 @@
 .editor {
   position: absolute;
-  inset: 75px 0 0;
+  inset: var(--workspace-header-height) 0 0;
   display: flex;
   flex-direction: column;
   background: var(--workspace);

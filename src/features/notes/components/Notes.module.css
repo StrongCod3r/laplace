@@ -264,8 +264,8 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 }
 
 .right-sidebar-head {
-  height: 39px;
-  min-height: 39px;
+  height: var(--workspace-toolbar-height);
+  min-height: var(--workspace-toolbar-height);
   display: flex;
   align-items: stretch;
   padding-right: 40px;
@@ -493,7 +493,7 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 }
 
 .left-sidebar-view .section-title {
-  height: 35px;
+  height: var(--workspace-toolbar-height);
   padding: 0 14px;
   border-bottom: 1px solid var(--border);
 }

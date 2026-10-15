@@ -139,7 +139,7 @@ body:global(.hide-files-tab-icons) :global(.dock-tab) .tab-icon {
 }
 .editor-tabs {
   top: 0;
-  height: 39px;
+  height: var(--workspace-toolbar-height);
   background: var(--tab-bg);
   border-bottom: 1px solid var(--border);
   z-index: 20;
@@ -151,7 +151,7 @@ body:global(.hide-files-tab-icons) :global(.dock-tab) .tab-icon {
   padding-left: 2px;
 }
 .editor-tab {
-  height: 38px;
+  height: calc(var(--workspace-toolbar-height) - 1px);
   flex-basis: 190px;
   min-width: 105px;
   max-width: 240px;

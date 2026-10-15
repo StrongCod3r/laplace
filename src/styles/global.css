@@ -1,4 +1,6 @@
 :root {
+  --workspace-toolbar-height: 35px;
+  --workspace-header-height: calc(2 * var(--workspace-toolbar-height));
   --bg: #fff;
   --panel: #fff;
   --sidebar: #f7f7f5;

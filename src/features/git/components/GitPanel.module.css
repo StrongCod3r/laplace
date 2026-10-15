@@ -71,7 +71,7 @@
   z-index: 3;
   background: var(--sc-background);
   border-bottom: 1px solid var(--border);
-  height: 35px;
+  height: var(--workspace-toolbar-height);
   padding: 0 6px 0 8px;
   justify-content: space-between;
 }
