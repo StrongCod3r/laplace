@@ -490,7 +490,7 @@ body.dark .multi-block-selection-rect.multi-block-selection-table {
   color: var(--text);
 }
 
-.dock-pane.active .dock-tab.active::after {
+.dock-pane.active .dock-tab.active:not(.tab-drop-before):not(.tab-drop-after)::after {
   content: '';
   position: absolute;
   left: 0;

@@ -3685,6 +3685,15 @@ export function registerInteractions(runtime: EditorRuntime) {
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         const target = runtime.dockTargetAt(e, pane);
         runtime.clearDockIndicators();
+        const strip = e.target.closest?.('.dock-tabs');
+        if (strip) {
+          const tabs = [...strip.querySelectorAll('.dock-tab[data-tab-id]')];
+          const before = tabs.find((tab) => tab.dataset.tabId === target.beforeTabId);
+          const tab = before || tabs.at(-1);
+          if (tab && tab.dataset.tabId !== runtime.dragTabId)
+            tab.classList.add(before ? 'tab-drop-before' : 'tab-drop-after');
+          return;
+        }
         runtime.dockDrop = {
           ...target,
           groupId:
@@ -3700,7 +3709,9 @@ export function registerInteractions(runtime: EditorRuntime) {
       document
         .querySelectorAll('.tab-drop-before,.tab-drop-after')
         .forEach((x) => x.classList.remove('tab-drop-before', 'tab-drop-after'));
-      const tab = e.target.closest('.editor-tab[data-tab-id]');
+      const tab =
+        e.target.closest('.editor-tab[data-tab-id]') ||
+        strip.querySelector('.editor-tab:last-child');
       if (tab && tab.dataset.tabId !== runtime.dragTabId) {
         const r = tab.getBoundingClientRect();
         tab.classList.add(e.clientX < r.left + r.width / 2 ? 'tab-drop-before' : 'tab-drop-after');
@@ -4041,6 +4052,9 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function clearDockIndicators() {
+    document
+      .querySelectorAll('.tab-drop-before,.tab-drop-after')
+      .forEach((node) => node.classList.remove('tab-drop-before', 'tab-drop-after'));
     document
       .querySelectorAll(
         '.dock-drop-left,.dock-drop-right,.dock-drop-top,.dock-drop-bottom,.dock-drop-center',

@@ -1,6 +1,6 @@
 {
-  "_WorkspacePage-B0rFd3fS.js": {
-    "file": "assets/WorkspacePage-B0rFd3fS.js",
+  "_WorkspacePage-BngGUL1n.js": {
+    "file": "assets/WorkspacePage-BngGUL1n.js",
     "name": "WorkspacePage",
     "isDynamicEntry": true,
     "imports": [
@@ -12,23 +12,23 @@
       "src/features/git/services/git-worker-client.ts"
     ],
     "css": [
-      "assets/WorkspacePage-cm63mODb.css"
+      "assets/WorkspacePage-gG1pQenx.css"
     ]
   },
-  "_WorkspacePage-cm63mODb.css": {
-    "file": "assets/WorkspacePage-cm63mODb.css",
-    "src": "_WorkspacePage-cm63mODb.css"
+  "_WorkspacePage-gG1pQenx.css": {
+    "file": "assets/WorkspacePage-gG1pQenx.css",
+    "src": "_WorkspacePage-gG1pQenx.css"
   },
   "index.html": {
-    "file": "assets/index-CD4gVGD2.js",
+    "file": "assets/index-yXeLGXIx.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "dynamicImports": [
-      "_WorkspacePage-B0rFd3fS.js"
+      "_WorkspacePage-BngGUL1n.js"
     ],
     "css": [
-      "assets/index-B5u-FMx1.css"
+      "assets/index-BqGknN2n.css"
     ]
   },
   "src/features/git/services/directory-fs.ts": {
@@ -38,17 +38,17 @@
     "isDynamicEntry": true
   },
   "src/features/git/services/git-client.ts": {
-    "file": "assets/git-client-DB86my3I.js",
+    "file": "assets/git-client-CmucTJxI.js",
     "name": "git-client",
     "src": "src/features/git/services/git-client.ts",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_WorkspacePage-B0rFd3fS.js"
+      "_WorkspacePage-BngGUL1n.js"
     ]
   },
   "src/features/git/services/git-worker-client.ts": {
-    "file": "assets/git-worker-client-bcWbyyZW.js",
+    "file": "assets/git-worker-client-BkYpJwH5.js",
     "name": "git-worker-client",
     "src": "src/features/git/services/git-worker-client.ts",
     "isDynamicEntry": true,

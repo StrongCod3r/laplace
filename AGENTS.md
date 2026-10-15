@@ -139,6 +139,8 @@ Page or tab switching should avoid work proportional to the entire workspace con
 
 Workspace panel headers, editor tab rows, and editor toolbars share `--workspace-toolbar-height`, using the panel toolbar height as the reference. Derive editor content offsets from `--workspace-header-height` and preserve alignment in split editors and the ribbon.
 
+Dragging a tab over a tab strip shows a vertical insertion marker at the drop edge, including active tabs and split editors. Clear the marker on drop or drag cancellation; tab strip drops must not highlight the entire pane.
+
 `spellcheckEnabled` and `showCustomPageIcons` are disabled by default for new workspaces and when the property is absent. Preserve an explicitly saved `true` value. Keep controller defaults, the workspace factory, and normalization consistent.
 
 Use theme variables and check light and dark themes. Keep global states toggled by the engine (`hidden`, `active`, `selected`, `dim`, `collapsed`) compatible with CSS Modules.
