@@ -615,7 +615,8 @@ export function registerEditor(runtime: EditorRuntime) {
       const activeFormats = formats.filter((format) => format.start <= start && format.end >= end);
       let segment = runtime.wrapInlineSegment(runtime.escapeHtml(piece), activeFormats);
       const token = tokens.find((item) => item.start <= start && item.end >= end);
-      if (token?.kind === 'math') segment = `<span data-inline-math>${segment}</span>`;
+      if (token?.kind === 'math')
+        segment = `<span data-inline-math role="button" tabindex="0" aria-label="Edit inline equation">${segment}</span>`;
       else if (token?.kind === 'external')
         segment = runtime.htmlWithStyles(
           `<a class="inline-link" data-inline-link href="${runtime.escapeHtml(token.url)}" target="_blank" rel="noopener noreferrer">${segment}</a>`,
@@ -1306,6 +1307,9 @@ export function registerEditor(runtime: EditorRuntime) {
     const block = runtime.inlineSelectionBlock(selection);
     if (!block) return;
     const segments = selection.segments || [selection];
+    toolbar
+      .querySelector('[data-format-equation]')
+      ?.classList.toggle('hidden', Boolean(selection.segments));
     const label = toolbar.querySelector('[data-format-type-label]');
     if (label)
       label.textContent = selection.segments

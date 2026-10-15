@@ -123,11 +123,18 @@ export function hydrateInlineMath(root: ParentNode): void {
     }
     shadow.adoptedStyleSheets = [inlineStyles];
     // Only the original source lives in the editable DOM. Range offsets, clipboard
-    // HTML, textContent and innerText cannot acquire generated KaTeX text.
+    // textContent and innerText cannot acquire generated KaTeX text. Native copy
+    // needs the explicit source-only clipboard handler, since it traverses shadows.
     shadow.innerHTML = `<slot></slot><span class="rendered" contenteditable="false">${renderMathHTML(formula.source)}</span>`;
     host.title = source;
     const content = host.closest(editableSelector);
-    host.toggleAttribute('data-math-editing', content === document.activeElement);
+    const selection = window.getSelection();
+    host.toggleAttribute(
+      'data-math-editing',
+      content === document.activeElement &&
+        (host.contains(selection?.anchorNode || null) ||
+          host.contains(selection?.focusNode || null)),
+    );
   }
 }
 
@@ -135,13 +142,23 @@ export function hydrateInlineMath(root: ParentNode): void {
 export function bindMathEditing(
   lifecycle: ControllerLifecycle,
   renderContent: (content: HTMLElement) => void,
+  openEquation?: (host: HTMLElement, content: HTMLElement) => void,
 ): void {
   const pending = new Set<HTMLElement>();
   const dirty = new WeakSet<HTMLElement>();
   const editing = (content: HTMLElement, enabled: boolean) => {
+    const selection = window.getSelection();
     content
       .querySelectorAll('[data-inline-math]')
-      .forEach((host) => host.toggleAttribute('data-math-editing', enabled));
+      .forEach((host) =>
+        host.toggleAttribute(
+          'data-math-editing',
+          enabled &&
+            (host.contains(selection?.anchorNode || null) ||
+              host.contains(selection?.focusNode || null) ||
+              host.getAttribute('title') !== host.textContent),
+        ),
+      );
   };
   const flush = () => {
     const selection = window.getSelection();
@@ -168,7 +185,13 @@ export function bindMathEditing(
       if ((event as PointerEvent).button !== 0) return;
       const host = (event.target as Element)?.closest<HTMLElement>('[data-inline-math]');
       const content = host?.closest<HTMLElement>(editableSelector);
-      if (!host || !content?.isContentEditable || document.activeElement === content) return;
+      if (!host || !content?.isContentEditable) return;
+      if (openEquation) {
+        event.preventDefault();
+        openEquation(host, content);
+        return;
+      }
+      if (document.activeElement === content) return;
       // A rendered formula is outside the editable tree. Enter its original source
       // explicitly instead of letting the browser select text inside its shadow root.
       event.preventDefault();
@@ -191,6 +214,29 @@ export function bindMathEditing(
     }
     flush();
   });
+  lifecycle.listen(
+    document,
+    'keydown',
+    (event) => {
+      const key = event as KeyboardEvent;
+      const target = event.target as HTMLElement;
+      const anchor = window.getSelection()?.anchorNode;
+      const anchorElement =
+        anchor?.nodeType === Node.ELEMENT_NODE ? (anchor as Element) : anchor?.parentElement;
+      const host = target.matches?.('[data-inline-math]')
+        ? target
+        : key.key === 'Enter' && target.matches?.(editableSelector)
+          ? anchorElement?.closest<HTMLElement>('[data-inline-math]')
+          : null;
+      if (!openEquation || !host || !['Enter', ' '].includes(key.key)) return;
+      const content = host.closest<HTMLElement>(editableSelector);
+      if (!content?.isContentEditable) return;
+      key.preventDefault();
+      key.stopImmediatePropagation();
+      openEquation(host, content);
+    },
+    true,
+  );
   lifecycle.listen(document, 'input', (event) => {
     const content = (event.target as Element)?.closest<HTMLElement>(editableSelector);
     if (
@@ -203,5 +249,8 @@ export function bindMathEditing(
     }
   });
   lifecycle.listen(document, 'focusout', () => lifecycle.frame(flush));
-  lifecycle.listen(document, 'selectionchange', flush);
+  lifecycle.listen(document, 'selectionchange', () => {
+    for (const content of pending) if (content === document.activeElement) editing(content, true);
+    flush();
+  });
 }

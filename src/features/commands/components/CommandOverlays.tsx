@@ -37,11 +37,62 @@ export const CommandOverlays = memo(function CommandOverlays() {
       </div>
       <div id="blockMenu" className={withModuleClasses(styles, 'floating-menu hidden')}></div>
       <div
+        id="inlineEquationPanel"
+        className={withModuleClasses(styles, 'inline-equation-panel hidden')}
+        role="dialog"
+        aria-label="Inline equation"
+        aria-modal="false"
+      >
+        <label htmlFor="inlineEquationInput">Inline equation</label>
+        <textarea
+          id="inlineEquationInput"
+          data-equation-input
+          rows={3}
+          spellcheck={false}
+          placeholder={'e.g. \\frac{x^2}{2}'}
+          aria-describedby="inlineEquationHint inlineEquationError"
+        />
+        <div id="inlineEquationHint" className={withModuleClasses(styles, 'equation-hint')}>
+          Write LaTeX. Enter to apply · Esc to cancel
+        </div>
+        <div
+          data-equation-preview
+          className={withModuleClasses(styles, 'equation-preview')}
+          aria-label="Equation preview"
+        ></div>
+        <div
+          id="inlineEquationError"
+          data-equation-error
+          className={withModuleClasses(styles, 'equation-error')}
+          role="status"
+          hidden
+        ></div>
+        <div className={withModuleClasses(styles, 'equation-actions')}>
+          <button type="button" data-equation-remove hidden>
+            Remove equation
+          </button>
+          <button type="button" data-equation-cancel>
+            Cancel
+          </button>
+          <button type="button" data-equation-save>
+            Done
+          </button>
+        </div>
+      </div>
+      <div
         id="textFormatToolbar"
         className={withModuleClasses(styles, 'text-format-toolbar hidden')}
         role="toolbar"
         aria-label="Text formatting"
       >
+        <button
+          type="button"
+          data-format-equation
+          title="Inline equation"
+          aria-label="Inline equation"
+        >
+          <Icon name="sigma" size="16" />
+        </button>
         <div style={{ position: 'relative' }} data-format-type-control>
           <button
             type="button"

@@ -8,21 +8,41 @@ import { createEditorVerticalNavigation } from '@/features/editor/services/verti
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { attachListContinuation, detachListContinuation } from './list-continuation';
 import { bindMathEditing } from '@/features/math/render';
+import { inlineMathRanges } from '@/features/math/syntax';
+import { copyInlineMathSelection } from '@/features/math/clipboard';
+import {
+  createInlineEquationEditor,
+  type InlineEquationEditor,
+} from '@/features/math/inline-equation-editor';
 
 export function registerInteractions(runtime: EditorRuntime) {
   let previousTextInputKey: string | null = null;
   const verticalNavigation = createEditorVerticalNavigation();
+  let equationEditor: InlineEquationEditor | null = null;
   function bindEvents() {
     if (runtime.eventsBound) return;
     runtime.eventsBound = true;
-    bindMathEditing(runtime.lifecycle, (content) => {
-      const block = runtime.findBlock(content.closest('.block-row')?.dataset.blockId);
-      if (!block) return;
-      if (content.matches('[data-table-cell]')) {
-        const [row, col] = content.dataset.tableCell.split(':').map(Number);
-        content.innerHTML = runtime.inlineTextHTML(runtime.tableCellInlineBlock(block, row, col));
-      } else content.innerHTML = runtime.inlineTextHTML(block);
-    });
+    equationEditor = createInlineEquationEditor(runtime.els.inlineEquationPanel, runtime.lifecycle);
+    bindMathEditing(
+      runtime.lifecycle,
+      (content) => {
+        const block = runtime.findBlock(content.closest('.block-row')?.dataset.blockId);
+        if (!block) return;
+        if (content.matches('[data-table-cell]')) {
+          const [row, col] = content.dataset.tableCell.split(':').map(Number);
+          content.innerHTML = runtime.inlineTextHTML(runtime.tableCellInlineBlock(block, row, col));
+        } else content.innerHTML = runtime.inlineTextHTML(block);
+      },
+      (host, content) => {
+        const before = document.createRange();
+        before.selectNodeContents(content);
+        before.setEndBefore(host);
+        runtime.openInlineEquation(content, {
+          start: before.toString().length,
+          end: before.toString().length + host.textContent.length,
+        });
+      },
+    );
     runtime.lifecycle.listen(runtime.els.workspaceReconnectBtn, 'click', () => {
       void runtime.requestWorkspaceWriteAccess();
     });
@@ -481,6 +501,15 @@ export function registerInteractions(runtime: EditorRuntime) {
       return;
     }
     if (e.target.closest('#textFormatToolbar')) {
+      if (e.target.closest('[data-format-equation]')) {
+        const selection = runtime.inlineSelectionState;
+        if (selection && !selection.segments)
+          runtime.openInlineEquation(selection.content, {
+            start: selection.start,
+            end: selection.end,
+          });
+        return;
+      }
       const typeToggle = e.target.closest('[data-format-type-toggle]');
       if (typeToggle) {
         const menu = runtime.els.textFormatToolbar.querySelector('[data-format-type-menu]');
@@ -2034,7 +2063,8 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (runtime.copySelectedImageBlockToClipboard?.(e)) return;
     if (runtime.copySelectedTableCellsToClipboard(e)) return;
     if (runtime.copySelectedTableToClipboard(e)) return;
-    runtime.copyMultiBlockSelectionToClipboard(e);
+    if (runtime.copyMultiBlockSelectionToClipboard(e)) return;
+    copyInlineMathSelection(e);
   }
 
   function onCut(e) {
@@ -2242,6 +2272,145 @@ export function registerInteractions(runtime: EditorRuntime) {
       e.preventDefault();
       runtime.openPage(homeCard.dataset.homePage, { newTab: true });
     }
+  }
+
+  function openInlineEquation(
+    content: HTMLElement,
+    range: { start: number; end: number } | null = null,
+    initialSource: string | null = null,
+  ) {
+    if (
+      !equationEditor ||
+      !content?.isContentEditable ||
+      runtime.workspaceAccess !== 'writable' ||
+      runtime.gitOperationActive
+    )
+      return;
+    const pane = content.closest('.dock-pane[data-editor-group]');
+    if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
+    const blockId = content.closest('.block-row')?.dataset.blockId;
+    const table = content.matches('[data-table-cell]')
+      ? runtime.tableCellCoordinates(content)
+      : null;
+    const currentBlock = runtime.findBlock(blockId);
+    if (!currentBlock) return;
+    const block = table
+      ? runtime.tableCellInlineBlock(currentBlock, table.row, table.col)
+      : currentBlock;
+    const original = String(block.text || '');
+    let { start, end } = range || runtime.selectionOffsetsWithin(content);
+    const math =
+      initialSource === null
+        ? inlineMathRanges(original).find((item) => item.start <= start && item.end >= end)
+        : null;
+    if (math) {
+      start = math.start;
+      end = math.end;
+    }
+    const source = initialSource ?? math?.source ?? original.slice(start, end);
+    const vaultId = runtime.activeVaultId;
+    const pageId = runtime.state.currentPageId;
+    const groupId = runtime.state.activeEditorGroupId;
+    const root = content.closest('[data-dock-blocks]') || runtime.els.blockEditor;
+    const valid = () => {
+      if (
+        !content.isConnected ||
+        runtime.workspaceAccess !== 'writable' ||
+        runtime.gitOperationActive ||
+        runtime.activeVaultId !== vaultId ||
+        runtime.state.currentPageId !== pageId ||
+        runtime.state.activeEditorGroupId !== groupId
+      )
+        return false;
+      const current = runtime.findBlock(blockId);
+      return (
+        current &&
+        String(table ? (current.tableRows?.[table.row]?.[table.col] ?? '') : current.text || '') ===
+          original
+      );
+    };
+    const focus = (target, offset) => {
+      target?.focus({ preventScroll: true });
+      if (target) {
+        runtime.setCaretOffset(target, offset);
+        for (const host of target.querySelectorAll('[data-inline-math]')) {
+          const before = document.createRange();
+          before.selectNodeContents(target);
+          before.setEndAfter(host);
+          if (before.toString().length !== offset) continue;
+          const after = document.createRange();
+          after.setStartAfter(host);
+          after.collapse(true);
+          window.getSelection()?.removeAllRanges();
+          window.getSelection()?.addRange(after);
+          break;
+        }
+      }
+    };
+    runtime.hideFloatingMenus();
+    equationEditor.open({
+      anchor: content,
+      source,
+      existing: Boolean(math),
+      valid,
+      cancel: () => focus(content, end),
+      apply: (value) => {
+        if (!valid()) return;
+        if (pane) runtime.focusEditorGroup(groupId);
+        focus(content, start);
+        runtime.flushHistoryPending();
+        runtime.captureHistoryBeforeInput({
+          inputType: value === null ? 'deleteContent' : 'insertReplacementText',
+        });
+        const inserted =
+          value === null
+            ? ''
+            : math && original.startsWith('\\(', start)
+              ? `\\(${value}\\)`
+              : `$${value}$`;
+        const wikiLinks = (block.wikiLinks || [])
+          .filter((link) => link.end <= start || link.start >= end)
+          .map((link) =>
+            link.start >= end
+              ? {
+                  ...link,
+                  start: link.start + inserted.length - (end - start),
+                  end: link.end + inserted.length - (end - start),
+                }
+              : link,
+          );
+        runtime.replaceBlockRangeWithInlineLink(block, start, end, inserted, null);
+        if (inserted)
+          runtime.setInlineFormatRange(block, start, start + inserted.length, 'code', '', 'remove');
+        if (wikiLinks.length) block.wikiLinks = wikiLinks;
+        else delete block.wikiLinks;
+        if (table) {
+          currentBlock.tableRows[table.row][table.col] = block.text;
+          runtime.setTableCellInline(currentBlock, table.row, table.col, block);
+        }
+        runtime.scheduleSave();
+        runtime.renderBlocks(runtime.currentPage());
+        runtime.lifecycle.frame(() => {
+          if (
+            runtime.activeVaultId !== vaultId ||
+            runtime.state.currentPageId !== pageId ||
+            runtime.state.activeEditorGroupId !== groupId
+          )
+            return;
+          const row = root.querySelector(`.block-row[data-block-id="${blockId}"]`);
+          focus(
+            row?.querySelector(
+              table ? `[data-table-cell="${table.row}:${table.col}"]` : '.block-content',
+            ),
+            start + inserted.length,
+          );
+        });
+      },
+    });
+  }
+
+  function closeInlineEquation() {
+    equationEditor?.close();
   }
 
   function onInput(e) {
@@ -4502,6 +4671,8 @@ export function registerInteractions(runtime: EditorRuntime) {
     deleteMultiBlockSelection,
     onAuxClick,
     onInput,
+    openInlineEquation,
+    closeInlineEquation,
     onChange,
     finishListIndentChange,
     outdentListContinuation,

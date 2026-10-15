@@ -1,5 +1,5 @@
 {
-  "total": 661,
+  "total": 663,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -567,6 +567,8 @@
       "normalizeListIndentation",
       "deleteMultiBlockSelection",
       "onAuxClick",
+      "openInlineEquation",
+      "closeInlineEquation",
       "onInput",
       "onChange",
       "finishListIndentChange",

@@ -164,6 +164,14 @@ export function registerCommands(runtime: EditorRuntime) {
     const b = runtime.findBlock(runtime.activeSlashBlockId);
     if (!b) return;
     const parent = runtime.currentPage();
+    if (type === 'inline-equation') {
+      const content = runtime.els.blockEditor.querySelector(
+        `.block-row[data-block-id="${b.id}"] .block-content`,
+      );
+      runtime.hideSlashMenu();
+      runtime.openInlineEquation(content, { start: 0, end: String(b.text || '').length }, '');
+      return;
+    }
     b.type = type;
     b.text = '';
     if (!runtime.isListBlock(b)) delete b.indent;

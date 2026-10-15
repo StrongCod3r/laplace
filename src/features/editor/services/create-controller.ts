@@ -833,6 +833,13 @@ export function createWorkspaceController(): WorkspaceController {
     },
     { type: 'code', icon: 'code', name: 'Code', desc: 'Code snippet', group: 'Advanced' },
     {
+      type: 'inline-equation',
+      icon: 'sigma',
+      name: 'Inline equation',
+      desc: 'Insert and edit a LaTeX equation',
+      group: 'Advanced',
+    },
+    {
       type: 'divider',
       icon: 'minus',
       name: 'Divider',
@@ -1205,6 +1212,7 @@ export function createWorkspaceController(): WorkspaceController {
     emojiResults: runtime.$('emojiResults'),
     blockMenu: runtime.$('blockMenu'),
     textFormatToolbar: runtime.$('textFormatToolbar'),
+    inlineEquationPanel: runtime.$('inlineEquationPanel'),
     linkEditPanel: runtime.$('linkEditPanel'),
     shareModal: runtime.$('shareModal'),
     settingsModal: runtime.$('settingsModal'),
@@ -1311,6 +1319,7 @@ export function createWorkspaceController(): WorkspaceController {
       )
         void runtime.persistStateNow();
       runtime.clearAttachmentObjectUrls();
+      runtime.closeInlineEquation?.();
       lifecycle.dispose();
       deleteConfirmResolver?.(false);
     },

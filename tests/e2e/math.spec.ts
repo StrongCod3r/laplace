@@ -45,9 +45,9 @@ for (const dark of [false, true]) {
     ).toMatchObject({ text: original, selected: original });
     expect(await content.innerHTML()).not.toContain('katex');
     await hosts.first().locator('.katex').click();
+    await expect(page.locator('[data-equation-input]')).toHaveValue('\\frac{x_1}{2}');
+    await page.locator('[data-equation-input]').press('Escape');
     await expect(content).toBeFocused();
-    await expect(hosts.first()).toHaveAttribute('data-math-editing', '');
-    await expect(hosts.first().locator('.katex')).toBeHidden();
     await content.press('End');
     await page.keyboard.type(' More $z^2$.');
     await page.locator('#pageTitle').click();
@@ -246,7 +246,7 @@ test('typing math creates a preview after leaving the paragraph and inline code 
   await contents.last().fill('Typed $x_1 + x_2$');
   await page.locator('#pageTitle').click();
   await expect(contents.last().locator('[data-inline-math] .katex')).toBeVisible();
-  await contents.last().click();
+  await contents.last().evaluate((element: HTMLElement) => element.focus());
   await contents.last().press('Control+End');
   await page.keyboard.type(' + $y_1 + y_2$');
   await page.locator('#pageTitle').click();
@@ -259,9 +259,10 @@ test('table formulas remain editable and preserve cell Markdown', async ({ page 
   const cell = page.locator('#blockEditor [data-table-cell="1:0"]');
   await expect(cell.locator('[data-inline-math] .katex')).toBeVisible();
   await cell.locator('[data-inline-math] .katex').click();
+  await expect(page.locator('[data-equation-input]')).toHaveValue('x_1');
+  await page.locator('[data-equation-input]').fill('y_2');
+  await page.locator('[data-equation-input]').press('Enter');
   await expect(cell).toBeFocused();
-  await expect(cell.locator('[data-inline-math] .katex')).toBeHidden();
-  await cell.fill('$y_2$');
   await page.locator('#pageTitle').click();
   await expect(cell.locator('[data-inline-math] .katex')).toBeVisible();
   expect(await cell.innerText()).toBe('$y_2$');

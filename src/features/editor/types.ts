@@ -48,6 +48,12 @@ export interface EditorRuntime {
   replaceSelectedPageContents(text: string, blocks?: Block[]): boolean;
   togglePagePlainText(): void;
   syncPlainTextView(root: HTMLElement | null, page: unknown, tabId?: string): void;
+  openInlineEquation(
+    content: HTMLElement,
+    range?: { start: number; end: number } | null,
+    initialSource?: string | null,
+  ): void;
+  closeInlineEquation(): void;
   selectImageBlock?: (id: string) => boolean;
   clearSelectedImageBlock?: () => void;
   copySelectedImageBlockToClipboard?: (event: ClipboardEvent) => boolean;

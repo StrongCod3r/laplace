@@ -44,7 +44,9 @@ The build checks TypeScript and writes the static site to `public/`. Open the UR
 
 ## Math
 
-Write inline formulas with `$x^2 + y^2 = z^2$` or `\(\frac{a}{b}\)`. A paragraph shows its LaTeX source while you edit it and renders the formulas after you move the cursor elsewhere.
+Use `/equation` and choose **Inline equation** to open a LaTeX field with a live preview. Press Enter or **Done** to insert the formula, or Escape to cancel. Click an existing equation to edit or remove it. You can also select text and use **Inline equation** in the formatting toolbar. These edits support undo/redo and work in split panes and table cells.
+
+Typing `$x^2 + y^2 = z^2$` or `\(\frac{a}{b}\)` remains supported. Formulas stay rendered while editing the surrounding paragraph; placing the text cursor inside a formula reveals its original source for direct editing.
 
 Choose **LaTeX / Math** in a code block's language menu to render a formula. Blocks start in **Preview**; use the display mode button to select **Code**, **Preview**, or **Split horizontally**. The toolbar also downloads the formula as a standalone SVG with embedded fonts. Imported fenced blocks also accept `tex`, `math`, and `katex`. Display math between separate `$$` lines is supported and keeps those delimiters when saved:
 
