@@ -2,6 +2,8 @@
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
 import { quoteDepth } from '@/features/markdown/services/quote-depth';
+import { inlineMathRanges } from '@/features/math/syntax';
+import { hydrateInlineMath } from '@/features/math/render';
 
 export function registerEditor(runtime: EditorRuntime) {
   let inlineSelectionScrollPending = false;
@@ -149,6 +151,7 @@ export function registerEditor(runtime: EditorRuntime) {
       if (previous && next) next.replaceWith(previous);
     });
     root.replaceChildren(template.content);
+    hydrateInlineMath(root);
     root.style.minHeight = minHeight;
     if (scroller) scroller.scrollTo({ top: scrollTop, left: scrollLeft, behavior: 'instant' });
   }
@@ -553,6 +556,24 @@ export function registerEditor(runtime: EditorRuntime) {
       links = runtime.inlineLinksForBlock(block),
       formats = runtime.inlineFormatsForBlock(block);
     const tokens = links.map((link) => ({ ...link, kind: link.pageId ? 'page' : 'external' }));
+    for (const math of inlineMathRanges(text)) {
+      if (
+        formats.some(
+          (format) => format.type === 'code' && format.start < math.end && format.end > math.start,
+        )
+      )
+        continue;
+      if (tokens.some((token) => token.start < math.end && token.end > math.start)) continue;
+      if (
+        formats.some(
+          (format) =>
+            (format.start > math.start && format.start < math.end) ||
+            (format.end > math.start && format.end < math.end),
+        )
+      )
+        continue;
+      tokens.push({ ...math, kind: 'math' });
+    }
     const wikiLinks = Array.isArray(block.wikiLinks)
       ? block.wikiLinks.map((wiki) => ({
           ...wiki,
@@ -560,6 +581,12 @@ export function registerEditor(runtime: EditorRuntime) {
         }))
       : runtime.wikiLinksInText(text);
     for (const wiki of wikiLinks) {
+      if (
+        tokens.some(
+          (token) => token.kind === 'math' && wiki.start < token.end && wiki.end > token.start,
+        )
+      )
+        continue;
       if (links.some((link) => wiki.start < link.end && wiki.end > link.start)) continue;
       tokens.push({ ...wiki, kind: 'wiki' });
     }
@@ -588,7 +615,8 @@ export function registerEditor(runtime: EditorRuntime) {
       const activeFormats = formats.filter((format) => format.start <= start && format.end >= end);
       let segment = runtime.wrapInlineSegment(runtime.escapeHtml(piece), activeFormats);
       const token = tokens.find((item) => item.start <= start && item.end >= end);
-      if (token?.kind === 'external')
+      if (token?.kind === 'math') segment = `<span data-inline-math>${segment}</span>`;
+      else if (token?.kind === 'external')
         segment = runtime.htmlWithStyles(
           `<a class="inline-link" data-inline-link href="${runtime.escapeHtml(token.url)}" target="_blank" rel="noopener noreferrer">${segment}</a>`,
         );
@@ -2516,7 +2544,7 @@ export function registerEditor(runtime: EditorRuntime) {
     runtime.els.blockMenu.classList.add('hidden');
     runtime.hideLinkHoverMenu();
     runtime.closeStandaloneLinkEditor();
-    runtime.closeMermaidModeToolbars();
+    runtime.closeCodeModeToolbars();
     document
       .querySelectorAll('[data-page-menu-trigger][aria-expanded="true"]')
       .forEach((button) => button.setAttribute('aria-expanded', 'false'));

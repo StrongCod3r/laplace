@@ -1,5 +1,5 @@
 {
-  "total": 659,
+  "total": 661,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -490,6 +490,7 @@
     "code": [
       "codeBlockHTML",
       "mermaidViewModeForBlock",
+      "codeViewModeForBlock",
       "highlightCode",
       "highlightMermaid",
       "currentMermaidTheme",
@@ -505,8 +506,9 @@
       "syncCodeScroll",
       "focusCodeBlock",
       "copyCodeBlock",
-      "setMermaidViewMode",
-      "closeMermaidModeToolbars",
+      "setCodeViewMode",
+      "closeCodeModeToolbars",
+      "downloadMathFormula",
       "downloadMermaidDiagram",
       "blockDeleteMenuItem",
       "showCodeOptions",

@@ -873,6 +873,7 @@ export function createWorkspaceController(): WorkspaceController {
     ['yaml', 'YAML'],
     ['markdown', 'Markdown'],
     ['mermaid', 'Mermaid'],
+    ['latex', 'LaTeX / Math'],
   ];
   const CODE_KEYWORDS = {
     javascript:

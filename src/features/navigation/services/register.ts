@@ -3,6 +3,7 @@
 import type { EditorRuntime } from '@/features/editor/types';
 import type { EditorTab } from '@/features/workspace/types';
 import { useWorkspaceStore } from '@/store/workspace.store';
+import { hydrateInlineMath } from '@/features/math/render';
 
 export function registerNavigation(runtime: EditorRuntime) {
   let editorScrollSaveTimer = null;
@@ -166,6 +167,7 @@ export function registerNavigation(runtime: EditorRuntime) {
           .map((block, index) => runtime.blockHTML(block, index, page.blocks))
           .join('');
         runtime.hydrateAttachmentImages(blocks);
+        hydrateInlineMath(blocks);
         root.querySelector('[data-dock-empty]').style.display = 'none';
         runtime.syncPlainTextView(root, page, root.dataset.tabId);
       }

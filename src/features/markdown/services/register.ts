@@ -4,6 +4,7 @@ import { APP_FRONTMATTER_PATTERN, APP_FRONTMATTER_VALUE_PATTERN } from './../../
 import type { EditorRuntime } from '@/features/editor/types';
 import { quoteDepth } from './quote-depth';
 import { normalizeImagePresentation } from '@/features/attachments/services/image-presentation';
+import { inlineMathAt, inlineMathRanges } from '@/features/math/syntax';
 import {
   markdownBlockShortcut,
   markdownInlineShortcut,
@@ -170,6 +171,19 @@ export function registerMarkdown(runtime: EditorRuntime) {
     const { block, caret, root } = context;
     const shortcut = markdownInlineShortcut(block.text || '', caret);
     if (!shortcut) return false;
+    if (
+      inlineMathRanges(block.text || '').some(
+        (math) => math.start < shortcut.end && math.end > shortcut.start,
+      )
+    )
+      return false;
+    // An unfinished formula may contain Markdown-like subscripts or emphasis.
+    const mathPrefix = String(block.text || '').slice(0, shortcut.start);
+    if (
+      (mathPrefix.match(/(?<!\\)\$/g) || []).length % 2 ||
+      mathPrefix.lastIndexOf('\\(') > mathPrefix.lastIndexOf('\\)')
+    )
+      return false;
     const codeBefore =
       String(block.text)
         .slice(0, shortcut.start)
@@ -359,6 +373,9 @@ export function registerMarkdown(runtime: EditorRuntime) {
       md: 'markdown',
       mdown: 'markdown',
       mmd: 'mermaid',
+      tex: 'latex',
+      math: 'latex',
+      katex: 'latex',
       txt: 'plain',
       text: 'plain',
       plaintext: 'plain',
@@ -460,6 +477,8 @@ export function registerMarkdown(runtime: EditorRuntime) {
     return (
       /(^|\n)\s{0,3}(#{1,6})\s+\S/.test(source) ||
       /(^|\n)\s{0,3}(```|~~~)/.test(source) ||
+      /(^|\n)\s*\$\$\s*(?:\n|$)/.test(source) ||
+      inlineMathRanges(source).length > 0 ||
       /(^|\n)\s{0,3}[-+*]\s+(?:\[[ xX]\]\s+)?\S/.test(source) ||
       /(^|\n)\s{0,3}\d+[.)]\s+\S/.test(source) ||
       /(^|\n)\s{0,3}>\s?\S/.test(source) ||
@@ -825,7 +844,10 @@ export function registerMarkdown(runtime: EditorRuntime) {
       .split('\n');
     const blocks = [];
     const pushText = (type, text, extra = {}) => {
-      const payload = preserveInline ? runtime.parseMarkdownInlinePayload(text) : null;
+      const payload =
+        preserveInline || inlineMathRanges(text).length
+          ? runtime.parseMarkdownInlinePayload(text)
+          : null;
       const cleaned = payload?.text ?? runtime.markdownInlineText(text);
       if (!cleaned && !['text', 'todo', 'bullet', 'number', 'quote'].includes(type)) return;
       const block = { id: runtime.uid('b'), type, text: cleaned, ...extra };
@@ -894,6 +916,22 @@ export function registerMarkdown(runtime: EditorRuntime) {
         continue;
       }
 
+      if (trimmed === '$$') {
+        const closing = lines.findIndex(
+          (candidate, index) => index > i && candidate.trim() === '$$',
+        );
+        if (closing > i) {
+          blocks.push({
+            id: runtime.uid('b'),
+            type: 'code',
+            language: 'latex',
+            text: lines.slice(i + 1, closing).join('\n'),
+            mathFence: 'dollars',
+          });
+          i = closing + 1;
+          continue;
+        }
+      }
       const fence = line.match(/^\s{0,3}(```|~~~)\s*([^\s`]*)\s*$/);
       if (fence) {
         const marker = fence[1],
@@ -1165,6 +1203,13 @@ export function registerMarkdown(runtime: EditorRuntime) {
         return { start: offset, end: result.text.length };
       };
       for (let i = 0; i < value.length;) {
+        const math = inlineMathAt(value, i);
+        if (math) {
+          const original = value.slice(i, math.end);
+          result.text += tableCell ? original.replace(/&#124;/g, '|') : original;
+          i = math.end;
+          continue;
+        }
         // Older documents escaped breaks as Markdown punctuation or HTML entities.
         const lineBreak = value.slice(i).match(/^(?:<br\s*\/?>|\\<br\s*\/?\\>|&lt;br\s*\/?&gt;)/i);
         if (lineBreak) {
@@ -1173,6 +1218,11 @@ export function registerMarkdown(runtime: EditorRuntime) {
           continue;
         }
         if (value[i] === '\\' && i + 1 < value.length) {
+          if (value[i + 1] === '$') {
+            result.text += '\\$';
+            i += 2;
+            continue;
+          }
           result.text += value[i + 1];
           i += 2;
           continue;
@@ -1332,6 +1382,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
     const text = String(block?.text || ''),
       formats = runtime.inlineFormatsForBlock(block),
       events = new Map();
+    const allMaths = inlineMathRanges(text);
     const add = (at, event) => {
       const list = events.get(at) || [];
       list.push(event);
@@ -1383,6 +1434,16 @@ export function registerMarkdown(runtime: EditorRuntime) {
       add(format.start, { kind: 'open', rank, value: opening });
       add(format.end, { kind: 'close', rank, value: wrapper[1] });
     }
+    // Partially formatted formula source stays ordinary editable text. Encode its
+    // dollars so the parser can recover the internal styles instead of treating
+    // their Markdown markers as LaTeX or dropping their range events.
+    const maths = allMaths.filter(
+      (math) =>
+        !formats.some(
+          (format) => format.type === 'code' && format.start < math.end && format.end > math.start,
+        ) && ![...events.keys()].some((offset) => offset > math.start && offset < math.end),
+    );
+    const literalMaths = allMaths.filter((math) => !maths.includes(math));
     let out = '';
     for (let i = 0; i <= text.length; i++) {
       const here = (events.get(i) || [])
@@ -1399,9 +1460,23 @@ export function registerMarkdown(runtime: EditorRuntime) {
       for (const event of here) if (event.kind === 'close') out += event.value;
       for (const event of here) if (event.kind === 'open') out += event.value;
       if (i < text.length) {
+        const math = maths.find((range) => range.start === i);
+        if (math) {
+          const source = text.slice(math.start, math.end);
+          out += tableCell ? source.replace(/\|/g, '&#124;') : source;
+          i = math.end - 1;
+          continue;
+        }
+        if (text[i] === '\\' && text[i + 1] === '$') {
+          out += '\\$';
+          i++;
+          continue;
+        }
         const char = text[i];
         if (formats.some((format) => format.type === 'code' && format.start <= i && format.end > i))
           out += tableCell && /[\\|]/.test(char) ? '\\' + char : char;
+        else if (char === '$' && literalMaths.some((math) => math.start <= i && math.end > i))
+          out += '&#36;';
         else if (char === '\n') out += '<br>';
         else if (tableCell && char === '|') out += '&#124;';
         else if (char === '&') out += '&amp;';
@@ -1466,6 +1541,14 @@ export function registerMarkdown(runtime: EditorRuntime) {
         );
       else if (block.type === 'toggle') lines.push(`> [!NOTE] ${text}`);
       else if (block.type === 'code') {
+        if (
+          block.language === 'latex' &&
+          block.mathFence === 'dollars' &&
+          !/^\s*\$\$\s*$/m.test(String(block.text || ''))
+        ) {
+          lines.push(`$$\n${block.text || ''}\n$$`);
+          continue;
+        }
         const value = String(block.text || ''),
           runs = [...value.matchAll(/`{3,}|~{3,}/g)].map((match) => match[0].length),
           fence = '`'.repeat(Math.max(3, ...runs.map((size) => size + 1)));

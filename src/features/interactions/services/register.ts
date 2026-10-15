@@ -7,6 +7,7 @@ import type { Block } from '@/features/workspace/types';
 import { createEditorVerticalNavigation } from '@/features/editor/services/vertical-navigation';
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { attachListContinuation, detachListContinuation } from './list-continuation';
+import { bindMathEditing } from '@/features/math/render';
 
 export function registerInteractions(runtime: EditorRuntime) {
   let previousTextInputKey: string | null = null;
@@ -14,6 +15,14 @@ export function registerInteractions(runtime: EditorRuntime) {
   function bindEvents() {
     if (runtime.eventsBound) return;
     runtime.eventsBound = true;
+    bindMathEditing(runtime.lifecycle, (content) => {
+      const block = runtime.findBlock(content.closest('.block-row')?.dataset.blockId);
+      if (!block) return;
+      if (content.matches('[data-table-cell]')) {
+        const [row, col] = content.dataset.tableCell.split(':').map(Number);
+        content.innerHTML = runtime.inlineTextHTML(runtime.tableCellInlineBlock(block, row, col));
+      } else content.innerHTML = runtime.inlineTextHTML(block);
+    });
     runtime.lifecycle.listen(runtime.els.workspaceReconnectBtn, 'click', () => {
       void runtime.requestWorkspaceWriteAccess();
     });
@@ -313,8 +322,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.closeAttachmentPreview();
       return;
     }
-    if (!e.target.closest?.('[data-mermaid-mode-toggle], [data-mermaid-view-mode]'))
-      runtime.closeMermaidModeToolbars();
+    if (!e.target.closest?.('[data-code-mode-toggle], [data-code-view-mode]'))
+      runtime.closeCodeModeToolbars();
     if (runtime.addBlockOnBlankPageEndClick(e)) return;
     if (e.target.closest?.('#deleteConfirmAccept')) {
       e.preventDefault();
@@ -957,24 +966,28 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.copyCodeBlock(id);
         return;
       }
-      const modeToggle = e.target.closest('[data-mermaid-mode-toggle]');
+      const modeToggle = e.target.closest('[data-code-mode-toggle]');
       if (modeToggle) {
-        const toolbar = blockRow.querySelector('.mermaid-mode-toolbar');
+        const toolbar = blockRow.querySelector('[data-code-mode-toolbar]');
         const open = !!toolbar && !toolbar.classList.contains('hidden');
-        runtime.closeMermaidModeToolbars();
+        runtime.closeCodeModeToolbars();
         if (toolbar) {
           toolbar.classList.toggle('hidden', open);
           modeToggle.setAttribute('aria-expanded', String(!open));
         }
         return;
       }
-      const mermaidMode = e.target.closest('[data-mermaid-view-mode]');
-      if (mermaidMode) {
-        runtime.setMermaidViewMode(id, mermaidMode.dataset.mermaidViewMode);
+      const previewMode = e.target.closest('[data-code-view-mode]');
+      if (previewMode) {
+        runtime.setCodeViewMode(id, previewMode.dataset.codeViewMode);
         return;
       }
       if (e.target.closest('[data-mermaid-download]')) {
         void runtime.downloadMermaidDiagram(blockRow, id);
+        return;
+      }
+      if (e.target.closest('[data-math-download]')) {
+        void runtime.downloadMathFormula(id);
         return;
       }
       if (e.target.closest('[data-code-wrap]')) {

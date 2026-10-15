@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { inlineMathRanges } from '@/features/math/syntax';
 
 export function registerTables(runtime: EditorRuntime) {
   function tableColumnAlignment(value) {
@@ -381,7 +382,7 @@ export function registerTables(runtime: EditorRuntime) {
       `| ${Array.from({ length: cols }, (_, i) => {
         const value = String(row?.[i] ?? '');
         const inline = cellInline?.[ri]?.[i];
-        return inline
+        return inline || inlineMathRanges(value).length
           ? runtime.markdownInlineForBlock({ ...inline, text: value }, workspace, paths, {
               tableCell: true,
             })

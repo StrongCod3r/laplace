@@ -1,7 +1,7 @@
 const BASE = new URL('./', self.location.href);
 const CACHE_PREFIX = `laplace-shell-${encodeURIComponent(BASE.pathname)}-preact-`;
 const LEGACY_CACHE_PREFIX = `laplace-shell-${encodeURIComponent(BASE.pathname)}-react-`;
-const CACHE_NAME = `${CACHE_PREFIX}dc509df769f8e0e1`;
+const CACHE_NAME = `${CACHE_PREFIX}1bcab9d670bd99b9`;
 const shellUrl = new URL('index.html', BASE).href;
 const APP_SHELL = [
   'index.html',
@@ -16,7 +16,7 @@ function isLocalAsset(value) {
   return (
     url.origin === BASE.origin &&
     url.pathname.startsWith(BASE.pathname) &&
-    /\.(?:js|css|svg|png|webmanifest)$/.test(url.pathname)
+    /\.(?:js|css|svg|png|webmanifest|woff2?|ttf)$/.test(url.pathname)
   );
 }
 

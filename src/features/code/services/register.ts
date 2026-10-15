@@ -2,6 +2,7 @@
 import { APP_ID } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { createMathSvg, renderMathHTML } from '@/features/math/render';
 
 export function registerCode(runtime: EditorRuntime) {
   const renderedMermaidPreviews = new WeakMap();
@@ -13,48 +14,53 @@ export function registerCode(runtime: EditorRuntime) {
     const text = String(block.text || '');
     const wrap = block.codeWrap === true,
       lineNumbers = block.codeLineNumbers === true;
-    const mermaidMode = language === 'mermaid' ? runtime.mermaidViewModeForBlock(block) : null;
+    const previewLabel = language === 'mermaid' ? 'Mermaid' : language === 'latex' ? 'LaTeX' : '';
+    const previewMode = previewLabel ? runtime.codeViewModeForBlock(block) : null;
     const rows = text.split('\n').length;
     const nums = text
       .split('\n')
       .map((_, i) => `<span>${i + 1}</span>`)
       .join('');
-    const mermaidToolbar =
-      language === 'mermaid'
-        ? runtime.htmlWithStyles(
-            `<div class="mermaid-mode-toolbar hidden" role="toolbar" aria-label="Mermaid display mode">${[
-              ['code', 'code-xml', 'Code'],
-              ['split', 'rows-2', 'Split horizontally'],
-              ['preview', 'eye', 'Preview'],
-            ]
-              .map(
-                ([mode, icon, label]) =>
-                  `<button type="button" class="mermaid-mode-btn ${mermaidMode === mode ? 'active' : ''}" data-mermaid-view-mode="${mode}" title="${label}" aria-label="${label}" aria-pressed="${mermaidMode === mode}">${runtime.iconMarkup(icon, '16px')}</button>`,
-              )
-              .join('')}</div>`,
-          )
-        : '';
-    const modeToggle =
-      language === 'mermaid'
-        ? runtime.htmlWithStyles(
-            `<button type="button" class="code-tool-btn mermaid-mode-toggle" data-mermaid-mode-toggle title="Change display mode" aria-label="Change Mermaid display mode" aria-expanded="false">${runtime.iconMarkup(mermaidMode === 'code' ? 'code-xml' : mermaidMode === 'preview' ? 'eye' : 'rows-2', '15px')}</button>`,
-          )
-        : '';
+    const modeToolbar = previewLabel
+      ? runtime.htmlWithStyles(
+          `<div class="mermaid-mode-toolbar hidden" data-code-mode-toolbar role="toolbar" aria-label="${previewLabel} display mode">${[
+            ['code', 'code-xml', 'Code'],
+            ['split', 'rows-2', 'Split horizontally'],
+            ['preview', 'eye', 'Preview'],
+          ]
+            .map(
+              ([mode, icon, label]) =>
+                `<button type="button" class="mermaid-mode-btn ${previewMode === mode ? 'active' : ''}" data-code-view-mode="${mode}" ${language === 'mermaid' ? `data-mermaid-view-mode="${mode}"` : ''} title="${label}" aria-label="${label}" aria-pressed="${previewMode === mode}">${runtime.iconMarkup(icon, '16px')}</button>`,
+            )
+            .join('')}</div>`,
+        )
+      : '';
+    const modeToggle = previewLabel
+      ? runtime.htmlWithStyles(
+          `<button type="button" class="code-tool-btn mermaid-mode-toggle" data-code-mode-toggle ${language === 'mermaid' ? 'data-mermaid-mode-toggle' : ''} title="Change display mode" aria-label="Change ${previewLabel} display mode" aria-expanded="false">${runtime.iconMarkup(previewMode === 'code' ? 'code-xml' : previewMode === 'preview' ? 'eye' : 'rows-2', '15px')}</button>`,
+        )
+      : '';
     const downloadButton =
       language === 'mermaid'
         ? runtime.htmlWithStyles(
             `<button type="button" class="code-tool-btn" data-mermaid-download title="Download diagram as SVG" aria-label="Download diagram as SVG">${runtime.iconMarkup('download', '15px')}</button>`,
           )
-        : '';
+        : language === 'latex'
+          ? `<button type="button" class="code-tool-btn" data-math-download title="Download formula as SVG" aria-label="Download formula as SVG">${runtime.iconMarkup('download', '15px')}</button>`
+          : '';
     const preview =
       language === 'mermaid'
         ? runtime.htmlWithStyles(
             `<div class="mermaid-preview" data-mermaid-preview><div class="mermaid-preview-status" data-mermaid-status>Rendering diagram…</div><div class="mermaid-render" data-mermaid-render></div></div>`,
           )
-        : '';
-    const modeClass = mermaidMode ? ` mermaid-mode-${mermaidMode}` : '';
+        : language === 'latex'
+          ? `<div class="math-preview" data-math-preview role="region" aria-label="LaTeX preview">${renderMathHTML(text, true)}</div>`
+          : '';
+    const modeClass = previewMode
+      ? ` ${language === 'mermaid' ? 'mermaid' : 'math'}-mode-${previewMode}`
+      : '';
     return runtime.htmlWithStyles(
-      `<div class="block-row code-block${modeClass}" data-block-id="${block.id}" data-type="code">${gutter}<div class="code-block-shell"><div class="code-toolbar"><select class="code-language-select" data-code-language aria-label="Code language">${runtime.CODE_LANGUAGES.map(([id, label]) => `<option value="${id}" ${id === language ? 'selected' : ''}>${label}</option>`).join('')}</select><div class="code-toolbar-actions">${modeToggle}${downloadButton}<button class="code-tool-btn" data-code-copy title="Copy code" aria-label="Copy code">${runtime.iconMarkup('copy', '14px', 'code-copy-icon')}</button><button class="code-tool-btn ${wrap ? 'active' : ''}" data-code-wrap title="${wrap ? 'Disable' : 'Enable'} line wrapping" aria-label="Toggle line wrapping">${runtime.iconMarkup('wrap-text', '14px', 'code-wrap-icon')}</button><button class="code-tool-btn" data-code-more title="More code options" aria-label="More code options">${runtime.iconMarkup('ellipsis', '14px', 'more-dots-icon')}</button></div></div>${mermaidToolbar}<div class="code-editor-wrap ${wrap ? 'wrap' : ''}"><div class="code-line-numbers ${lineNumbers ? '' : 'hidden'}" data-code-line-numbers>${nums}</div><div class="code-editor-stack"><pre class="code-highlight" data-code-highlight aria-hidden="true"><code>${runtime.highlightCode(text, language)}</code></pre><textarea class="code-input" data-code-editor rows="${rows}" wrap="${wrap ? 'soft' : 'off'}" spellcheck="false" autocomplete="off" autocapitalize="off">${runtime.escapeHtml(text)}</textarea></div></div>${preview}</div></div>`,
+      `<div class="block-row code-block${modeClass}" data-block-id="${block.id}" data-type="code">${gutter}<div class="code-block-shell"><div class="code-toolbar"><select class="code-language-select" data-code-language aria-label="Code language">${runtime.CODE_LANGUAGES.map(([id, label]) => `<option value="${id}" ${id === language ? 'selected' : ''}>${label}</option>`).join('')}</select><div class="code-toolbar-actions">${modeToggle}${downloadButton}<button class="code-tool-btn" data-code-copy title="Copy code" aria-label="Copy code">${runtime.iconMarkup('copy', '14px', 'code-copy-icon')}</button><button class="code-tool-btn ${wrap ? 'active' : ''}" data-code-wrap title="${wrap ? 'Disable' : 'Enable'} line wrapping" aria-label="Toggle line wrapping">${runtime.iconMarkup('wrap-text', '14px', 'code-wrap-icon')}</button><button class="code-tool-btn" data-code-more title="More code options" aria-label="More code options">${runtime.iconMarkup('ellipsis', '14px', 'more-dots-icon')}</button></div></div>${modeToolbar}<div class="code-editor-wrap ${wrap ? 'wrap' : ''}"><div class="code-line-numbers ${lineNumbers ? '' : 'hidden'}" data-code-line-numbers>${nums}</div><div class="code-editor-stack"><pre class="code-highlight" data-code-highlight aria-hidden="true"><code>${runtime.highlightCode(text, language)}</code></pre><textarea class="code-input" data-code-editor rows="${rows}" wrap="${wrap ? 'soft' : 'off'}" spellcheck="false" autocomplete="off" autocapitalize="off">${runtime.escapeHtml(text)}</textarea></div></div>${preview}</div></div>`,
     );
   }
 
@@ -63,9 +69,17 @@ export function registerCode(runtime: EditorRuntime) {
     return block?.mermaidPreview === false ? 'code' : 'preview';
   }
 
+  function codeViewModeForBlock(block) {
+    if (block?.language === 'mermaid') return runtime.mermaidViewModeForBlock(block);
+    return ['code', 'preview', 'split'].includes(block?.mathViewMode)
+      ? block.mathViewMode
+      : 'preview';
+  }
+
   function highlightCode(code, language) {
     code = String(code || '');
     if (language === 'plain') return runtime.escapeHtml(code);
+    if (language === 'latex') return runtime.escapeHtml(code);
     if (language === 'html' || language === 'xml') return runtime.highlightMarkup(code);
     if (language === 'mermaid') return runtime.highlightMermaid(code);
 
@@ -299,6 +313,10 @@ export function registerCode(runtime: EditorRuntime) {
         .join('');
     runtime.syncCodeScroll(input);
     if (language === 'mermaid') runtime.scheduleMermaidPreview(row, b);
+    if (language === 'latex') {
+      const preview = row?.querySelector('[data-math-preview]');
+      if (preview) preview.innerHTML = renderMathHTML(String(b.text || ''), true);
+    }
   }
 
   function syncCodeScroll(input) {
@@ -342,25 +360,49 @@ export function registerCode(runtime: EditorRuntime) {
     else fallback();
   }
 
-  function setMermaidViewMode(id, mode) {
+  function setCodeViewMode(id, mode) {
     const block = runtime.findBlock(id);
-    if (!block || block.language !== 'mermaid' || !['code', 'preview', 'split'].includes(mode))
+    if (
+      !block ||
+      !['mermaid', 'latex'].includes(block.language) ||
+      !['code', 'preview', 'split'].includes(mode)
+    )
       return;
-    block.mermaidViewMode = mode;
-    block.mermaidPreview = mode !== 'code';
-    runtime.closeMermaidModeToolbars();
+    if (block.language === 'mermaid') {
+      block.mermaidViewMode = mode;
+      block.mermaidPreview = mode !== 'code';
+    } else block.mathViewMode = mode;
+    runtime.closeCodeModeToolbars();
     runtime.scheduleSave();
     runtime.renderBlocks(runtime.currentPage());
   }
 
-  function closeMermaidModeToolbars() {
-    document.querySelectorAll('.mermaid-mode-toolbar:not(.hidden)').forEach((toolbar) => {
+  function closeCodeModeToolbars() {
+    document.querySelectorAll('[data-code-mode-toolbar]:not(.hidden)').forEach((toolbar) => {
       toolbar.classList.add('hidden');
       toolbar
         .closest('.code-block-shell')
-        ?.querySelector('[data-mermaid-mode-toggle]')
+        ?.querySelector('[data-code-mode-toggle]')
         ?.setAttribute('aria-expanded', 'false');
     });
+  }
+
+  async function downloadMathFormula(id) {
+    const block = runtime.findBlock(id);
+    if (!block || block.language !== 'latex') return;
+    const filename = `${String(runtime.currentPage()?.title || 'formula').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')}.svg`;
+    try {
+      const blob = await createMathSvg(String(block.text || ''));
+      if (runtime.lifecycle.disposed) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      runtime.lifecycle.timeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      runtime.toast(error?.message || 'Could not download the formula');
+    }
   }
 
   async function downloadMermaidDiagram(row, id) {
@@ -449,6 +491,7 @@ export function registerCode(runtime: EditorRuntime) {
   Object.assign(runtime, {
     codeBlockHTML,
     mermaidViewModeForBlock,
+    codeViewModeForBlock,
     highlightCode,
     highlightMermaid,
     currentMermaidTheme,
@@ -464,8 +507,9 @@ export function registerCode(runtime: EditorRuntime) {
     syncCodeScroll,
     focusCodeBlock,
     copyCodeBlock,
-    setMermaidViewMode,
-    closeMermaidModeToolbars,
+    setCodeViewMode,
+    closeCodeModeToolbars,
+    downloadMathFormula,
     downloadMermaidDiagram,
     blockDeleteMenuItem,
     showCodeOptions,

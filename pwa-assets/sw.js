@@ -16,7 +16,7 @@ function isLocalAsset(value) {
   return (
     url.origin === BASE.origin &&
     url.pathname.startsWith(BASE.pathname) &&
-    /\.(?:js|css|svg|png|webmanifest)$/.test(url.pathname)
+    /\.(?:js|css|svg|png|webmanifest|woff2?|ttf)$/.test(url.pathname)
   );
 }
 

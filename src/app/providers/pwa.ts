@@ -10,7 +10,7 @@ export function registerPwa() {
           const urls = performance
             .getEntriesByType('resource')
             .map((entry) => entry.name)
-            .filter((url) => /\.(js|css)(?:\?|$)/.test(url));
+            .filter((url) => /\.(js|css|woff2?|ttf)(?:\?|$)/.test(url));
           // Cache only resources that this browser already requested, including lazy chunks.
           registration.active?.postMessage({ type: 'CACHE_LOADED_ASSETS', urls });
         };
