@@ -30,6 +30,7 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
       validateFilesystemName: () => '',
       INLINE_FORMAT_TYPES: new Set(['bold']),
       CODE_LANGUAGES: [['plain', 'Plain text']],
+      STORAGE_CONFIG: { indexeddb: { attachmentsDirectory: '.attachments' } },
     };
     registerTables(runtime);
     registerEditor(runtime);
@@ -257,16 +258,36 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
       'data:image/svg+xml;charset=utf-8,%3Csvg%3E%3C%2Fsvg%3E',
     ]) {
       const caption = 'Caption "quoted" & literal &quot; **text** [label] \\path\nSecond line';
-      let images = [{ id: 'image-caption', type: 'image', src, alt: 'Alternative text', caption }];
+      let images = [
+        {
+          id: 'image-caption',
+          type: 'image',
+          src,
+          alt: 'Alternative text',
+          caption,
+          imageWidth: 313,
+        },
+      ];
       for (let reload = 0; reload < 3; reload++) {
         const saved = runtime.markdownForBlocks(images, workspace, new Map());
+        assert.ok(saved.includes('|313]'));
         images = runtime.parseMarkdownFile({ path: 'Image.md', content: `${saved}\n` }).blocks;
         assert.equal(images.length, 1);
         assert.equal(images[0].type, 'image');
         assert.equal(images[0].src, src);
         assert.equal(images[0].alt, 'Alternative text');
         assert.equal(images[0].caption, caption);
+        assert.equal(images[0].imageWidth, 313);
       }
+    }
+    let resized = '![[Pasted image 20261015204831.png|313]]';
+    for (let reload = 0; reload < 3; reload++) {
+      const images = runtime.parseMarkdownFile({ path: 'Image.md', content: resized }).blocks;
+      assert.equal(images[0].imageWidth, 313);
+      assert.equal(images[0].alt, '');
+      assert.equal(images[0].src, '.attachments/Pasted image 20261015204831.png');
+      resized = runtime.markdownForBlocks(images, workspace, new Map());
+      assert.ok(resized.endsWith('|313]]'));
     }
     let tables = tableSources.flatMap((source) => runtime.parseMarkdownBlocks(source));
     const expectedRows = tables.map((table) => structuredClone(table.tableRows));

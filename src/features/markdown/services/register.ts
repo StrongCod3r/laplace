@@ -985,6 +985,9 @@ export function registerMarkdown(runtime: EditorRuntime) {
       if (image) {
         const src = runtime.normalizeMarkdownImageSource(image[2].replace(/\\([\\()])/g, '$1'));
         if (src) {
+          const size = image[1].match(/\|(\d+)$/);
+          const width = size ? Number(size[1]) : 0;
+          const hasWidth = Number.isFinite(width) && width > 80;
           blocks.push({
             id: runtime.uid('b'),
             type: 'image',
@@ -1000,7 +1003,8 @@ export function registerMarkdown(runtime: EditorRuntime) {
                     : Number(value.slice(1));
                 return code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : entity;
               }),
-            alt: runtime.markdownInlineText(image[1]),
+            alt: runtime.markdownInlineText(hasWidth ? image[1].slice(0, size.index) : image[1]),
+            ...(hasWidth ? { imageWidth: width } : {}),
           });
           i++;
           continue;
@@ -1009,10 +1013,22 @@ export function registerMarkdown(runtime: EditorRuntime) {
 
       const obsidianImage = trimmed.match(/^!\[\[([^\]]+)\]\]$/);
       if (obsidianImage) {
-        const [target, alt = ''] = obsidianImage[1].split('|');
+        const [target, ...options] = obsidianImage[1].split('|');
+        const size = options.at(-1)?.trim() || '';
+        const width = /^\d+$/.test(size) ? Number(size) : 0;
+        const hasWidth = Number.isFinite(width) && width > 80;
+        if (hasWidth) options.pop();
+        const alt = options.join('|').trim();
         const src = runtime.normalizeObsidianAttachmentReference(target);
         if (src) {
-          blocks.push({ id: runtime.uid('b'), type: 'image', src, caption: '', alt: alt.trim() });
+          blocks.push({
+            id: runtime.uid('b'),
+            type: 'image',
+            src,
+            caption: '',
+            alt,
+            ...(hasWidth ? { imageWidth: width } : {}),
+          });
           i++;
           continue;
         }
@@ -1410,6 +1426,8 @@ export function registerMarkdown(runtime: EditorRuntime) {
       } else if (block.type === 'divider') lines.push('---');
       else if (block.type === 'image') {
         const path = runtime.normalizeAttachmentPath(block.src);
+        const width = Number(block.imageWidth);
+        const size = Number.isFinite(width) && width > 80 ? `|${Math.round(width)}` : '';
         const inlineSvg = /^data:image\/svg\+xml[;,]/i.test(block.src || '');
         const caption = String(block.caption || '');
         const title = caption
@@ -1417,8 +1435,8 @@ export function registerMarkdown(runtime: EditorRuntime) {
           : '';
         lines.push(
           path && !caption
-            ? `![[${runtime.markdownAssetPath(path).replace(/\]/g, '\\]')}]]`
-            : `![${runtime.markdownEscapeLinkLabel(block.alt || (inlineSvg ? '' : 'Image'))}](${runtime.markdownEscapeLinkUrl(path ? runtime.markdownAssetPath(path) : block.src || '')}${title})`,
+            ? `![[${runtime.markdownAssetPath(path).replace(/\]/g, '\\]')}${size}]]`
+            : `![${runtime.markdownEscapeLinkLabel(block.alt || (inlineSvg ? '' : 'Image'))}${size}](${runtime.markdownEscapeLinkUrl(path ? runtime.markdownAssetPath(path) : block.src || '')}${title})`,
         );
       } else if (block.type === 'page-link' || block.type === 'page')
         lines.push(runtime.markdownPageBlockReference(block, workspace, paths));

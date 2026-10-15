@@ -119,6 +119,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
+- Persist resized image widths as a trailing `|width` suffix: `![[image.png|313]]` for attachment embeds and `![alt|313](url "caption")` for standard Markdown images. Parse the suffix into `imageWidth` rather than alt text and preserve captions and attachment references through reloads.
+
 - Rich text pasted into H1–H3 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.
