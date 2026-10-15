@@ -145,6 +145,8 @@ Lay out Files, Favorites, and Git as a static header above a separate scrollable
 
 The Files, Favorites, and Git ribbon buttons toggle their associated left panel: clicking the visible panel's button hides the sidebar; clicking another panel's button opens that panel. There is no separate left sidebar toggle button in the ribbon.
 
+Git activity uses an indeterminate horizontal progress bar below the Commit controls, without visible progress messages or a spinner. Keep the composer and progress outside the file list's scroll container.
+
 ## Theme-aware scrollbars
 
 Every scrollable view, panel, menu and dialog must style its scrollbar using the current theme variables (for example, `var(--muted)`), including overlays rendered through portals. Follow the existing thin scrollbar style with a transparent track and rounded thumb, and cover both `scrollbar-width` / `scrollbar-color` and `::-webkit-scrollbar` selectors, including hover and corner states. Check light and dark themes when adding or changing a scrollable container.
@@ -154,6 +156,7 @@ Every scrollable view, panel, menu and dialog must style its scrollbar using the
 - Git uses `isomorphic-git` on the selected directory. Reuse the worker per repository and serialize requests; a direct fallback exists when Worker is unavailable or the handle cannot be cloned.
 - Use `repositoryInfo()` for configuration, references, and startup without traversing files. `status()` must detect external edits; history comparison caching depends on local/remote OIDs rather than stale file state.
 - Commit saves locally; Fetch downloads references and objects; Sync protects local changes and divergence, applies a clean fast-forward, and pushes commits without force-push.
+- The Commit dropdown offers Commit & Push and Commit & Sync. Commit & Push creates a local commit and pushes through the existing guarded push operation without changing the working tree from remote files; Commit & Sync uses the existing synchronization operation.
 - Manual commands reserve the workspace and drain the save queue. Reload notes when Sync updates the working tree, or conservatively if it fails; Commit/Fetch without file changes must not unnecessarily reset the editor or its history.
 - The Vite Git proxy is for development and is not part of the static site.
 - The default Vite base is `/laplace/`. Use `BASE_URL` for assets and deployment-dependent paths; verify the actual repository name when configuring GitHub Pages.

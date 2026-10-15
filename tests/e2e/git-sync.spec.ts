@@ -47,7 +47,6 @@ test('Source Control resizes with the sidebar and preserves the width across pan
   expect(await width()).toBe(356);
   await page.reload();
   await expect(page.locator('#pageTitle')).toBeVisible();
-  await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   await expect(page.locator('#gitPanel')).toBeVisible();
   await expect.poll(width).toBe(356);
 });
@@ -368,8 +367,9 @@ test('browser Git pushes to a real remote and reloads received notes in the edit
     await dialog.getByRole('button', { name: 'Save settings' }).click();
     await expect(dialog).toBeHidden();
     await panel.getByLabel('Commit message').fill('Synchronize notes');
-    await panel.getByRole('button', { name: 'Sync workspace' }).click();
-    await expect(panel.getByText('Workspace synchronized.', { exact: true })).toBeVisible({
+    await panel.getByLabel('More commit actions', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Commit & Push', exact: true }).click();
+    await expect(panel.getByText('Changes committed and pushed.', { exact: true })).toBeVisible({
       timeout: 30_000,
     });
     const sent = execFileSync('git', ['--git-dir', remote.bare, 'show', 'main:Local note.md'], {
@@ -406,7 +406,8 @@ test('browser Git pushes to a real remote and reloads received notes in the edit
     });
     await expect(panel.getByText('Remote note.md', { exact: true })).toBeVisible();
     await panel.getByLabel('Commit message').fill('Synchronize notes');
-    await panel.getByRole('button', { name: 'Sync workspace' }).click();
+    await panel.getByLabel('More commit actions', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Commit & Sync', exact: true }).click();
     await expect(panel.getByText('Workspace synchronized.', { exact: true })).toBeVisible({
       timeout: 30_000,
     });
@@ -742,9 +743,10 @@ test('source control matches the compact VS Code layout with real staged and uns
     });
     expect(index).toBe(files.find((file) => file.path === '.git/index')!.base64);
     await panel.getByLabel('More commit actions', { exact: true }).click();
-    await expect(panel.getByRole('button', { name: 'Commit and Sync', exact: true })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Commit & Push', exact: true })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Commit & Sync', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(panel.getByRole('button', { name: 'Commit and Sync', exact: true })).toBeHidden();
+    await expect(panel.getByRole('button', { name: 'Commit & Sync', exact: true })).toBeHidden();
     await repositoryAction(panel, 'Repository settings');
     await expect(page.getByRole('dialog', { name: 'Repository settings' })).toBeVisible();
   } finally {

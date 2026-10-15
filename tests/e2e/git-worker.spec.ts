@@ -20,6 +20,9 @@ test('Git shows progress and keeps panel navigation responsive during worker rea
       else send();
     };
     Object.assign(window, {
+      holdGitReads() {
+        hold = true;
+      },
       releaseGitReads() {
         hold = false;
         queued.splice(0).forEach((send) => send());
@@ -33,7 +36,8 @@ test('Git shows progress and keeps panel navigation responsive during worker rea
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   const panel = page.locator('#gitPanel');
   await expect(panel).toHaveAttribute('aria-busy', 'true');
-  await expect(panel.getByRole('status')).toContainText('Reading changes');
+  await expect(panel.getByRole('progressbar')).toBeVisible();
+  await expect(panel.getByRole('progressbar')).toHaveText('');
   await expect.poll(() => workers.some((url) => url.includes('git.worker'))).toBe(true);
   await page.getByRole('button', { name: 'Files', exact: true }).click();
   await expect(page.locator('#pageTree')).toBeVisible();
@@ -41,7 +45,25 @@ test('Git shows progress and keeps panel navigation responsive during worker rea
   await page.evaluate(() => (window as unknown as { releaseGitReads(): void }).releaseGitReads());
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
   await expect(panel).toHaveAttribute('aria-busy', 'false');
+  await expect(panel.getByRole('progressbar')).toHaveCount(0);
   await expect(panel.getByLabel('Commit message')).toBeVisible();
+  await page.evaluate(() => (window as unknown as { holdGitReads(): void }).holdGitReads());
+  await panel.getByRole('button', { name: 'Refresh Git changes' }).click();
+  const progress = panel.getByRole('progressbar');
+  await expect(progress).toBeVisible();
+  const commitBounds = (await panel
+    .getByRole('button', { name: 'Commit local changes' })
+    .boundingBox())!;
+  const progressBounds = (await progress.boundingBox())!;
+  expect(progressBounds.y).toBeGreaterThanOrEqual(commitBounds.y + commitBounds.height);
+  expect(progressBounds.height).toBe(3);
+  await expect(progress).toHaveText('');
+  await page.evaluate(() => document.body.classList.add('dark'));
+  await panel.screenshot({ path: 'test-results/git-progress-dark.png' });
+  await page.evaluate(() => document.body.classList.remove('dark'));
+  await panel.screenshot({ path: 'test-results/git-progress-light.png' });
+  await page.evaluate(() => (window as unknown as { releaseGitReads(): void }).releaseGitReads());
+  await expect(progress).toHaveCount(0);
   const initializedWorkers = workers.length;
   await page.getByRole('button', { name: 'Files', exact: true }).click();
   await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();

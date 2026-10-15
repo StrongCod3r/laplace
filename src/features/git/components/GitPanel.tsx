@@ -30,7 +30,15 @@ const emptySettings: GitSettings = { url: '', corsProxy: '', name: '', email: ''
 const labels = { added: 'Added', modified: 'Modified', deleted: 'Deleted', untracked: 'Untracked' };
 const symbols = { added: 'A', modified: 'M', deleted: 'D', untracked: 'U' };
 type Action =
-  'refresh' | 'configure' | 'fetch' | 'commit' | 'sync' | 'stage' | 'unstage' | 'discard';
+  | 'refresh'
+  | 'configure'
+  | 'fetch'
+  | 'commit'
+  | 'commitPush'
+  | 'sync'
+  | 'stage'
+  | 'unstage'
+  | 'discard';
 type FileSelection = { comparison: GitComparison; paths: string[]; anchor: string };
 type FileMenu = {
   workspaceId: string;
@@ -568,6 +576,7 @@ export function GitPanel() {
     running.current = true;
     const version = generation.current;
     const descriptions = {
+      commitPush: 'Committing and pushing',
       refresh: 'Reading changesâ€¦',
       configure: 'Saving settingsâ€¦',
       fetch: 'Fetching remoteâ€¦',
@@ -584,7 +593,11 @@ export function GitPanel() {
     previewGeneration.current++;
     let locked = false;
     try {
-      if ((action === 'commit' || action === 'sync') && status?.changes.length && !message.trim()) {
+      if (
+        (action === 'commit' || action === 'commitPush' || action === 'sync') &&
+        status?.changes.length &&
+        !message.trim()
+      ) {
         setError('Enter a commit message before committing.');
         return;
       }
@@ -639,6 +652,11 @@ export function GitPanel() {
       if (action === 'commit') {
         const oid = await current.commit(message);
         setNotice(oid ? `Commit created: ${oid.slice(0, 7)}` : 'There are no changes to commit.');
+      }
+      if (action === 'commitPush') {
+        await current.commit(message);
+        result = await current.push();
+        setNotice('Changes committed and pushed.');
       }
       if (action === 'sync') {
         const synchronized = await current.synchronize(message);
@@ -732,11 +750,7 @@ export function GitPanel() {
     automaticRunning ||
     gitBusy ||
     (location?.kind === 'directory' && clientLocation.current !== location.id);
-  const loadingText =
-    busy ||
-    (automaticRunning ? 'Automatic commit in progressâ€¦' : '') ||
-    (refreshing ? 'Updating changesâ€¦' : '') ||
-    (gitBusy ? 'Processing repositoryâ€¦' : '');
+  const loading = Boolean(busy || automaticRunning || refreshing || gitBusy);
   const writable = access === 'writable' && !disabled;
   const diverged = Boolean(status?.incoming.length && status.outgoing.length);
 
@@ -946,7 +960,7 @@ export function GitPanel() {
       data-left-panel="git"
       className={`${styles.panel} ${mode === 'git' ? '' : 'hidden'}`}
       aria-label="Git synchronization"
-      aria-busy={Boolean(loadingText)}
+      aria-busy={loading}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
@@ -999,10 +1013,49 @@ export function GitPanel() {
           )}
         </div>
       </header>
-      {loadingText && (
-        <div className={styles.progress} role="status" aria-live="polite">
-          <span className={styles.spinner} aria-hidden="true" />
-          <span>{loadingText}</span>
+      {location?.kind === 'directory' && status?.initialized && (
+        <div className={styles.composer}>
+          <label className={styles.messageLabel}>
+            <span>Commit message</span>
+            <textarea
+              rows={3}
+              value={message}
+              placeholder="Enter a commit message"
+              disabled={disabled}
+              onInput={(event) => setMessage(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && canCommit) {
+                  event.preventDefault();
+                  void run('commit');
+                }
+              }}
+            />
+          </label>
+          <div className={styles.commitActions}>
+            <button
+              className={styles.commitButton}
+              type="button"
+              aria-label="Commit local changes"
+              title="Commit all local changes (Ctrl+Enter)"
+              disabled={!canCommit}
+              onClick={() => void run('commit')}
+            >
+              <Icon name="check" size="18" /> Commit
+            </button>
+            <GitActionMenu label="More commit actions" commit>
+              <button type="button" disabled={!canSync} onClick={() => void run('commitPush')}>
+                Commit &amp; Push
+              </button>
+              <button type="button" disabled={!canSync} onClick={() => void run('sync')}>
+                Commit &amp; Sync
+              </button>
+            </GitActionMenu>
+          </div>
+        </div>
+      )}
+      {loading && (
+        <div className={styles.progress} role="progressbar" aria-label="Git operation in progress">
+          <span aria-hidden="true" />
         </div>
       )}
       <div className={`sidebar-scroll ${notesStyles['sidebar-scroll']}`}>
@@ -1020,52 +1073,6 @@ export function GitPanel() {
             {status?.initialized && (
               <>
                 <div id="gitRepositoryContent">
-                  <div className={styles.composer}>
-                    <label className={styles.messageLabel}>
-                      <span>Commit message</span>
-                      <textarea
-                        rows={3}
-                        value={message}
-                        placeholder="Enter a commit message"
-                        disabled={disabled}
-                        onInput={(event) => setMessage(event.currentTarget.value)}
-                        onKeyDown={(event) => {
-                          if (
-                            (event.ctrlKey || event.metaKey) &&
-                            event.key === 'Enter' &&
-                            canCommit
-                          ) {
-                            event.preventDefault();
-                            void run('commit');
-                          }
-                        }}
-                      />
-                    </label>
-                    <div className={styles.commitActions}>
-                      <button
-                        className={styles.commitButton}
-                        type="button"
-                        aria-label="Commit local changes"
-                        title="Commit all local changes (Ctrl+Enter)"
-                        disabled={!canCommit}
-                        onClick={() => void run('commit')}
-                      >
-                        <Icon name="check" size="18" /> Commit
-                      </button>
-                      <GitActionMenu label="More commit actions" commit>
-                        <button
-                          type="button"
-                          disabled={!canCommit}
-                          onClick={() => void run('commit')}
-                        >
-                          <Icon name="check" size="16" /> Commit local changes
-                        </button>
-                        <button type="button" disabled={!canSync} onClick={() => void run('sync')}>
-                          <Icon name="refresh-cw" size="16" /> Commit and Sync
-                        </button>
-                      </GitActionMenu>
-                    </div>
-                  </div>
                   {status.stagedChanges.length > 0 && (
                     <details className={styles.fileGroup} open>
                       <summary>
