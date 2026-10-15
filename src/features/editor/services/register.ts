@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { quoteDepth } from '@/features/markdown/services/quote-depth';
 
 export function registerEditor(runtime: EditorRuntime) {
   let inlineSelectionScrollPending = false;
@@ -253,8 +254,12 @@ export function registerEditor(runtime: EditorRuntime) {
       );
     }
     if (block.type === 'toggle') return runtime.toggleBlockHTML(block, gutter);
+    const quoteStyle =
+      block.type === 'quote'
+        ? ` data-quote-depth="${quoteDepth(block)}" style="--quote-indent:${(quoteDepth(block) - 1) * 18}px"`
+        : '';
     return runtime.htmlWithStyles(
-      `<div class="block-row" data-block-id="${block.id}" data-type="${block.type}">${gutter}${block.type === 'callout' ? `<span class="callout-icon" aria-hidden="true">${runtime.iconMarkup('lightbulb', '18px')}</span>` : ''}<div class="block-content" contenteditable="true" spellcheck="true" data-placeholder="${placeholder}" data-empty="${emptyState}">${runtime.inlineTextHTML(block)}</div></div>`,
+      `<div class="block-row" data-block-id="${block.id}" data-type="${block.type}"${quoteStyle}>${gutter}${block.type === 'callout' ? `<span class="callout-icon" aria-hidden="true">${runtime.iconMarkup('lightbulb', '18px')}</span>` : ''}<div class="block-content" contenteditable="true" spellcheck="true" data-placeholder="${placeholder}" data-empty="${emptyState}">${runtime.inlineTextHTML(block)}</div></div>`,
     );
   }
 

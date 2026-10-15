@@ -2,6 +2,7 @@
 import { APP_NAME } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { quoteDepth, splitQuoteAtLine } from '@/features/markdown/services/quote-depth';
 import type { Block } from '@/features/workspace/types';
 import { createEditorVerticalNavigation } from '@/features/editor/services/vertical-navigation';
 import { useWorkspaceStore } from '@/store/workspace.store';
@@ -1966,7 +1967,8 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (block.type === 'h2') return '## ';
     if (block.type === 'h3') return '### ';
     if (block.type === 'h4') return '#### ';
-    if (block.type === 'quote' || block.type === 'callout') return '> ';
+    if (block.type === 'quote') return `${'>'.repeat(quoteDepth(block))} `;
+    if (block.type === 'callout') return '> ';
     return '';
   }
 
@@ -3241,6 +3243,21 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.scheduleSave();
       runtime.renderBlocks(page);
       runtime.focusBlock(b.id, caret);
+      return;
+    }
+    if (e.key === 'Tab' && b.type === 'quote' && !mod && !e.altKey) {
+      e.preventDefault();
+      const caret = runtime.getCaretOffset(content);
+      const depth = Math.max(1, quoteDepth(b) + (e.shiftKey ? -1 : 1));
+      if (depth === quoteDepth(b)) return;
+      const lineStart = caret > 0 ? (b.text || '').lastIndexOf('\n', caret - 1) + 1 : 0;
+      const split = splitQuoteAtLine(b, lineStart, runtime.uid('b'));
+      runtime.flushHistoryPending();
+      runtime.captureHistoryBeforeInput({ inputType: 'insertText' });
+      const target = split ? split[1] : b;
+      if (split) blocks.splice(index, 1, ...split);
+      target.quoteDepth = depth;
+      finishListIndentChange(target.id, caret - lineStart);
       return;
     }
     if (e.key === 'Tab' && runtime.isListBlock(b)) {

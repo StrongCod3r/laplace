@@ -2,6 +2,7 @@
 import { APP_FRONTMATTER_PATTERN, APP_FRONTMATTER_VALUE_PATTERN } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { quoteDepth } from './quote-depth';
 import { normalizeImagePresentation } from '@/features/attachments/services/image-presentation';
 import {
   markdownBlockShortcut,
@@ -79,7 +80,11 @@ export function registerMarkdown(runtime: EditorRuntime) {
       const prefix = shortcut.prefixText || '';
       const links = runtime.splitInlineLinksAt(block, shortcut.prefixLength).right;
       const formats = runtime.splitInlineFormatsAt(block, shortcut.prefixLength).right;
+      const previousQuoteDepth = block.type === 'quote' ? quoteDepth(block) : 0;
       block.type = shortcut.type;
+      if (shortcut.type === 'quote')
+        block.quoteDepth = previousQuoteDepth + (shortcut.quoteDepth || 1);
+      else delete block.quoteDepth;
       block.text = prefix + remaining;
       block.inlineLinks = runtime.normalizeInlineLinkRanges(
         links.map((link) => ({
@@ -658,11 +663,17 @@ export function registerMarkdown(runtime: EditorRuntime) {
       });
     };
 
-    const processContainer = (container) => {
+    const processContainer = (container, quoteLevel = 0) => {
       for (const node of container.childNodes) {
         if (node.nodeType === Node.TEXT_NODE) {
           const value = String(node.nodeValue || '').trim();
-          if (value) blocks.push({ id: runtime.uid('b'), type: 'text', text: value });
+          if (value)
+            blocks.push({
+              id: runtime.uid('b'),
+              type: quoteLevel ? 'quote' : 'text',
+              text: value,
+              ...(quoteLevel > 1 ? { quoteDepth: quoteLevel } : {}),
+            });
           continue;
         }
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
@@ -706,7 +717,13 @@ export function registerMarkdown(runtime: EditorRuntime) {
           continue;
         }
         if (tag === 'P') {
-          pushBlock(runtime.richHtmlBlockFromElement(el, 'text'));
+          pushBlock(
+            runtime.richHtmlBlockFromElement(
+              el,
+              quoteLevel ? 'quote' : 'text',
+              quoteLevel > 1 ? { quoteDepth: quoteLevel } : {},
+            ),
+          );
           continue;
         }
         if (tag === 'UL' || tag === 'OL') {
@@ -714,10 +731,19 @@ export function registerMarkdown(runtime: EditorRuntime) {
           continue;
         }
         if (tag === 'BLOCKQUOTE') {
-          const inner = [...el.children].filter((child) => ['P', 'DIV'].includes(child.tagName));
-          if (inner.length) {
-            for (const child of inner) pushBlock(runtime.richHtmlBlockFromElement(child, 'quote'));
-          } else pushBlock(runtime.richHtmlBlockFromElement(el, 'quote'));
+          const depth = quoteLevel + 1;
+          if (el.querySelector('blockquote')) processContainer(el, depth);
+          else {
+            const inner = [...el.children].filter((child) => ['P', 'DIV'].includes(child.tagName));
+            for (const child of inner.length ? inner : [el])
+              pushBlock(
+                runtime.richHtmlBlockFromElement(
+                  child,
+                  'quote',
+                  depth > 1 ? { quoteDepth: depth } : {},
+                ),
+              );
+          }
           continue;
         }
         if (tag === 'PRE') {
@@ -760,10 +786,16 @@ export function registerMarkdown(runtime: EditorRuntime) {
           'h1,h2,h3,h4,h5,h6,p,ul,ol,blockquote,pre,table,hr,img',
         );
         if (structural) {
-          processContainer(el);
+          processContainer(el, quoteLevel);
           continue;
         }
-        pushBlock(runtime.richHtmlBlockFromElement(el, 'text'));
+        pushBlock(
+          runtime.richHtmlBlockFromElement(
+            el,
+            quoteLevel ? 'quote' : 'text',
+            quoteLevel > 1 ? { quoteDepth: quoteLevel } : {},
+          ),
+        );
       }
     };
 
@@ -795,7 +827,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
     const pushText = (type, text, extra = {}) => {
       const payload = preserveInline ? runtime.parseMarkdownInlinePayload(text) : null;
       const cleaned = payload?.text ?? runtime.markdownInlineText(text);
-      if (!cleaned && !['text', 'todo', 'bullet', 'number'].includes(type)) return;
+      if (!cleaned && !['text', 'todo', 'bullet', 'number', 'quote'].includes(type)) return;
       const block = { id: runtime.uid('b'), type, text: cleaned, ...extra };
       if (payload?.links.length) block.inlineLinks = payload.links;
       if (payload?.formats.length) block.inlineFormats = payload.formats;
@@ -964,11 +996,12 @@ export function registerMarkdown(runtime: EditorRuntime) {
       }
 
       if (/^\s*>/.test(line)) {
-        const quoteLines = [];
+        const quoteLines: { depth: number; text: string }[] = [];
         while (i < lines.length) {
           const quoteLine = lines[i];
           if (/^\s*>/.test(quoteLine)) {
-            quoteLines.push(quoteLine.replace(/^\s*>\s?/, ''));
+            const match = quoteLine.match(/^[ \t]*((?:>[ \t]?)+)(.*)$/);
+            quoteLines.push({ depth: match[1].replace(/[^>]/g, '').length, text: match[2] });
             i++;
             continue;
           }
@@ -976,7 +1009,12 @@ export function registerMarkdown(runtime: EditorRuntime) {
             let nextQuoteLine = i;
             while (nextQuoteLine < lines.length && !lines[nextQuoteLine].trim()) nextQuoteLine++;
             if (nextQuoteLine < lines.length && /^\s*>/.test(lines[nextQuoteLine])) {
-              quoteLines.push(...Array(nextQuoteLine - i).fill(''));
+              quoteLines.push(
+                ...Array.from({ length: nextQuoteLine - i }, () => ({
+                  depth: quoteLines.at(-1)?.depth || 1,
+                  text: '',
+                })),
+              );
               i = nextQuoteLine;
               continue;
             }
@@ -985,14 +1023,21 @@ export function registerMarkdown(runtime: EditorRuntime) {
           // Unprefixed lines belong to the next editor block, even without a blank separator.
           break;
         }
-        const first = quoteLines[0]?.match(/^\[!([A-Za-z]+)\]\s*(.*)$/);
-        if (first) {
-          const body = [first[2], ...quoteLines.slice(1)].join('\n').trim();
-          pushText(
-            'callout',
-            `${first[1][0].toUpperCase() + first[1].slice(1).toLowerCase()}: ${body}`,
-          );
-        } else pushText('quote', quoteLines.join('\n'));
+        for (let start = 0; start < quoteLines.length;) {
+          const depth = quoteLines[start].depth;
+          let end = start + 1;
+          while (end < quoteLines.length && quoteLines[end].depth === depth) end++;
+          const text = quoteLines.slice(start, end).map((item) => item.text);
+          const first = depth === 1 ? text[0]?.match(/^\[!([A-Za-z]+)\]\s*(.*)$/) : null;
+          if (first) {
+            const body = [first[2], ...text.slice(1)].join('\n').trim();
+            pushText(
+              'callout',
+              `${first[1][0].toUpperCase() + first[1].slice(1).toLowerCase()}: ${body}`,
+            );
+          } else pushText('quote', text.join('\n'), depth > 1 ? { quoteDepth: depth } : {});
+          start = end;
+        }
         continue;
       }
 
@@ -1415,8 +1460,9 @@ export function registerMarkdown(runtime: EditorRuntime) {
       else if (block.type === 'quote')
         lines.push(
           String(text)
+            .replace(/<br>/g, '\n')
             .split('\n')
-            .map((line) => `> ${line}`)
+            .map((line) => `${'>'.repeat(quoteDepth(block))} ${line}`)
             .join('\n'),
         );
       else if (block.type === 'callout')

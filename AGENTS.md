@@ -91,6 +91,10 @@ Important historical regression: enabling writes before loading finished and sav
 
 ## Editor behaviors to preserve
 
+Blockquotes support nested levels with `>>`, `>>>`, and spaced `> >` markers. Keep each quote block's `quoteDepth` through Markdown/HTML import, rendering, copying, and serialization. Tab and Shift+Tab adjust quote depth without losing inline metadata; render a guide for each nesting level.
+
+When Tab or Shift+Tab is used on a later line of a multiline quote, split at the start of that line and change only that line and the following lines in the block. Preserve earlier lines at their depth, inline ranges, caret history, and Markdown round trips.
+
 Heading blocks support H1 through H4 in the slash menu, formatting toolbar, outline, typing shortcuts, and Markdown/HTML import and export. H4 uses `####` and an 18 px heading style.
 
 Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.

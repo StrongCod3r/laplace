@@ -40,6 +40,25 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
       '/src/features/interactions/services/list-continuation.ts',
     );
     const workspace = { pages: [] };
+    let quotes =
+      '## Blockquotes\n> Outer **bold**\n>\n>> Nested [link](https://example.com)\n> > > Third\n>> Back to second\n> Outer again\n';
+    for (let reload = 0; reload < 3; reload++) {
+      const blocks = runtime.parseMarkdownFile({ path: 'Quotes.md', content: quotes }).blocks;
+      assert.deepEqual(
+        blocks.map((block) => block.type),
+        ['h2', 'quote', 'quote', 'quote', 'quote', 'quote'],
+      );
+      assert.deepEqual(
+        blocks.slice(1).map((block) => block.quoteDepth || 1),
+        [1, 2, 3, 2, 1],
+      );
+      assert.equal(blocks[1].text, 'Outer bold\n');
+      assert.equal(blocks[2].text, 'Nested link');
+      assert.equal(blocks[2].inlineLinks[0].url, 'https://example.com/');
+      quotes = runtime.markdownForBlocks(blocks, workspace, new Map());
+      assert.ok(quotes.includes('> Outer **bold**\n> \n>> Nested [link](https://example.com/)'));
+      assert.ok(quotes.includes('>>> Third\n>> Back to second\n> Outer again'));
+    }
     for (const kind of ['number', 'bullet']) {
       const marker = kind === 'number' ? '1. ' : '- ';
       const padding = ' '.repeat(marker.length);
@@ -213,7 +232,7 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
     for (const source of [
       'Lorenz\nIgniz\nLaplace\nNotidian\nBase\nsoft',
       '**Lorenz**\nIgniz<br>continued<br><br>last\nLaplace\n# Heading\n- Item\nEnd',
-      '> Quote<br>continued\nLorenz\nIgniz\nLaplace\nBase\nsoft',
+      '> Quote\n> continued\nLorenz\nIgniz\nLaplace\nBase\nsoft',
     ]) {
       let saved = source;
       for (let reload = 0; reload < 3; reload++) {

@@ -624,9 +624,16 @@
 
 .block-row[data-type='quote'] {
   border-left: 3px solid var(--text);
+  border-radius: 0;
+  margin-top: 0;
+  margin-bottom: 0;
   margin-left: 2px;
   margin-right: -2px;
-  padding-left: 10px;
+  padding-left: calc(10px + var(--quote-indent, 0px));
+  background-image: repeating-linear-gradient(to right, transparent 0 15px, var(--border) 15px 18px);
+  background-size: var(--quote-indent, 0px) 100%;
+  background-position: 10px 0;
+  background-repeat: no-repeat;
 }
 
 .block-row[data-type='callout'] {
