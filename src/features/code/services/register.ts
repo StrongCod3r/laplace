@@ -60,7 +60,7 @@ export function registerCode(runtime: EditorRuntime) {
 
   function mermaidViewModeForBlock(block) {
     if (['code', 'preview', 'split'].includes(block?.mermaidViewMode)) return block.mermaidViewMode;
-    return block?.mermaidPreview === false ? 'code' : 'split';
+    return block?.mermaidPreview === false ? 'code' : 'preview';
   }
 
   function highlightCode(code, language) {

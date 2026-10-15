@@ -2,6 +2,7 @@
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
 import { attachmentReferenceSources, findUnusedAttachments } from './unused-attachments';
+import { normalizeImageCrop } from './image-presentation';
 
 export function registerAttachments(runtime: EditorRuntime) {
   let imageViewerZoom = 1;
@@ -770,19 +771,7 @@ export function registerAttachments(runtime: EditorRuntime) {
   }
 
   function normalizedImageCrop(block) {
-    const raw = block.imageCrop && typeof block.imageCrop === 'object' ? block.imageCrop : {};
-    const originalAspect = Math.max(0.2, Math.min(5, Number(raw.originalAspect) || 1));
-    const shape = raw.shape === 'circle' ? 'circle' : 'rect';
-    const aspectRaw = shape === 'circle' ? 1 : Number(raw.aspect) || originalAspect;
-    return {
-      enabled: !!raw.enabled,
-      shape,
-      aspect: Math.max(0.2, Math.min(5, aspectRaw)),
-      originalAspect,
-      zoom: Math.max(1, Math.min(3, Number(raw.zoom) || 1)),
-      x: Math.max(0, Math.min(100, Number.isFinite(Number(raw.x)) ? Number(raw.x) : 50)),
-      y: Math.max(0, Math.min(100, Number.isFinite(Number(raw.y)) ? Number(raw.y) : 50)),
-    };
+    return normalizeImageCrop(block.imageCrop);
   }
 
   async function downloadImageBlock(id) {

@@ -29,6 +29,11 @@ async function openMermaidPage(page: Page, trailingText = false) {
     );
   }, trailingText);
   await expect(page.locator('#blockEditor [data-mermaid-render] svg')).toBeVisible();
+  await expect(page.locator('#blockEditor .code-block')).toHaveClass(/mermaid-mode-preview/);
+  await expect(page.locator('#blockEditor [data-code-editor]')).toBeHidden();
+  // The scroll scenarios below exercise an explicitly selected split display.
+  await page.locator('#blockEditor [data-mermaid-mode-toggle]').click();
+  await page.locator('#blockEditor [data-mermaid-view-mode="split"]').click();
 }
 
 for (const docked of [false, true]) {

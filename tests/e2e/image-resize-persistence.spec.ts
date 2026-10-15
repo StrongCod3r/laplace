@@ -31,7 +31,7 @@ for (const docked of [false, true]) {
       await write(
         root,
         'Resize.md',
-        '![[example.svg]]\n![Description|201](.attachments/example.svg "Caption")\n',
+        '![[example.svg]]\n![Description](.attachments/example.svg "Caption")\n<!-- laplace:image: {"width":201,"align":"right","crop":{"enabled":true,"shape":"circle","aspect":1,"originalAspect":1.7777777777777777,"zoom":1.3,"x":35,"y":60}} -->\n',
       );
     });
     await page.locator('#chooseDirectoryBtn').click();
@@ -56,6 +56,9 @@ for (const docked of [false, true]) {
     await page.mouse.up();
     const resizedWidth = Math.round((await shell.boundingBox())!.width);
     expect(Math.abs(resizedWidth - 313)).toBeLessThanOrEqual(1);
+    await shell.hover();
+    await shell.locator('[data-image-align]').click();
+    await shell.locator('[data-image-align-choice="left"]').dispatchEvent('click');
     const markdown = await page.evaluate(async () => {
       const url = new URL('src/store/workspace.store.ts', location.href).href;
       const { useWorkspaceStore } = await import(url);
@@ -63,13 +66,21 @@ for (const docked of [false, true]) {
       const root = await navigator.storage.getDirectory();
       return (await (await root.getFileHandle('Resize.md')).getFile()).text();
     });
-    expect(markdown).toContain(`![[.attachments/example.svg|${resizedWidth}]]`);
-    expect(markdown).toContain('![Description|201](.attachments/example.svg "Caption")');
+    expect(markdown).toContain(
+      `![[.attachments/example.svg]]\n<!-- laplace:image: {"width":${resizedWidth},"align":"left"} -->`,
+    );
+    expect(markdown).toContain(
+      '![Description](.attachments/example.svg "Caption")\n<!-- laplace:image: {"width":201,"align":"right","crop":',
+    );
+    expect(markdown).not.toContain(`|${resizedWidth}]]`);
     await page.reload();
     await expect
       .poll(async () => Math.round((await shell.boundingBox())!.width))
       .toBe(resizedWidth);
     await expect(editor.locator('.image-caption').nth(0)).toHaveText('Caption');
+    await expect(editor.locator('.image-figure').first()).toHaveClass(/align-left/);
+    await expect(editor.locator('.image-figure').nth(1)).toHaveClass(/align-right/);
+    await expect(editor.locator('.image-preview').nth(1)).toHaveClass(/circle/);
     await expect
       .poll(async () =>
         Math.round((await editor.locator('.image-preview-shell').nth(1).boundingBox())!.width),

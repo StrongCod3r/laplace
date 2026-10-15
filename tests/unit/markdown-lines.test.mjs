@@ -266,11 +266,22 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
           alt: 'Alternative text',
           caption,
           imageWidth: 313,
+          imageAlign: 'right',
+          imageCrop: {
+            enabled: true,
+            shape: 'rect',
+            aspect: 1.5,
+            originalAspect: 2,
+            zoom: 1.4,
+            x: 35,
+            y: 60,
+          },
         },
       ];
       for (let reload = 0; reload < 3; reload++) {
         const saved = runtime.markdownForBlocks(images, workspace, new Map());
-        assert.ok(saved.includes('|313]'));
+        assert.ok(saved.includes('<!-- laplace:image: {"width":313,"align":"right","crop":'));
+        assert.ok(!saved.includes('|313]'));
         images = runtime.parseMarkdownFile({ path: 'Image.md', content: `${saved}\n` }).blocks;
         assert.equal(images.length, 1);
         assert.equal(images[0].type, 'image');
@@ -278,17 +289,43 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
         assert.equal(images[0].alt, 'Alternative text');
         assert.equal(images[0].caption, caption);
         assert.equal(images[0].imageWidth, 313);
+        assert.equal(images[0].imageAlign, 'right');
+        assert.deepEqual(images[0].imageCrop, {
+          enabled: true,
+          shape: 'rect',
+          aspect: 1.5,
+          originalAspect: 2,
+          zoom: 1.4,
+          x: 35,
+          y: 60,
+        });
       }
     }
-    let resized = '![[Pasted image 20261015204831.png|313]]';
+    let resized = '![[Pasted image 20261015204831.png]]\n<!-- laplace:image: {"width":313} -->';
     for (let reload = 0; reload < 3; reload++) {
       const images = runtime.parseMarkdownFile({ path: 'Image.md', content: resized }).blocks;
       assert.equal(images[0].imageWidth, 313);
       assert.equal(images[0].alt, '');
       assert.equal(images[0].src, '.attachments/Pasted image 20261015204831.png');
       resized = runtime.markdownForBlocks(images, workspace, new Map());
-      assert.ok(resized.endsWith('|313]]'));
+      assert.ok(resized.endsWith('<!-- laplace:image: {"width":313} -->'));
     }
+    for (const comment of [
+      '<!-- laplace:image: broken -->',
+      '<!-- laplace:image: {"other":"keep"} -->',
+    ]) {
+      const blocks = runtime.parseMarkdownBlocks(`![[image.png]]\n${comment}`, {
+        preserveBlankLines: true,
+      });
+      assert.equal(blocks[1].text, comment);
+    }
+    const separated = runtime.parseMarkdownBlocks(
+      '![[image.png]]\n\n<!-- laplace:image: {"width":313} -->',
+      { preserveBlankLines: true },
+    );
+    assert.equal(separated[0].imageWidth, undefined);
+    assert.equal(separated.at(-1).type, 'text');
+    assert.equal(runtime.parseMarkdownBlocks('![[image.png|313]]')[0].imageWidth, undefined);
     let tables = tableSources.flatMap((source) => runtime.parseMarkdownBlocks(source));
     const expectedRows = tables.map((table) => structuredClone(table.tableRows));
     for (let reload = 0; reload < 3; reload++) {

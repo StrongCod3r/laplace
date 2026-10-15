@@ -91,6 +91,8 @@ Important historical regression: enabling writes before loading finished and sav
 
 ## Editor behaviors to preserve
 
+Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.
+
 Undo/redo restores edits while retaining the current note, tabs, pane layout, and scroll position when that note still exists. Restore editor focus and the caret position saved before/after each edit, rather than reusing the position at which undo/redo was invoked. Keep caret metadata in controller memory, outside the workspace document. Keep recording new edits while history persistence is pending. Group consecutive typing separately from deletions, and separate edits in different notes or blocks. Navigation alone must not add undo entries.
 
 The plain text toggle beside Page options displays read-only Markdown using the existing serializer, including user frontmatter. Its state is local to each tab for the controller session. Preserve the editor DOM when toggling and refresh source previews when the same note changes in another pane.
@@ -119,7 +121,7 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
-- Persist resized image widths as a trailing `|width` suffix: `![[image.png|313]]` for attachment embeds and `![alt|313](url "caption")` for standard Markdown images. Parse the suffix into `imageWidth` rather than alt text and preserve captions and attachment references through reloads.
+- Store image presentation in a JSON HTML comment immediately below the image: `<!-- laplace:image: {"width":313,"align":"right","crop":{...}} -->`. Width, alignment, and the full reversible crop settings belong there; do not read or write width suffixes in image labels. Omit default presentation, keep captions and attachment references, and preserve malformed, unsupported, or detached comments as ordinary note content.
 
 - Rich text pasted into H1–H3 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
 

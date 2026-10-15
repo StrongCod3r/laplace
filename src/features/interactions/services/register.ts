@@ -2422,6 +2422,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       const row = e.target.closest('.code-block'),
         b = runtime.findBlock(row?.dataset.blockId);
       if (b) {
+        if (e.target.value === 'mermaid' && b.language !== 'mermaid' && !b.mermaidViewMode)
+          b.mermaidPreview = true;
         b.language = e.target.value;
         if (b.language === 'mermaid' && typeof b.mermaidPreview !== 'boolean')
           b.mermaidPreview = true;
