@@ -60,7 +60,7 @@ export function markdownBlockShortcut(
   if (currentType !== 'text') return null;
   const heading = source.match(/^ {0,3}(#{1,6})[ \t]+/);
   if (heading)
-    return { type: `h${Math.min(4, heading[1].length)}`, prefixLength: heading[0].length };
+    return { type: `h${heading[1].length}`, prefixLength: heading[0].length };
   const list = source.match(/^([ \t]*)([-+*]|\d+[.)])[ \t]+/);
   if (list)
     return {

@@ -95,7 +95,7 @@ Blockquotes support nested levels with `>>`, `>>>`, and spaced `> >` markers. Ke
 
 When Tab or Shift+Tab is used on a later line of a multiline quote, split at the start of that line and change only that line and the following lines in the block. Preserve earlier lines at their depth, inline ranges, caret history, and Markdown round trips.
 
-Heading blocks support H1 through H4 in the slash menu, formatting toolbar, outline, typing shortcuts, and Markdown/HTML import and export. H4 uses `####` and an 18 px heading style.
+Heading blocks support H1 through H6 in the slash menu, formatting toolbar, outline, typing shortcuts, and Markdown/HTML import and export. H4, H5, and H6 use 18 px, 16 px, and 14 px heading styles respectively.
 
 Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.
 
@@ -131,7 +131,7 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 - Store image presentation in a JSON HTML comment immediately below the image: `<!-- laplace:image: {"width":313,"align":"right","crop":{...}} -->`. Width, alignment, and the full reversible crop settings belong there; do not read or write width suffixes in image labels. Omit default presentation, keep captions and attachment references, and preserve malformed, unsupported, or detached comments as ordinary note content.
 
-- Rich text pasted into H1–H4 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
+- Rich text pasted into H1–H6 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.
 - The image block cache is valid only when its token matches the `application/x-laplace-image-block` MIME token in the current event. Copying from the gallery writes the corresponding content to the system clipboard.

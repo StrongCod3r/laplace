@@ -40,6 +40,29 @@ test('consecutive note lines survive repeated Markdown saves without spaces or e
       '/src/features/interactions/services/list-continuation.ts',
     );
     const workspace = { pages: [] };
+    const { markdownBlockShortcut } = await server.ssrLoadModule(
+      '/src/features/markdown/services/typing-shortcuts.ts',
+    );
+    let headings =
+      Array.from({ length: 6 }, (_, index) => `${'#'.repeat(index + 1)} Heading ${index + 1}`).join(
+        '\n',
+      ) + '\n';
+    for (let reload = 0; reload < 3; reload++) {
+      const blocks = runtime.parseMarkdownFile({ path: 'Headings.md', content: headings }).blocks;
+      assert.deepEqual(
+        blocks.map((block) => block.type),
+        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+      );
+      for (let level = 1; level <= 6; level++) {
+        assert.equal(
+          markdownBlockShortcut(`${'#'.repeat(level)} Existing`, 'text', 'input').type,
+          `h${level}`,
+        );
+      }
+      const saved = runtime.markdownForPage({ blocks }, workspace, new Map());
+      assert.equal(saved, headings);
+      headings = saved;
+    }
     let quotes =
       '## Blockquotes\n> Outer **bold**\n>\n>> Nested [link](https://example.com)\n> > > Third\n>> Back to second\n> Outer again\n';
     for (let reload = 0; reload < 3; reload++) {

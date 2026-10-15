@@ -123,6 +123,8 @@ export function registerCommands(runtime: EditorRuntime) {
       h2: '##',
       h3: '###',
       h4: '####',
+      h5: '#####',
+      h6: '######',
       bullet: '-',
       number: '1.',
       todo: '[]',

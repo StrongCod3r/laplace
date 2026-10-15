@@ -1,7 +1,40 @@
 import { expect, test } from '@playwright/test';
 
+test('HTML paste preserves all six heading levels', async ({ page }) => {
+  await page.goto('/laplace/');
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await page.locator('#newPageBtn').click();
+  await page
+    .locator('#blockEditor .block-content')
+    .first()
+    .evaluate((element) => {
+      element.focus();
+      const data = new DataTransfer();
+      data.setData(
+        'text/html',
+        Array.from({ length: 6 }, (_, index) => {
+          const level = index + 1;
+          return `<h${level}>Heading <em>${level}</em></h${level}>`;
+        }).join(''),
+      );
+      element.dispatchEvent(
+        new ClipboardEvent('paste', {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+  const rows = page.locator('#blockEditor > .block-row');
+  await expect(rows).toHaveCount(6);
+  for (let level = 1; level <= 6; level++) {
+    await expect(rows.nth(level - 1)).toHaveAttribute('data-type', `h${level}`);
+    await expect(rows.nth(level - 1).locator('em')).toHaveText(String(level));
+  }
+});
+
 for (const docked of [false, true]) {
-  for (const level of [1, 2, 3, 4]) {
+  for (const level of [1, 2, 3, 4, 5, 6]) {
     test(`rich paste inherits H${level} typography in ${docked ? 'a split pane' : 'the main editor'}`, async ({
       page,
     }) => {
@@ -11,10 +44,12 @@ for (const docked of [false, true]) {
       await page.locator('#pageTitle').fill('Heading paste');
       const main = page.locator('#blockEditor .block-content').first();
       await main.click();
-      if (level === 4 && !docked) {
-        await page.keyboard.type('/heading 4');
-        await expect(page.locator('[data-slash-type="h4"]')).toContainText('####');
-        await page.locator('[data-slash-type="h4"]').click();
+      if (level >= 4 && !docked) {
+        await page.keyboard.type(`/heading ${level}`);
+        await expect(page.locator(`[data-slash-type="h${level}"]`)).toContainText(
+          '#'.repeat(level),
+        );
+        await page.locator(`[data-slash-type="h${level}"]`).click();
       } else await page.keyboard.type('#'.repeat(level) + ' ');
       await main.fill('Before after');
       if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
@@ -59,11 +94,11 @@ for (const docked of [false, true]) {
           }),
         ).toBe(true);
         await expect(content.locator('[style]')).toHaveCount(0);
-        if (level === 4) {
-          await expect(content).toHaveCSS('font-size', '18px');
+        if (level >= 4) {
+          await expect(content).toHaveCSS('font-size', `${26 - level * 2}px`);
           await expect(
             page.locator(`#rightSidebar [data-outline-block="${originalId}"]`),
-          ).toHaveClass(/level-4/);
+          ).toHaveClass(new RegExp(`level-${level}`));
         }
       };
       await verify();

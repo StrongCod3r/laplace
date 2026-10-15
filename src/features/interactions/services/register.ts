@@ -1967,6 +1967,8 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (block.type === 'h2') return '## ';
     if (block.type === 'h3') return '### ';
     if (block.type === 'h4') return '#### ';
+    if (block.type === 'h5') return '##### ';
+    if (block.type === 'h6') return '###### ';
     if (block.type === 'quote') return `${'>'.repeat(quoteDepth(block))} `;
     if (block.type === 'callout') return '> ';
     return '';
@@ -2333,7 +2335,7 @@ export function registerInteractions(runtime: EditorRuntime) {
           return;
       }
       runtime.scheduleSave('merge');
-      if (['h1', 'h2', 'h3', 'h4'].includes(b.type)) runtime.renderRightSidebar();
+      if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(b.type)) runtime.renderRightSidebar();
       if (b.text.startsWith('/') && !b.text.includes('\n')) {
         runtime.showSlashMenu(row, b);
         runtime.hideEmojiMenu();
@@ -3418,6 +3420,8 @@ export function registerInteractions(runtime: EditorRuntime) {
         '2': 'h2',
         '3': 'h3',
         '4': 'h4',
+        '5': 'h5',
+        '6': 'h6',
         '7': 'number',
         '8': 'bullet',
         '9': 'todo',
