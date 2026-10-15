@@ -2507,15 +2507,40 @@ export function registerInteractions(runtime: EditorRuntime) {
 
   function indentTextIntoList(content: HTMLElement): boolean {
     if (runtime.workspaceAccess !== 'writable') return false;
-    const location = runtime.findBlockLocation(content.closest('.block-row')?.dataset.blockId);
-    if (!location || location.index === 0) return false;
-    const previous = location.blocks[location.index - 1];
-    const joined = attachListContinuation(previous, location.block);
-    if (!joined) return false;
-    const caret = String(previous.text || '').length + 1 + runtime.getCaretOffset(content);
+    if (runtime.multiBlockSelection?.allPage) return false;
+    const selection = runtime.captureInlineSelection();
+    const segments = selection?.segments || [
+      {
+        blockId: content.closest('.block-row')?.dataset.blockId,
+        start: runtime.getCaretOffset(content),
+      },
+    ];
+    const locations = segments.map((segment) => runtime.findBlockLocation(segment.blockId));
+    const location = locations[0];
+    if (!location || location.block.type !== 'text') return false;
+    if (
+      locations.some(
+        (item) => !item || item.blocks !== location.blocks || item.block.type !== 'text',
+      )
+    )
+      return false;
+    const end = locations.at(-1).index;
+    let start = location.index;
+    while (start > 0 && location.blocks[start - 1].type === 'text') start--;
+    if (start === 0) return false;
+    let joined = location.blocks[start - 1];
+    let caret = 0;
+    for (let index = start; index <= end; index++) {
+      if (location.blocks[index].type !== 'text') return false;
+      if (index === location.index)
+        caret = String(joined.text || '').length + 1 + segments[0].start;
+      joined = attachListContinuation(joined, location.blocks[index]);
+      if (!joined) return false;
+    }
     runtime.flushHistoryPending();
     runtime.captureHistoryBeforeInput({ inputType: 'insertText' });
-    location.blocks.splice(location.index - 1, 2, joined);
+    location.blocks.splice(start - 1, end - start + 2, joined);
+    runtime.clearMultiBlockSelection();
     finishListIndentChange(joined.id, caret);
     return true;
   }

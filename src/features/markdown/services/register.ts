@@ -9,6 +9,7 @@ import {
 } from './typing-shortcuts';
 
 export function registerMarkdown(runtime: EditorRuntime) {
+  const pendingListSpaces = new WeakSet<object>();
   function markdownTypingContext(content) {
     if (!content) return null;
     const row = content?.closest('.block-row');
@@ -56,10 +57,20 @@ export function registerMarkdown(runtime: EditorRuntime) {
     if (!context) return false;
     const { block, blocks, index, caret, root } = context;
     const text = content.innerText.replace(/\n$/, '');
+    if (pendingListSpaces.has(block)) {
+      pendingListSpaces.delete(block);
+      if (trigger === 'space' && caret === 0) return true;
+    }
     // Let the browser insert a space inside existing text before inspecting its prefix.
     if (trigger !== 'input' && caret !== text.length) return false;
     const source = trigger === 'space' ? text + ' ' : text;
-    const shortcut = markdownBlockShortcut(text, block.type, trigger);
+    const typedPrefix = text.slice(0, caret);
+    const bareNumber =
+      trigger === 'input' && caret < text.length && /^[ \t]*\d+[.)]$/.test(typedPrefix);
+    const shortcut = bareNumber
+      ? markdownBlockShortcut(typedPrefix, block.type, 'space')
+      : markdownBlockShortcut(trigger === 'input' ? typedPrefix : text, block.type, trigger);
+    if (bareNumber && shortcut) shortcut.prefixLength = caret;
     if (shortcut) {
       if (caret !== text.length && caret !== shortcut.prefixLength) return false;
       rememberMarkdownSource(block, source);
@@ -110,6 +121,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
           prefix.length +
             Math.max(0, caret + (trigger === 'space' ? 1 : 0) - shortcut.prefixLength),
         );
+      if (bareNumber) pendingListSpaces.add(block);
       return true;
     }
     if (trigger !== 'enter' || block.type !== 'text') return false;
@@ -1344,7 +1356,13 @@ export function registerMarkdown(runtime: EditorRuntime) {
       if (block.type === 'table' && previousType === 'table') lines.push('');
       previousType = block.type;
       runtime.normalizeLegacyLinkBlock(block);
-      if (block.type !== 'bullet' && block.type !== 'number') listNumbers.clear();
+      if (
+        block.type !== 'bullet' &&
+        block.type !== 'number' &&
+        block.type !== 'image' &&
+        !(block.type === 'text' && !String(block.text || '').trim())
+      )
+        listNumbers.clear();
       const text = runtime.markdownInlineForBlock(block, workspace, paths);
       if (['text', 'h1', 'h2', 'h3'].includes(block.type))
         lines.push(

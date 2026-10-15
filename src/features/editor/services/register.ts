@@ -1032,7 +1032,11 @@ export function registerEditor(runtime: EditorRuntime) {
     let n = 1;
     for (let i = index - 1; i >= 0; i--) {
       const block = blocks[i];
-      if (!runtime.isListBlock(block)) break;
+      if (!runtime.isListBlock(block)) {
+        if (block.type === 'image' || (block.type === 'text' && !String(block.text || '').trim()))
+          continue;
+        break;
+      }
       const level = runtime.listIndentLevel(block);
       if (level < indent) break;
       if (level > indent) continue;
@@ -2099,6 +2103,43 @@ export function registerEditor(runtime: EditorRuntime) {
 
   function pasteRichHtmlIntoBlock(content, html) {
     const parsed = runtime.parseRichHtmlBlocks(html);
+    const block = runtime.findBlock(content?.closest('.block-row')?.dataset.blockId);
+    if (
+      runtime.workspaceAccess === 'writable' &&
+      ['h1', 'h2', 'h3'].includes(block?.type) &&
+      parsed.length &&
+      parsed.every((item) => ['text', 'h1', 'h2', 'h3'].includes(item.type))
+    ) {
+      const selection = window.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+      if (!range || !content.contains(range.commonAncestorContainer)) return false;
+      const root = new DOMParser().parseFromString(html, 'text/html').body;
+      const payload = runtime.richHtmlInlinePayload(root, { tableCell: true });
+      if (!payload.text) return false;
+      const fragment = range.createContextualFragment(
+        runtime.inlineTextHTML({
+          id: block.id,
+          type: block.type,
+          text: payload.text,
+          inlineLinks: payload.links,
+          inlineFormats: payload.formats,
+        }),
+      );
+      const last = fragment.lastChild;
+      runtime.flushHistoryPending();
+      runtime.captureHistoryBeforeInput({ inputType: 'insertFromPaste' });
+      range.deleteContents();
+      range.insertNode(fragment);
+      range.setStartAfter(last);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      content.dispatchEvent(
+        new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }),
+      );
+      runtime.scheduleSave();
+      return true;
+    }
     if (!runtime.richHtmlShouldCreateBlocks(html, parsed)) return false;
     return runtime.pasteParsedBlocksIntoBlock(content, parsed, 'Rich text');
   }

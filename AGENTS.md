@@ -109,11 +109,17 @@ For a nonempty list item, Backspace at its start or Shift+Tab on its first line 
 
 Tab on an ordinary text block immediately after a list item attaches that text as a continuation of the preceding item, equivalent to Shift+Enter. Preserve inline formatting, links, wikilinks, caret offsets, remaining siblings, undo/redo, and Markdown persistence. Shift+Tab reverses the attachment by detaching the continuation.
 
+Tab also attaches multiple selected ordinary text blocks as continuations in one operation. When invoked from a later text block in a consecutive run below a list item, include the preceding text blocks in that run through the focused block. Do not consume unselected following blocks or cross a different block type.
+
 Serialized numbered lists use consecutive markers matching the editor, with independent counters per nesting level. Continuation lines do not advance the counter, and their indentation follows the actual marker width, including multi-digit numbers. Apply this to saved Markdown and the plain text view.
+
+Numbered lists continue across image blocks and empty text blocks; nonempty paragraphs and other block types separate sequences. Typing a numbered prefix such as `1.` before existing text converts immediately without requiring a space, including when the text has continuation lines. An optional space typed immediately after conversion is consumed as part of the marker.
 
 Gutter block reordering normalizes list indentation in the affected source and destination containers. A list item moved to the beginning, or after a non-list block, starts at the root level; no item may skip more than one nesting level relative to the preceding list item. Preserve the original structure through undo/redo.
 
 ### Clipboard and tables
+
+- Rich text pasted into H1–H3 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.
 - The image block cache is valid only when its token matches the `application/x-laplace-image-block` MIME token in the current event. Copying from the gallery writes the corresponding content to the system clipboard.

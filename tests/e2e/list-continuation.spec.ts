@@ -94,6 +94,33 @@ for (const docked of [false, true]) {
   }
 }
 
+test('numbered lists continue across images and blank lines through Markdown reloads', async ({
+  page,
+}) => {
+  await openList(
+    page,
+    '1. First\n\n![Example](https://example.com/image.png)\n\n1. Second\n\n1. Third\n\nParagraph\n\n1. New list\n',
+  );
+  for (let reload = 0; reload < 2; reload++) {
+    await expect(page.locator('#blockEditor .list-prefix')).toHaveText(['1.', '2.', '3.', '1.']);
+    await page.locator('#breadcrumbs [data-page-plain-text-toggle]').click();
+    const source = await page.locator('#pageEditor [data-plain-text-content]').innerText();
+    expect(source).toContain('2. Second');
+    expect(source).toContain('3. Third');
+    expect(source).toContain('1. New list');
+    await page.locator('#breadcrumbs [data-page-plain-text-toggle]').click();
+    const content = page.locator('#blockEditor .block-content').first();
+    await content.click();
+    await content.press('End');
+    await page.keyboard.type('!');
+    await saveAndReload(page);
+    await page
+      .locator('#pageTree [data-action="open-page"]')
+      .filter({ hasText: /^List$/ })
+      .click();
+  }
+});
+
 test('numbered Markdown and plain text use sequential markers with continuation lines', async ({
   page,
 }) => {
@@ -233,6 +260,58 @@ for (const docked of [false, true]) {
       await expect(rows.nth(1)).toHaveAttribute('data-type', 'text');
       await expect(normal).toBeFocused();
       await normal.press('Tab');
+      await verify();
+      await saveAndReload(page);
+      await verify();
+    });
+  }
+}
+
+for (const docked of [false, true]) {
+  for (const selected of [false, true]) {
+    test(`Tab attaches multiple text blocks ${selected ? 'with a selection' : 'from the last line'} in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+      page,
+    }) => {
+      await openList(
+        page,
+        '1. Reflection\nEl agente evalúa sus propias respuestas.\nEjemplo: **C#** [link](https://example.com) [[Target|wiki]]\n2. Next\n',
+      );
+      if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
+      const editor = page.locator(docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor');
+      const rows = editor.locator(':scope > .block-row');
+      await expect(rows).toHaveCount(4);
+      const description = rows.nth(1).locator('.block-content');
+      const example = rows.nth(2).locator('.block-content');
+      await example.click({ position: { x: 3, y: 8 } });
+      await example.press('Home');
+      if (selected) {
+        await editor.evaluate((element) => {
+          const contents = element.querySelectorAll('.block-content');
+          const range = document.createRange();
+          range.setStart(contents[1], 0);
+          range.setEnd(contents[2], contents[2].childNodes.length);
+          window.getSelection()!.removeAllRanges();
+          window.getSelection()!.addRange(range);
+        });
+      }
+      await page.keyboard.press('Tab');
+      const first = rows.first().locator('.block-content');
+      const verify = async () => {
+        await expect(rows).toHaveCount(2);
+        await expect(first).toHaveText(
+          'Reflection\nEl agente evalúa sus propias respuestas.\nEjemplo: C# link wiki',
+        );
+        await expect(first.locator('strong')).toHaveText('C#');
+        await expect(first.locator('.inline-link')).toHaveText('link');
+        await expect(first.locator('[data-wiki-page-title]')).toHaveText('wiki');
+        await expect(rows.last().locator('.block-content')).toHaveText('Next');
+        await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.']);
+      };
+      await verify();
+      await first.press('Control+z');
+      await expect(rows).toHaveCount(4);
+      await expect(description).toHaveText('El agente evalúa sus propias respuestas.');
+      await page.keyboard.press('Control+Shift+z');
       await verify();
       await saveAndReload(page);
       await verify();
