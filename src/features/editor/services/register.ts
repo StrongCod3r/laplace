@@ -2281,6 +2281,28 @@ export function registerEditor(runtime: EditorRuntime) {
       }
     }
     if (runtime.pasteCopiedImageBlock?.(e)) return;
+    if (
+      runtime.multiBlockSelection?.allPage &&
+      runtime.workspaceAccess === 'writable' &&
+      !runtime.transferImageFile(e.clipboardData)
+    ) {
+      const html = String(e.clipboardData?.getData('text/html') || '');
+      const explicit = String(e.clipboardData?.getData('text/markdown') || '');
+      const text = explicit || String(e.clipboardData?.getData('text/plain') || '');
+      let blocks = [];
+      if (/<table[\s>]/i.test(html)) blocks = runtime.parseRichHtmlBlocks(html);
+      else if (explicit || runtime.looksLikeMarkdown(text))
+        blocks = runtime.parseMarkdownBlocks(text, {
+          preserveInline: true,
+          preserveBlankLines: true,
+        });
+      else if (html) blocks = runtime.parseRichHtmlBlocks(html);
+      if (html || text) {
+        e.preventDefault();
+        runtime.replaceSelectedPageContents(text, blocks);
+        return;
+      }
+    }
     if (e.target === runtime.els.pageTitle || e.target.matches?.('[data-dock-title]')) {
       e.preventDefault();
       const text = String(e.clipboardData?.getData('text/plain') || '')

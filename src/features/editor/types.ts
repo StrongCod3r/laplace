@@ -1,5 +1,5 @@
 import type { ControllerLifecycle } from '@/shared/lib/controller-lifecycle';
-import type { WorkspaceDocument } from '@/features/workspace/types';
+import type { Block, WorkspaceDocument } from '@/features/workspace/types';
 
 export type WorkspaceAction =
   | 'openPage'
@@ -44,6 +44,7 @@ export interface EditorRuntime {
   publish(): void;
   deferPublication(update: () => void): void;
   captureHistoryBeforeInput(event: Pick<InputEvent, 'inputType'>): void;
+  replaceSelectedPageContents(text: string, blocks?: Block[]): boolean;
   togglePagePlainText(): void;
   syncPlainTextView(root: HTMLElement | null, page: unknown, tabId?: string): void;
   selectImageBlock?: (id: string) => boolean;

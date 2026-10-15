@@ -2,6 +2,7 @@
 import { APP_NAME } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import type { Block } from '@/features/workspace/types';
 import { createEditorVerticalNavigation } from '@/features/editor/services/vertical-navigation';
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { attachListContinuation, detachListContinuation } from './list-continuation';
@@ -60,6 +61,7 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.refreshOtherDockPages(runtime.state.currentPageId);
     });
     runtime.lifecycle.listen(document, 'focusin', (e) => {
+      if (runtime.multiBlockSelection?.allPage) runtime.clearMultiBlockSelection();
       const target = e.target;
       const pane = target.closest?.('.dock-pane[data-editor-group]');
       if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
@@ -1810,6 +1812,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     const layer = runtime.multiSelectionLayer();
     layer.innerHTML = '';
     if (!runtime.multiBlockSelection?.active) return;
+    if (runtime.multiBlockSelection.allPage) return;
     for (const { range } of runtime.multiSelectionRanges()) {
       for (const rect of range.getClientRects()) {
         if (rect.width < 0.5 || rect.height < 0.5) continue;
@@ -1979,6 +1982,11 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function selectedMultiBlockMarkdown() {
+    if (runtime.multiBlockSelection?.allPage)
+      return runtime.markdownForBlocks(
+        runtime.clone(runtime.currentPage()?.blocks || []),
+        runtime.state,
+      );
     const segments = runtime.multiSelectionSegments();
     if (!segments.length) return '';
     const entries = segments.map((segment) => ({ kind: 'text', node: segment.content, segment }));
@@ -2086,6 +2094,8 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function deleteMultiBlockSelection() {
+    if (runtime.workspaceAccess !== 'writable') return false;
+    if (runtime.multiBlockSelection?.allPage) return replaceSelectedPageContents('');
     const segments = runtime.multiSelectionSegments();
     if (!segments.length) {
       runtime.clearMultiBlockSelection();
@@ -2515,6 +2525,72 @@ export function registerInteractions(runtime: EditorRuntime) {
     return true;
   }
 
+  function selectCurrentPageContents(target: Element): boolean {
+    if (target.closest('input,textarea,select,[data-table-cell],#pageTitle,[data-dock-title]'))
+      return false;
+    const editable = target.closest('[contenteditable]');
+    if (editable && !editable.matches('.block-content')) return false;
+    if (
+      [...document.querySelectorAll('[aria-modal="true"],dialog[open]')].some(
+        (dialog) => dialog.getClientRects().length,
+      )
+    )
+      return false;
+    const pane = target.closest('.dock-pane[data-editor-group]');
+    if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
+    if (runtime.state.mainView !== 'page' || !runtime.currentPage()) return false;
+    const root = runtime.els.blockEditor;
+    if (!root) return false;
+    const page = root.closest('.page');
+    const plain =
+      page?.dataset.plainText === 'true' ? page.querySelector('[data-plain-text-content]') : null;
+    if (!(plain || root).getClientRects().length) return false;
+    runtime.clearMultiBlockSelection();
+    runtime.clearSelectedImageBlock?.();
+    runtime.clearSelectedTable();
+    runtime.clearTableCellSelection();
+    runtime.hideFloatingMenus();
+    const contents = [...root.querySelectorAll('.block-content')].filter(
+      (content) => content.getClientRects().length,
+    );
+    const focus = plain || contents[0];
+    focus?.focus({ preventScroll: true });
+    runtime.selectAllContent(plain || root);
+    if (!plain)
+      runtime.multiBlockSelection = {
+        anchor: runtime.contentBoundaryPoint(contents[0]),
+        focus: runtime.contentBoundaryPoint(contents.at(-1), true),
+        active: true,
+        dragging: false,
+        allPage: true,
+      };
+    runtime.scheduleTextFormatToolbarFromSelection();
+    return true;
+  }
+
+  function replaceSelectedPageContents(text: string, blocks?: Block[]): boolean {
+    if (!runtime.multiBlockSelection?.allPage || runtime.workspaceAccess !== 'writable')
+      return false;
+    const page = runtime.currentPage();
+    if (!page) return false;
+    runtime.flushHistoryPending();
+    runtime.captureHistoryBeforeInput({ inputType: text ? 'insertText' : 'deleteContentBackward' });
+    const block = runtime.newTextBlock();
+    block.text = text;
+    page.blocks = blocks?.length ? blocks : [block];
+    runtime.clearMultiBlockSelection();
+    runtime.hideFloatingMenus();
+    runtime.renderBlocks(page);
+    const content = runtime.els.blockEditor.querySelector('.block-content');
+    content?.focus({ preventScroll: true });
+    if (content) runtime.setCaretOffset(content, text.length);
+    const typing = !!text && blocks === undefined;
+    if (typing)
+      previousTextInputKey = JSON.stringify([runtime.activeVaultId, page.id, block.id, 'insert']);
+    runtime.scheduleSave(typing ? 'merge' : 'immediate');
+    return true;
+  }
+
   function onKeyDown(e) {
     if (runtime.gitOperationActive) return;
     const gitDiff = useWorkspaceStore.getState().gitDiff;
@@ -2654,6 +2730,17 @@ export function registerInteractions(runtime: EditorRuntime) {
       return;
     }
     if (gitDiff && e.target.closest?.('#gitDiffEditor, [aria-controls="gitDiffEditor"]')) return;
+    if (
+      !gitDiff &&
+      mod &&
+      !e.shiftKey &&
+      !e.altKey &&
+      e.key.toLowerCase() === 'a' &&
+      selectCurrentPageContents(e.target)
+    ) {
+      e.preventDefault();
+      return;
+    }
     if (e.target.matches?.('[data-page-link-search]')) {
       const items = [...runtime.els.blockMenu.querySelectorAll('[data-page-link-pick]')];
       if (e.key === 'ArrowDown' && items.length) {
@@ -2757,6 +2844,11 @@ export function registerInteractions(runtime: EditorRuntime) {
       return;
     }
     if (runtime.multiBlockSelection?.active) {
+      if (
+        runtime.multiBlockSelection.allPage &&
+        ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)
+      )
+        runtime.clearMultiBlockSelection();
       if (e.key === 'Escape') {
         e.preventDefault();
         runtime.clearMultiBlockSelection();
@@ -2765,6 +2857,16 @@ export function registerInteractions(runtime: EditorRuntime) {
       if (e.key === 'Backspace' || e.key === 'Delete') {
         e.preventDefault();
         runtime.deleteMultiBlockSelection();
+        return;
+      }
+      if (
+        runtime.multiBlockSelection?.allPage &&
+        !mod &&
+        !e.altKey &&
+        (e.key.length === 1 || e.key === 'Enter')
+      ) {
+        e.preventDefault();
+        replaceSelectedPageContents(e.key === 'Enter' ? '' : e.key);
         return;
       }
     }
@@ -4346,6 +4448,8 @@ export function registerInteractions(runtime: EditorRuntime) {
     outdentListContinuation,
     outdentListItem,
     indentTextIntoList,
+    selectCurrentPageContents,
+    replaceSelectedPageContents,
     onKeyDown,
     onDragStart,
     onDragOver,

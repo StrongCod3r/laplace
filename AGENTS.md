@@ -95,6 +95,8 @@ Undo/redo restores edits while retaining the current note, tabs, pane layout, an
 
 The plain text toggle beside Page options displays read-only Markdown using the existing serializer, including user frontmatter. Its state is local to each tab for the controller session. Preserve the editor DOM when toggling and refresh source previews when the same note changes in another pane.
 
+Ctrl/Cmd+A selects the current page body, including all blocks, or its plain text preview. Keep the selection inside the active editor group and exclude application panels. Titles, inputs, code editors, and table cells retain their native local selection. Copying, deleting, and replacing a selected page body must preserve block content and undo/redo.
+
 The inline emoji picker requires a letter immediately after `:` (for example, `:s`). A bare colon or whitespace within the token must not open the picker; returning to either state must hide it.
 
 Typing a Markdown list prefix at the beginning of existing text must convert the block when the prefix is completed. Preserve the remaining text, inline formatting, links, and caret position, and support undo/redo of the conversion.

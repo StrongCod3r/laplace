@@ -365,7 +365,13 @@ for (const docked of [false, true]) {
     const content = rows.nth(1).locator('.block-content');
     const before = await content.boundingBox();
     await content.click();
-    await content.press('Control+a');
+    await content.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
     await content.press('Control+x');
     await expect(content).toHaveText('');
     await expect(rows.locator('.list-prefix')).toHaveText(['1.', '2.', '3.']);
