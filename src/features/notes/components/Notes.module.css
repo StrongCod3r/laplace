@@ -357,6 +357,11 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   font-size: 11px;
 }
 
+.outline-item:global(.level-4) {
+  padding-left: 44px;
+  font-size: 11px;
+}
+
 .backlink-item {
   width: 100%;
   display: flex;

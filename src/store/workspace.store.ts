@@ -383,10 +383,10 @@ export function publishWorkspace(
   } else {
     context.headings = runtime
       .flattenBlocks(current.blocks)
-      .filter((block) => ['h1', 'h2', 'h3'].includes(block.type) && block.text?.trim())
+      .filter((block) => ['h1', 'h2', 'h3', 'h4'].includes(block.type) && block.text?.trim())
       .map((block) => ({ id: block.id, text: block.text || '', level: block.type.slice(1) }));
     if (!context.headings.length)
-      context.empty = 'No headings in this note. Add H1, H2 or H3 blocks to build an outline.';
+      context.empty = 'No headings in this note. Add H1, H2, H3 or H4 blocks to build an outline.';
   }
   const ui: WorkspaceUI = {
     theme: document.theme,

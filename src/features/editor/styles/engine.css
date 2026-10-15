@@ -611,6 +611,17 @@
   top: 10px;
 }
 
+.block-row[data-type='h4'] .block-content {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.2;
+  margin-top: 8px;
+}
+
+.block-row[data-type='h4']>.block-gutter {
+  top: 8px;
+}
+
 .block-row[data-type='quote'] {
   border-left: 3px solid var(--text);
   margin-left: 2px;

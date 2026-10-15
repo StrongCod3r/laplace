@@ -681,7 +681,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
             fragment.appendChild(range.cloneContents());
             const textBlock = runtime.richHtmlBlockFromElement(
               fragment,
-              /^H[1-6]$/.test(tag) ? `h${Math.min(3, Number(tag.slice(1)))}` : 'text',
+              /^H[1-6]$/.test(tag) ? `h${Math.min(4, Number(tag.slice(1)))}` : 'text',
             );
             if (textBlock?.text) pushBlock(textBlock);
           };
@@ -702,7 +702,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
           continue;
         }
         if (/^H[1-6]$/.test(tag)) {
-          pushBlock(runtime.richHtmlBlockFromElement(el, `h${Math.min(3, Number(tag.slice(1)))}`));
+          pushBlock(runtime.richHtmlBlockFromElement(el, `h${Math.min(4, Number(tag.slice(1)))}`));
           continue;
         }
         if (tag === 'P') {
@@ -933,7 +933,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
 
       const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
       if (heading) {
-        const level = Math.min(3, heading[1].length);
+        const level = Math.min(4, heading[1].length);
         pushText(`h${level}`, heading[2]);
         i++;
         continue;
@@ -1387,7 +1387,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
       )
         listNumbers.clear();
       const text = runtime.markdownInlineForBlock(block, workspace, paths);
-      if (['text', 'h1', 'h2', 'h3'].includes(block.type))
+      if (['text', 'h1', 'h2', 'h3', 'h4'].includes(block.type))
         lines.push(
           block.type === 'h1'
             ? `# ${text}`
@@ -1395,7 +1395,9 @@ export function registerMarkdown(runtime: EditorRuntime) {
               ? `## ${text}`
               : block.type === 'h3'
                 ? `### ${text}`
-                : text,
+                : block.type === 'h4'
+                  ? `#### ${text}`
+                  : text,
         );
       else if (block.type === 'bullet' || block.type === 'number') {
         const depth = runtime.listIndentLevel(block);

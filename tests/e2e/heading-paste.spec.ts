@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 for (const docked of [false, true]) {
-  for (const level of [1, 2, 3]) {
+  for (const level of [1, 2, 3, 4]) {
     test(`rich paste inherits H${level} typography in ${docked ? 'a split pane' : 'the main editor'}`, async ({
       page,
     }) => {
@@ -11,7 +11,11 @@ for (const docked of [false, true]) {
       await page.locator('#pageTitle').fill('Heading paste');
       const main = page.locator('#blockEditor .block-content').first();
       await main.click();
-      await page.keyboard.type('#'.repeat(level) + ' ');
+      if (level === 4 && !docked) {
+        await page.keyboard.type('/heading 4');
+        await expect(page.locator('[data-slash-type="h4"]')).toContainText('####');
+        await page.locator('[data-slash-type="h4"]').click();
+      } else await page.keyboard.type('#'.repeat(level) + ' ');
       await main.fill('Before after');
       if (docked) await page.keyboard.press('Control+Alt+ArrowRight');
       const editor = page.locator(docked ? '.dock-pane.active [data-dock-blocks]' : '#blockEditor');
@@ -55,6 +59,12 @@ for (const docked of [false, true]) {
           }),
         ).toBe(true);
         await expect(content.locator('[style]')).toHaveCount(0);
+        if (level === 4) {
+          await expect(content).toHaveCSS('font-size', '18px');
+          await expect(
+            page.locator(`#rightSidebar [data-outline-block="${originalId}"]`),
+          ).toHaveClass(/level-4/);
+        }
       };
       await verify();
       await content.press('Control+z');

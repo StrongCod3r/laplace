@@ -91,6 +91,8 @@ Important historical regression: enabling writes before loading finished and sav
 
 ## Editor behaviors to preserve
 
+Heading blocks support H1 through H4 in the slash menu, formatting toolbar, outline, typing shortcuts, and Markdown/HTML import and export. H4 uses `####` and an 18 px heading style.
+
 Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.
 
 Undo/redo restores edits while retaining the current note, tabs, pane layout, and scroll position when that note still exists. Restore editor focus and the caret position saved before/after each edit, rather than reusing the position at which undo/redo was invoked. Keep caret metadata in controller memory, outside the workspace document. Keep recording new edits while history persistence is pending. Group consecutive typing separately from deletions, and separate edits in different notes or blocks. Navigation alone must not add undo entries.
@@ -123,7 +125,7 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 - Store image presentation in a JSON HTML comment immediately below the image: `<!-- laplace:image: {"width":313,"align":"right","crop":{...}} -->`. Width, alignment, and the full reversible crop settings belong there; do not read or write width suffixes in image labels. Omit default presentation, keep captions and attachment references, and preserve malformed, unsupported, or detached comments as ordinary note content.
 
-- Rich text pasted into H1–H3 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
+- Rich text pasted into H1–H4 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.
 - The image block cache is valid only when its token matches the `application/x-laplace-image-block` MIME token in the current event. Copying from the gallery writes the corresponding content to the system clipboard.

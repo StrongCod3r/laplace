@@ -823,6 +823,7 @@ export function registerEditor(runtime: EditorRuntime) {
           'h1',
           'h2',
           'h3',
+          'h4',
           'bullet',
           'number',
           'todo',
@@ -1053,6 +1054,7 @@ export function registerEditor(runtime: EditorRuntime) {
         h1: 'Heading 1',
         h2: 'Heading 2',
         h3: 'Heading 3',
+        h4: 'Heading 4',
         bullet: 'Bulleted list',
         number: 'Numbered list',
         todo: 'To-do list',
@@ -1595,6 +1597,7 @@ export function registerEditor(runtime: EditorRuntime) {
       'h1',
       'h2',
       'h3',
+      'h4',
       'bullet',
       'number',
       'todo',
@@ -1842,9 +1845,19 @@ export function registerEditor(runtime: EditorRuntime) {
   function isTextLikeBlock(block) {
     return (
       !!block &&
-      ['text', 'h1', 'h2', 'h3', 'bullet', 'number', 'todo', 'toggle', 'quote', 'callout'].includes(
-        block.type,
-      )
+      [
+        'text',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'bullet',
+        'number',
+        'todo',
+        'toggle',
+        'quote',
+        'callout',
+      ].includes(block.type)
     );
   }
 
@@ -1911,6 +1924,7 @@ export function registerEditor(runtime: EditorRuntime) {
         'h1',
         'h2',
         'h3',
+        'h4',
         'bullet',
         'number',
         'todo',
@@ -2106,9 +2120,9 @@ export function registerEditor(runtime: EditorRuntime) {
     const block = runtime.findBlock(content?.closest('.block-row')?.dataset.blockId);
     if (
       runtime.workspaceAccess === 'writable' &&
-      ['h1', 'h2', 'h3'].includes(block?.type) &&
+      ['h1', 'h2', 'h3', 'h4'].includes(block?.type) &&
       parsed.length &&
-      parsed.every((item) => ['text', 'h1', 'h2', 'h3'].includes(item.type))
+      parsed.every((item) => ['text', 'h1', 'h2', 'h3', 'h4'].includes(item.type))
     ) {
       const selection = window.getSelection();
       const range = selection?.rangeCount ? selection.getRangeAt(0) : null;

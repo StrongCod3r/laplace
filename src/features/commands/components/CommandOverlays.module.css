@@ -106,7 +106,8 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 16px;
+  font-size: 13px;
+  line-height: 20px;
 }
 .command-results {
   max-height: 56vh;
@@ -568,16 +569,16 @@
 }
 
 .menu-search {
-  padding: 9px 10px;
+  padding: 6px 9px;
   border-bottom: 1px solid var(--border);
 }
 .slash-results {
   max-height: 375px;
   overflow: auto;
-  padding: 5px;
+  padding: 4px;
 }
 .slash-group {
-  padding: 7px 8px 4px;
+  padding: 5px 8px 3px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 600;
@@ -586,8 +587,9 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 7px;
+  gap: 9px;
+  min-height: 32px;
+  padding: 5px 8px;
   border: 0;
   background: transparent;
   border-radius: 5px;
@@ -598,22 +600,27 @@
   background: var(--hover);
 }
 .slash-icon {
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
+  width: 20px;
+  height: 20px;
+  flex: none;
   display: grid;
   place-items: center;
-  font-size: 20px;
-  background: var(--bg);
+  color: var(--muted);
 }
 .slash-name {
-  font-size: 14px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
 }
-.slash-desc {
+.slash-prefix {
+  flex: none;
   font-size: 11px;
   color: var(--muted);
-  margin-top: 1px;
+  font-family: monospace;
 }
 .floating-menu {
   border-radius: 7px;
@@ -636,6 +643,7 @@
 }
 .page-meta-menu::-webkit-scrollbar-track,
 .slash-results::-webkit-scrollbar-track,
+.slash-results::-webkit-scrollbar-corner,
 .command-results::-webkit-scrollbar-track,
 .emoji-results::-webkit-scrollbar-track {
   background: transparent;

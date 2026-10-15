@@ -50,7 +50,7 @@ export function markdownBlockShortcut(
   if (currentType !== 'text') return null;
   const heading = source.match(/^ {0,3}(#{1,6})[ \t]+/);
   if (heading)
-    return { type: `h${Math.min(3, heading[1].length)}`, prefixLength: heading[0].length };
+    return { type: `h${Math.min(4, heading[1].length)}`, prefixLength: heading[0].length };
   const quote = source.match(/^ {0,3}>[ \t]+/);
   if (quote) return { type: 'quote', prefixLength: quote[0].length };
   const list = source.match(/^([ \t]*)([-+*]|\d+[.)])[ \t]+/);

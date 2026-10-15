@@ -118,6 +118,19 @@ export function registerCommands(runtime: EditorRuntime) {
   }
 
   function renderSlashResults(query = '') {
+    const prefixes = {
+      h1: '#',
+      h2: '##',
+      h3: '###',
+      h4: '####',
+      bullet: '-',
+      number: '1.',
+      todo: '[]',
+      toggle: '>',
+      quote: '"',
+      code: '```',
+      divider: '---',
+    };
     const items = runtime.BLOCK_TYPES.filter((x) => runtime.blockTypeMatchesQuery(x, query)).sort(
       (a, b) => runtime.blockTypeSearchRank(a, query) - runtime.blockTypeSearchRank(b, query),
     );
@@ -130,7 +143,7 @@ export function registerCommands(runtime: EditorRuntime) {
         .filter((x) => x.group === g)
         .map((x) =>
           runtime.htmlWithStyles(
-            `<button class="slash-item" data-slash-type="${x.type}"><span class="slash-icon">${runtime.iconMarkup(x.icon, '20px')}</span><span><div class="slash-name">${x.name}</div><div class="slash-desc">${x.desc}</div></span></button>`,
+            `<button class="slash-item" data-slash-type="${x.type}" aria-label="${runtime.escapeHtml(x.name)}" title="${runtime.escapeHtml(x.desc)}"><span class="slash-icon">${runtime.iconMarkup(x.icon, '18px')}</span><span class="slash-name">${x.name}</span>${prefixes[x.type] ? `<span class="slash-prefix" aria-hidden="true">${runtime.escapeHtml(prefixes[x.type])}</span>` : ''}</button>`,
           ),
         )
         .join('');

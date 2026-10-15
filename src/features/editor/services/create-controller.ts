@@ -775,6 +775,13 @@ export function createWorkspaceController(): WorkspaceController {
       group: 'Basic',
     },
     {
+      type: 'h4',
+      icon: 'heading-4',
+      name: 'Heading 4',
+      desc: 'Compact section heading',
+      group: 'Basic',
+    },
+    {
       type: 'bullet',
       icon: 'list',
       name: 'Bulleted list',
