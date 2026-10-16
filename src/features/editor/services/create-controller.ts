@@ -1320,6 +1320,7 @@ export function createWorkspaceController(): WorkspaceController {
         void runtime.persistStateNow();
       runtime.clearAttachmentObjectUrls();
       runtime.closeInlineEquation?.();
+      runtime.closeMermaidViewer?.();
       lifecycle.dispose();
       deleteConfirmResolver?.(false);
     },

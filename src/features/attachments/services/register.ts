@@ -412,7 +412,7 @@ export function registerAttachments(runtime: EditorRuntime) {
   }
 
   function onImageBlockViewerWheel(event) {
-    if (!isImageBlockPreviewOpen() || !event.ctrlKey) return;
+    if (!isImageBlockPreviewOpen()) return;
     event.preventDefault();
     zoomImageBlockViewer(event.deltaY < 0 ? 'in' : 'out', event);
   }
@@ -628,6 +628,7 @@ export function registerAttachments(runtime: EditorRuntime) {
     const active = () => runtime.state === workspace && runtime.activeVaultId === vaultId;
     let locked = false;
     let deleted = 0;
+    let attachmentsMayHaveChanged = false;
     try {
       if (runtime.saveTimer && !(await runtime.persistStateNow()))
         throw new Error('Could not save notes before cleaning attachments.');
@@ -687,6 +688,7 @@ export function registerAttachments(runtime: EditorRuntime) {
       for (const item of unused) {
         if (!active()) break;
         if (!stillUnused.has(item.path)) continue;
+        attachmentsMayHaveChanged = true;
         await runtime.localStorageGateway.deleteAttachment(item.path);
         if (
           imageBlockClipboard &&
@@ -717,7 +719,7 @@ export function registerAttachments(runtime: EditorRuntime) {
         runtime.syncWorkspaceLocationActions();
       }
       attachmentCleanupRunning = false;
-      if (active()) {
+      if (attachmentsMayHaveChanged && active()) {
         runtime.clearAttachmentObjectUrls();
         runtime.closeAttachmentPreview();
         await runtime.refreshAttachmentList();

@@ -1,4 +1,5 @@
 import type { ControllerLifecycle } from '@/shared/lib/controller-lifecycle';
+import { createMermaidViewer } from './mermaid-viewer';
 
 interface View {
   scale: number;
@@ -7,7 +8,20 @@ interface View {
 }
 
 /** Navigation belongs to the preview DOM, never to the persisted Markdown. */
-export function bindMermaidNavigation(lifecycle: ControllerLifecycle): void {
+export function bindMermaidNavigation(lifecycle: ControllerLifecycle): () => void {
+  const viewer = createMermaidViewer();
+  lifecycle.listen(window, 'resize', viewer.resize);
+  lifecycle.listen(
+    document,
+    'cancel',
+    (event) => {
+      if ((event.target as Element)?.matches?.('[data-mermaid-viewer]')) {
+        event.preventDefault();
+        viewer.close();
+      }
+    },
+    true,
+  );
   const views = new WeakMap<HTMLElement, View>();
   let drag: { viewport: HTMLElement; id: number; x: number; y: number } | null = null;
   const viewportFor = (target: EventTarget | null) =>
@@ -59,7 +73,29 @@ export function bindMermaidNavigation(lifecycle: ControllerLifecycle): void {
     },
     { passive: false },
   );
+  lifecycle.listen(document, 'dblclick', (event) => {
+    if (viewer.isOpen()) return;
+    const viewport = (event.target as Element)?.closest?.<HTMLElement>('[data-mermaid-render]');
+    const button = viewport
+      ?.closest('[data-mermaid-preview]')
+      ?.querySelector<HTMLElement>('[data-mermaid-fullscreen-toggle]');
+    if (!button || !viewport?.querySelector('svg')) return;
+    event.preventDefault();
+    viewer.open(button);
+  });
   lifecycle.listen(document, 'click', (event) => {
+    const fullscreen = (event.target as Element)?.closest?.<HTMLElement>(
+      '[data-mermaid-fullscreen-toggle]',
+    );
+    if (fullscreen) {
+      event.preventDefault();
+      viewer.open(fullscreen);
+      return;
+    }
+    if ((event.target as Element)?.closest?.('[data-mermaid-viewer-close]')) {
+      viewer.close();
+      return;
+    }
     const button = (event.target as Element)?.closest?.<HTMLElement>(
       '[data-mermaid-zoom], [data-mermaid-reset]',
     );
@@ -119,6 +155,12 @@ export function bindMermaidNavigation(lifecycle: ControllerLifecycle): void {
     'keydown',
     (event) => {
       const key = event as KeyboardEvent;
+      if (key.key === 'Escape' && viewer.isOpen()) {
+        key.preventDefault();
+        key.stopImmediatePropagation();
+        viewer.close();
+        return;
+      }
       const viewport = (key.target as HTMLElement)?.matches?.('[data-mermaid-render]')
         ? (key.target as HTMLElement)
         : null;
@@ -145,4 +187,5 @@ export function bindMermaidNavigation(lifecycle: ControllerLifecycle): void {
     },
     true,
   );
+  return viewer.close;
 }

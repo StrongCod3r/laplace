@@ -7,7 +7,7 @@ import { bindMermaidNavigation } from './mermaid-navigation';
 
 export function registerCode(runtime: EditorRuntime) {
   const renderedMermaidPreviews = new WeakMap();
-  bindMermaidNavigation(runtime.lifecycle);
+  const closeMermaidViewer = bindMermaidNavigation(runtime.lifecycle);
 
   function codeBlockHTML(block, gutter) {
     const language = runtime.CODE_LANGUAGES.some(([id]) => id === block.language)
@@ -50,10 +50,11 @@ export function registerCode(runtime: EditorRuntime) {
         : language === 'latex'
           ? `<button type="button" class="code-tool-btn" data-math-download title="Download formula as SVG" aria-label="Download formula as SVG">${runtime.iconMarkup('download', '15px')}</button>`
           : '';
+    const fullscreenButton = `<button type="button" class="code-tool-btn" data-mermaid-fullscreen-toggle title="Open diagram viewer" aria-label="Open diagram viewer">${runtime.iconMarkup('maximize-2', '15px')}</button>`;
     const preview =
       language === 'mermaid'
         ? runtime.htmlWithStyles(
-            `<div class="mermaid-preview" data-mermaid-preview><div class="mermaid-navigation" role="toolbar" aria-label="Diagram navigation" aria-orientation="horizontal"><button type="button" class="code-tool-btn" data-mermaid-zoom="out" title="Zoom out" aria-label="Zoom out">${runtime.iconMarkup('zoom-out', '15px')}</button><button type="button" class="code-tool-btn mermaid-reset" data-mermaid-reset title="Reset diagram view" aria-label="Reset diagram view">100%</button><button type="button" class="code-tool-btn" data-mermaid-zoom="in" title="Zoom in" aria-label="Zoom in">${runtime.iconMarkup('zoom-in', '15px')}</button></div><div class="mermaid-preview-status" data-mermaid-status>Rendering diagram…</div><div class="mermaid-render" data-mermaid-render tabindex="0" role="region" aria-label="Mermaid diagram. Scroll to zoom, drag to pan. Use plus, minus, arrows and zero on the keyboard."><div class="mermaid-canvas" data-mermaid-canvas></div></div></div>`,
+            `<div class="mermaid-preview" data-mermaid-preview><div class="mermaid-navigation" role="toolbar" aria-label="Diagram navigation" aria-orientation="horizontal"><button type="button" class="code-tool-btn" data-mermaid-zoom="out" title="Zoom out" aria-label="Zoom out">${runtime.iconMarkup('zoom-out', '15px')}</button><button type="button" class="code-tool-btn mermaid-reset" data-mermaid-reset title="Reset diagram view" aria-label="Reset diagram view">100%</button><button type="button" class="code-tool-btn" data-mermaid-zoom="in" title="Zoom in" aria-label="Zoom in">${runtime.iconMarkup('zoom-in', '15px')}</button>${fullscreenButton}</div><div class="mermaid-preview-status" data-mermaid-status>Rendering diagram…</div><div class="mermaid-render" data-mermaid-render tabindex="0" role="region" aria-label="Mermaid diagram. Scroll to zoom, drag to pan. Use plus, minus, arrows and zero on the keyboard."><div class="mermaid-canvas" data-mermaid-canvas></div></div></div>`,
           )
         : language === 'latex'
           ? `<div class="math-preview" data-math-preview role="region" aria-label="LaTeX preview">${renderMathHTML(text, true)}</div>`
@@ -491,6 +492,7 @@ export function registerCode(runtime: EditorRuntime) {
   }
 
   Object.assign(runtime, {
+    closeMermaidViewer,
     codeBlockHTML,
     mermaidViewModeForBlock,
     codeViewModeForBlock,

@@ -73,8 +73,61 @@ for (const docked of [false, true]) {
         'transform',
         'matrix(1, 0, 0, 1, 0, 0)',
       );
+      await preview.getByRole('button', { name: 'Zoom in', exact: true }).click();
+      const savedTransform = await preview.locator('[data-mermaid-canvas]').getAttribute('style');
+      const savedSvgStyle = await svg.getAttribute('style');
+      const svgId = await svg.getAttribute('id');
+      const launch = preview.getByRole('button', { name: 'Open diagram viewer', exact: true });
+      await launch.click();
+      const viewer = page.getByRole('dialog', { name: 'Mermaid diagram viewer', exact: true });
+      await expect(viewer).toBeVisible();
+      const viewerBounds = (await viewer.boundingBox())!;
+      expect(viewerBounds.width).toBe(page.viewportSize()!.width);
+      expect(viewerBounds.height).toBe(page.viewportSize()!.height);
+      await expect(viewer.locator('[data-mermaid-reset]')).toHaveText('100%');
+      await expect(page.locator(`svg[id="${svgId}"]`)).toHaveCount(1);
+      const diagram = (await viewer.locator('[data-mermaid-canvas] svg').boundingBox())!;
+      expect(diagram.height).toBeLessThanOrEqual(viewerBounds.height - 80);
+      await viewer.getByRole('button', { name: 'Zoom in', exact: true }).click();
+      await expect(viewer.locator('[data-mermaid-reset]')).toHaveText('125%');
+      const fullViewport = viewer.locator('[data-mermaid-render]');
+      await fullViewport.hover();
+      await page.mouse.wheel(0, -100);
+      await expect(viewer.locator('[data-mermaid-reset]')).not.toHaveText('125%');
+      const fullBox = (await fullViewport.boundingBox())!;
+      await page.mouse.move(fullBox.x + 40, fullBox.y + 40);
+      await page.mouse.down();
+      await page.mouse.move(fullBox.x + 90, fullBox.y + 70, { steps: 6 });
+      await page.mouse.up();
+      await page.keyboard.press('Escape');
+      await expect(viewer).toHaveCount(0);
+      await expect(launch).toBeFocused();
+      await expect(svg).toBeVisible();
+      await expect(svg).toHaveAttribute('style', savedSvgStyle!);
+      await expect(preview.locator('[data-mermaid-canvas]')).toHaveAttribute(
+        'style',
+        savedTransform!,
+      );
+      await viewport.dblclick();
+      await expect(viewer).toBeVisible();
+      await viewer.locator('[data-mermaid-render]').dblclick();
+      await expect(viewer).toHaveCount(1);
+      await viewer.getByRole('button', { name: 'Close diagram viewer', exact: true }).click();
+      await expect(viewer).toHaveCount(0);
+      await expect(svg).toBeVisible();
       await expect(root.locator('[data-code-editor]')).toHaveValue('graph TD\n A --> B');
       await expect(root.locator('[data-code-editor]')).toBeHidden();
+      if (!dark && !docked) {
+        await launch.click();
+        await page.evaluate(async () => {
+          const { useWorkspaceStore } = await import(
+            new URL('src/store/workspace.store.ts', location.href).href
+          );
+          useWorkspaceStore.getState().controller.dispose();
+        });
+        await expect(viewer).toHaveCount(0);
+        await expect(svg).toBeVisible();
+      }
     });
   }
 }

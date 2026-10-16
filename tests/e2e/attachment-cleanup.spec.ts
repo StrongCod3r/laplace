@@ -60,6 +60,13 @@ test('Attachments cleans only unused files after confirmation, including nested 
     .click();
   await expect(page.locator('#rightSidebarContent')).toContainText('References');
   await expect(page.locator('#rightSidebarContent')).toContainText('1 reference');
+  await gallery.getByRole('list').evaluate((list) => {
+    (window as any).attachmentGalleryBeforeCleanup = {
+      list,
+      cards: [...list.children],
+      sources: [...list.querySelectorAll('img')].map((image) => image.src),
+    };
+  });
   const clean = gallery.getByRole('button', { name: 'Clean unused assets', exact: true });
   await clean.click();
   const confirmation = page.getByRole('alertdialog', { name: 'Delete unused attachments?' });
@@ -67,7 +74,24 @@ test('Attachments cleans only unused files after confirmation, including nested 
   await expect(confirmation).toContainText('orphan.svg');
   await expect(confirmation).toContainText('orphan.pdf');
   await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(clean).toBeEnabled();
   await expect(gallery.getByRole('listitem')).toHaveCount(6);
+  expect(
+    await gallery.getByRole('list').evaluate((list) => {
+      const previous = (window as any).attachmentGalleryBeforeCleanup;
+      return {
+        sameList: list === previous.list,
+        sameCards: [...list.children].every((card, index) => card === previous.cards[index]),
+        sameSources:
+          JSON.stringify([...list.querySelectorAll('img')].map((image) => image.src)) ===
+          JSON.stringify(previous.sources),
+      };
+    }),
+  ).toEqual({ sameList: true, sameCards: true, sameSources: true });
+  await expect(
+    gallery.getByRole('button', { name: 'Show references for manual.pdf', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await clean.click();
   await confirmation.getByRole('button', { name: 'Delete unused files', exact: true }).click();
   await expect(gallery.getByRole('listitem')).toHaveCount(4);

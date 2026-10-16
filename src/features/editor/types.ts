@@ -54,6 +54,7 @@ export interface EditorRuntime {
     initialSource?: string | null,
   ): void;
   closeInlineEquation(): void;
+  closeMermaidViewer(): void;
   selectImageBlock?: (id: string) => boolean;
   clearSelectedImageBlock?: () => void;
   copySelectedImageBlockToClipboard?: (event: ClipboardEvent) => boolean;
