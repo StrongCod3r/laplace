@@ -1265,24 +1265,20 @@ export function registerWorkspace(runtime: EditorRuntime) {
           !page.parentId &&
           runtime.folderPathForId(page.folderId).toLocaleLowerCase() ===
             normalized.toLocaleLowerCase() &&
-          String(page.title || 'Untitled').toLocaleLowerCase() === key,
+          (page.folderNote === true ||
+            String(page.title || 'Untitled').toLocaleLowerCase() === key),
       ) || null
     );
   }
 
   function pagesInFolder(path) {
-    const normalized = runtime.normalizeFolderPath(path),
-      folder = runtime.folderByPath(normalized);
+    const normalized = runtime.normalizeFolderPath(path);
+    // A folder note keeps its identity while its title differs from the folder during editing.
     return runtime.state.pages.filter(
       (page) =>
         !page.parentId &&
         runtime.pageFolderPath(page) === normalized &&
-        !(
-          runtime.state.folderNotesEnabled &&
-          folder &&
-          String(page.title || 'Untitled').toLocaleLowerCase() ===
-            String(folder.name || '').toLocaleLowerCase()
-        ),
+        !(runtime.state.folderNotesEnabled && runtime.representedFolderForPage(page)),
     );
   }
 

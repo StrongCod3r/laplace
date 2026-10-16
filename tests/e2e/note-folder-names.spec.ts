@@ -27,7 +27,7 @@ test('Untitled.md and an existing Untitled directory persist independently in a 
   await expect(note).toHaveCount(1);
   await expect(note.locator('.tree-expand')).toHaveCount(0);
   await page.evaluate(async () => {
-    const modulePath = '/src/store/workspace.store.ts';
+    const modulePath = new URL('src/store/workspace.store.ts', location.href).href;
     const { useWorkspaceStore } = await import(modulePath);
     await useWorkspaceStore.getState().controller.flush();
     const root = await navigator.storage.getDirectory();
@@ -57,7 +57,7 @@ for (const explicit of [true, false]) {
       await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);
       await page.evaluate(
         async ({ explicit, parent }) => {
-          const modulePath = '/src/store/workspace.store.ts';
+          const modulePath = new URL('src/store/workspace.store.ts', location.href).href;
           const { useWorkspaceStore } = await import(modulePath);
           await useWorkspaceStore.getState().controller.flush();
           const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -107,7 +107,7 @@ for (const explicit of [true, false]) {
       await expect(page.locator('#pageTitle')).toHaveText('Untitled');
       const assertSeparate = async () => {
         const result = await page.evaluate(async () => {
-          const modulePath = '/src/store/workspace.store.ts';
+          const modulePath = new URL('src/store/workspace.store.ts', location.href).href;
           const { useWorkspaceStore } = await import(modulePath);
           const { controller, ui } = useWorkspaceStore.getState();
           const document = controller.getDocument();
@@ -135,7 +135,7 @@ for (const explicit of [true, false]) {
       };
       await assertSeparate();
       await page.evaluate(async () => {
-        const modulePath = '/src/store/workspace.store.ts';
+        const modulePath = new URL('src/store/workspace.store.ts', location.href).href;
         const { useWorkspaceStore } = await import(modulePath);
         await useWorkspaceStore.getState().controller.flush();
       });
