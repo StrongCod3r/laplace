@@ -44,7 +44,7 @@ for (const dark of [false, true]) {
       }),
     ).toMatchObject({ text: original, selected: original });
     expect(await content.innerHTML()).not.toContain('katex');
-    await hosts.first().locator('.katex').click();
+    await hosts.first().click();
     await expect(page.locator('[data-equation-input]')).toHaveValue('\\frac{x_1}{2}');
     await page.locator('[data-equation-input]').press('Escape');
     await expect(content).toBeFocused();
@@ -258,7 +258,7 @@ test('table formulas remain editable and preserve cell Markdown', async ({ page 
   await page.locator('#pageTitle').click();
   const cell = page.locator('#blockEditor [data-table-cell="1:0"]');
   await expect(cell.locator('[data-inline-math] .katex')).toBeVisible();
-  await cell.locator('[data-inline-math] .katex').click();
+  await cell.locator('[data-inline-math]').click();
   await expect(page.locator('[data-equation-input]')).toHaveValue('x_1');
   await page.locator('[data-equation-input]').fill('y_2');
   await page.locator('[data-equation-input]').press('Enter');

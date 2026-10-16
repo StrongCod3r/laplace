@@ -113,15 +113,17 @@ export function hydrateInlineMath(root: ParentNode): void {
     if (!inlineStyles) {
       inlineStyles = new CSSStyleSheet();
       inlineStyles.replaceSync(`${katexStyles}
-        :host { display: inline; }
+        :host { display: inline-block; }
         slot { font-size: 0; }
         :host([data-math-editing]) slot { font-size: inherit; }
         :host([data-math-editing]) .rendered { display: none; }
-        .rendered { cursor: text; }
+        .rendered { cursor: text; pointer-events: none; user-select: none; }
         .math-error { color: var(--code-error, currentColor); text-decoration: underline dotted; }
       `);
     }
     shadow.adoptedStyleSheets = [inlineStyles];
+    // Keep the preview inert inside one atomic inline box so native selection and
+    // caret movement stay in the surrounding editable tree across the formula.
     // Only the original source lives in the editable DOM. Range offsets, clipboard
     // textContent and innerText cannot acquire generated KaTeX text. Native copy
     // needs the explicit source-only clipboard handler, since it traverses shadows.
@@ -131,7 +133,8 @@ export function hydrateInlineMath(root: ParentNode): void {
     const selection = window.getSelection();
     host.toggleAttribute(
       'data-math-editing',
-      content === document.activeElement &&
+      host.isContentEditable &&
+        content === document.activeElement &&
         (host.contains(selection?.anchorNode || null) ||
           host.contains(selection?.focusNode || null)),
     );
@@ -149,11 +152,12 @@ export function bindMathEditing(
   const editing = (content: HTMLElement, enabled: boolean) => {
     const selection = window.getSelection();
     content
-      .querySelectorAll('[data-inline-math]')
+      .querySelectorAll<HTMLElement>('[data-inline-math]')
       .forEach((host) =>
         host.toggleAttribute(
           'data-math-editing',
-          enabled &&
+          host.isContentEditable &&
+            enabled &&
             (host.contains(selection?.anchorNode || null) ||
               host.contains(selection?.focusNode || null) ||
               host.getAttribute('title') !== host.textContent),
@@ -178,17 +182,19 @@ export function bindMathEditing(
       pending.delete(content);
     }
   };
+  let pressed: { host: HTMLElement; content: HTMLElement; x: number; y: number } | null = null;
   lifecycle.listen(
     document,
     'pointerdown',
     (event) => {
+      pressed = null;
       if ((event as PointerEvent).button !== 0) return;
       const host = (event.target as Element)?.closest<HTMLElement>('[data-inline-math]');
       const content = host?.closest<HTMLElement>(editableSelector);
       if (!host || !content?.isContentEditable) return;
       if (openEquation) {
-        event.preventDefault();
-        openEquation(host, content);
+        const pointer = event as PointerEvent;
+        pressed = { host, content, x: pointer.clientX, y: pointer.clientY };
         return;
       }
       if (document.activeElement === content) return;
@@ -206,6 +212,18 @@ export function bindMathEditing(
     },
     true,
   );
+  lifecycle.listen(document, 'pointerup', (event) => {
+    const start = pressed;
+    pressed = null;
+    if (!start || !openEquation) return;
+    const pointer = event as PointerEvent;
+    if (Math.hypot(pointer.clientX - start.x, pointer.clientY - start.y) > 4) return;
+    if (!window.getSelection()?.isCollapsed) return;
+    openEquation(start.host, start.content);
+  });
+  lifecycle.listen(document, 'pointercancel', () => {
+    pressed = null;
+  });
   lifecycle.listen(document, 'focusin', (event) => {
     const content = (event.target as Element)?.closest<HTMLElement>(editableSelector);
     if (content) {

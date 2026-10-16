@@ -616,7 +616,7 @@ export function registerEditor(runtime: EditorRuntime) {
       let segment = runtime.wrapInlineSegment(runtime.escapeHtml(piece), activeFormats);
       const token = tokens.find((item) => item.start <= start && item.end >= end);
       if (token?.kind === 'math')
-        segment = `<span data-inline-math role="button" tabindex="0" aria-label="Edit inline equation">${segment}</span>`;
+        segment = `<span data-inline-math contenteditable="false" role="button" tabindex="0" aria-label="Edit inline equation">${segment}</span>`;
       else if (token?.kind === 'external')
         segment = runtime.htmlWithStyles(
           `<a class="inline-link" data-inline-link href="${runtime.escapeHtml(token.url)}" target="_blank" rel="noopener noreferrer">${segment}</a>`,
@@ -2524,7 +2524,13 @@ export function registerEditor(runtime: EditorRuntime) {
     }
     const placeholder = el.querySelector('[data-caret-placeholder]');
     if (placeholder && offset === el.textContent.length) range.setStartBefore(placeholder);
-    else range.setStart(node, pos);
+    else {
+      const math = node.parentElement?.closest('[data-inline-math]');
+      if (math) {
+        if (pos === 0) range.setStartBefore(math);
+        else range.setStartAfter(math);
+      } else range.setStart(node, pos);
+    }
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
