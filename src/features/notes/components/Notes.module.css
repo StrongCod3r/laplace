@@ -150,6 +150,21 @@
   margin-left: 12px;
 }
 
+:global(#pageTree) .page-children {
+  position: relative;
+}
+
+:global(#pageTree) .page-children::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  bottom: 0;
+  left: -3.5px;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
 body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   display: none;
 }
