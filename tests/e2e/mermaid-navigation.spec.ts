@@ -42,8 +42,13 @@ for (const docked of [false, true]) {
       const x = rect.x + rect.width / 2,
         y = rect.y + rect.height / 2;
       await page.mouse.move(x, y);
-      await page.mouse.wheel(0, -100);
-      await expect(reset).not.toHaveText('100%');
+      const wheelPrevented = await viewport.evaluate((element) => {
+        const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 });
+        element.dispatchEvent(wheel);
+        return wheel.defaultPrevented;
+      });
+      expect(wheelPrevented).toBe(false);
+      await expect(reset).toHaveText('100%');
       const before = (await svg.boundingBox())!;
       await page.mouse.down();
       await page.mouse.move(x + 60, y + 35, { steps: 8 });

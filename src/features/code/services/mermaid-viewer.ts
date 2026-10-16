@@ -25,6 +25,10 @@ export function createMermaidViewer() {
     const full = preview.cloneNode(true) as HTMLElement;
     full.setAttribute('data-mermaid-fullscreen', '');
     const fullViewport = full.querySelector<HTMLElement>('[data-mermaid-render]')!;
+    fullViewport.setAttribute(
+      'aria-label',
+      'Mermaid diagram. Scroll to zoom, drag to pan. Use plus, minus, arrows and zero on the keyboard.',
+    );
     const fullCanvas = full.querySelector<HTMLElement>('[data-mermaid-canvas]')!;
     fullViewport.style.height = '';
     fullViewport.removeAttribute('data-panning');

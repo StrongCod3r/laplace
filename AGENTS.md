@@ -99,7 +99,7 @@ Heading blocks support H1 through H6 in the slash menu, formatting toolbar, outl
 
 Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.
 
-Mermaid previews support wheel zoom, pointer dragging, zoom buttons, and keyboard navigation. Keep zoom and pan local to each preview, retain them when preserving its DOM during unrelated edits, and exclude navigation transforms from Markdown and SVG exports. Reset restores 100% zoom and the original position.
+Mermaid previews support pointer dragging, zoom buttons, and keyboard navigation. Wheel zoom is enabled only in the fullscreen viewer; in a block preview, the wheel retains normal page scrolling. Keep zoom and pan local to each preview, retain them when preserving its DOM during unrelated edits, and exclude navigation transforms from Markdown and SVG exports. Reset restores 100% zoom and the original position.
 
 The Mermaid fullscreen viewer fits the diagram to the window and supports the same navigation controls. Close it with Escape or its close button, restore the source preview's SVG, zoom, pan and focus, and remove the modal during controller disposal. Keep SVG IDs unique while the viewer is open.
 

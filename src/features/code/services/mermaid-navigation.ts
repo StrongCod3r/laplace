@@ -58,7 +58,7 @@ export function bindMermaidNavigation(lifecycle: ControllerLifecycle): () => voi
     (event) => {
       const wheel = event as WheelEvent;
       const viewport = (wheel.target as Element)?.closest?.<HTMLElement>('[data-mermaid-render]');
-      if (!viewport?.querySelector('svg')) return;
+      if (!viewport?.closest('[data-mermaid-fullscreen]') || !viewport.querySelector('svg')) return;
       wheel.preventDefault();
       const rect = viewport.getBoundingClientRect();
       const delta =
