@@ -8,7 +8,8 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 0 5px 8px;
+  padding: calc((var(--workspace-toolbar-height) - var(--workspace-toolbar-button-size)) / 2) 5px
+    8px;
   z-index: 60;
 }
 .ribbon-top,
@@ -20,8 +21,8 @@
   align-items: center;
 }
 .ribbon-btn {
-  width: 34px;
-  height: var(--workspace-toolbar-height);
+  width: var(--workspace-toolbar-button-size);
+  height: var(--workspace-toolbar-button-size);
   border: 0;
   border-radius: 6px;
   background: transparent;

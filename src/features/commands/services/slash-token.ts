@@ -11,6 +11,6 @@ export function slashTokenAtCaret(text: string, caret: number): SlashToken | nul
   const start = text.lastIndexOf('/', end - 1);
   if (start < 0 || (start > 0 && !/\s/.test(text[start - 1]))) return null;
   const query = text.slice(start + 1, end);
-  if (!/^[\p{L}\p{N} -]*$/u.test(query)) return null;
+  if (query.startsWith(' ') || !/^[\p{L}\p{N} -]*$/u.test(query)) return null;
   return { start, end, query };
 }

@@ -48,6 +48,14 @@ for (const docked of [false, true]) {
       await expect(choice).toBeVisible();
       await expect(choice.locator('svg.lucide-radical')).toHaveCount(1);
       await expect(page.locator('#slashResults [data-slash-type]')).toHaveCount(1);
+      await page.keyboard.press('Space');
+      await expect(page.locator('#slashMenu')).toBeHidden();
+      await page.keyboard.type('x');
+      await expect(page.locator('#slashMenu')).toBeHidden();
+      await expect(content).toHaveText('Before / x after');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Backspace');
+      await expect(choice).toBeVisible();
       await page.keyboard.type('equation');
       await page.keyboard.press('Enter');
       const input = page.locator('[data-equation-input]');

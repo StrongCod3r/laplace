@@ -17,6 +17,13 @@ test('math syntax and Markdown preserve LaTeX without interpreting its inline pu
     assert.deepEqual(slashTokenAtCaret('Before /eq after', 10), { start: 7, end: 10, query: 'eq' });
     assert.deepEqual(slashTokenAtCaret('line\n/eq', 8), { start: 5, end: 8, query: 'eq' });
     assert.equal(slashTokenAtCaret('/', 0), null);
+    assert.equal(slashTokenAtCaret('Before / ', 9), null);
+    assert.equal(slashTokenAtCaret('Before / equation', 17), null);
+    assert.deepEqual(slashTokenAtCaret('/inline equation', 16), {
+      start: 0,
+      end: 16,
+      query: 'inline equation',
+    });
     assert.equal(slashTokenAtCaret('https://example.com/eq', 22), null);
     assert.equal(slashTokenAtCaret('folder/eq', 9), null);
     const { registerMarkdown } = await server.ssrLoadModule(

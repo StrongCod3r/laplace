@@ -203,11 +203,11 @@
 }
 .global-right-sidebar-toggle {
   position: fixed;
-  top: calc((var(--workspace-toolbar-height) - 29px) / 2);
+  top: calc((var(--workspace-toolbar-height) - var(--workspace-toolbar-button-size)) / 2);
   right: 6px;
   z-index: 70;
-  width: 29px;
-  height: 29px;
+  width: var(--workspace-toolbar-button-size);
+  height: var(--workspace-toolbar-button-size);
   background: var(--tab-bg);
   color: var(--muted);
   font-size: 18px;
