@@ -121,7 +121,6 @@ export const CommandOverlays = memo(function CommandOverlays() {
             <button data-format-block-type="bullet">{'Bulleted list'}</button>
             <button data-format-block-type="number">{'Numbered list'}</button>
             <button data-format-block-type="todo">{'To-do list'}</button>
-            <button data-format-block-type="toggle">{'Toggle list'}</button>
             <button data-format-block-type="quote">{'Quote'}</button>
             <button data-format-block-type="callout">{'Callout'}</button>
           </div>

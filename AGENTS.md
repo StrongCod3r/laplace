@@ -91,6 +91,10 @@ Important historical regression: enabling writes before loading finished and sav
 
 ## Editor behaviors to preserve
 
+Toggle list blocks are no longer offered by the editor. Normalize legacy toggles to ordinary text followed by their children in reading order, recursively, including closed toggles. Preserve block IDs, inline metadata, attachments and child blocks; never discard hidden content.
+
+The initial Getting Started note contains examples of every block type, including Mermaid, inline math, display LaTeX, an embedded image, and a working child page and page link. Seed it only through the existing new-workspace initialization; never replace an existing user's note with updated examples.
+
 Blockquotes support nested levels with `>>`, `>>>`, and spaced `> >` markers. Keep each quote block's `quoteDepth` through Markdown/HTML import, rendering, copying, and serialization. Tab and Shift+Tab adjust quote depth without losing inline metadata; render a guide for each nesting level.
 
 When Tab or Shift+Tab is used on a later line of a multiline quote, split at the start of that line and change only that line and the following lines in the block. Preserve earlier lines at their depth, inline ranges, caret history, and Markdown round trips.

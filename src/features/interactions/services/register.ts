@@ -1173,15 +1173,6 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.downloadImageBlock(id);
         return;
       }
-      if (e.target.closest('.toggle-prefix')) {
-        const b = runtime.findBlock(id);
-        if (b?.type === 'toggle') {
-          b.open = !b.open;
-          runtime.scheduleSave();
-          runtime.renderCurrentBlocksKeepFocus();
-        }
-        return;
-      }
     }
 
     const tableAxisAction = e.target.closest('[data-table-axis-action]');
@@ -3360,19 +3351,6 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (e.target.matches('[data-comment-input]') && (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       runtime.addPageComment();
-      return;
-    }
-
-    const togglePrefix = e.target.closest?.('.toggle-prefix');
-    if (togglePrefix && (e.key === 'Enter' || e.key === ' ')) {
-      e.preventDefault();
-      const row = togglePrefix.closest('.block-row'),
-        b = runtime.findBlock(row?.dataset.blockId);
-      if (b?.type === 'toggle') {
-        b.open = !b.open;
-        runtime.scheduleSave();
-        runtime.renderCurrentBlocksKeepFocus();
-      }
       return;
     }
 

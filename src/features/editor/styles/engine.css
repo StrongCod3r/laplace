@@ -1220,39 +1220,6 @@ dialog[data-mermaid-viewer] {
   color: var(--muted);
 }
 
-.toggle-prefix {
-  width: 24px;
-  flex: none;
-  padding-top: 5px;
-  color: var(--muted);
-}
-
-.block-row[data-type='toggle'] .toggle-prefix {
-  cursor: pointer;
-  user-select: none;
-}
-
-.toggle-block {
-  align-items: flex-start;
-}
-
-.toggle-shell {
-  flex: 1;
-  min-width: 0;
-}
-
-.toggle-header {
-  display: flex;
-  min-width: 0;
-  min-height: 30px;
-}
-
-.toggle-children {
-  margin-left: 24px;
-  padding-left: 12px;
-  border-left: 1px solid var(--border);
-}
-
 .page-block {
   min-height: 32px;
   align-items: center;
@@ -2604,11 +2571,6 @@ dialog[data-mermaid-viewer] {
   overscroll-behavior: contain;
 }
 
-.toggle-prefix {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-}
 
 @media (max-width: 900px) {
   .page {

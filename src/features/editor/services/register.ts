@@ -208,17 +208,11 @@ export function registerEditor(runtime: EditorRuntime) {
   }
 
   function toggleBlockHTML(block, gutter) {
-    if (!Array.isArray(block.children)) block.children = [];
-    const children = block.open
-      ? runtime.htmlWithStyles(
-          `<div class="toggle-children" data-toggle-children="${block.id}">${block.children.map((child, i) => runtime.blockHTML(child, i, block.children)).join('')}</div>`,
-        )
-      : '';
-    const placeholder = "Type '/' for commands";
-    const emptyState = block.text ? 'false' : 'true';
-    return runtime.htmlWithStyles(
-      `<div class="block-row toggle-block" data-block-id="${block.id}" data-type="toggle">${gutter}<div class="toggle-shell"><div class="toggle-header"><div class="toggle-prefix" aria-label="${block.open ? 'Collapse' : 'Expand'}" role="button" tabindex="0">${runtime.chevronSvg(block.open ? 'down' : 'right', 'toggle-chevron')}</div><div class="block-content" contenteditable="true" data-placeholder="${placeholder}" data-empty="${emptyState}">${runtime.inlineTextHTML(block)}</div></div>${children}</div></div>`,
-    );
+    // Defensive rendering for legacy clipboard/history data before normalization.
+    return runtime
+      .normalizeBlockTree([block])
+      .map((item, index, blocks) => runtime.blockHTML(item, index, blocks))
+      .join('');
   }
 
   function blockHTML(block, index, blocks) {
@@ -831,6 +825,13 @@ export function registerEditor(runtime: EditorRuntime) {
     // The removed database block type is discarded throughout the document tree.
     blocks = blocks.flatMap((block) => {
       if (block?.type === 'database') return [];
+      if (block?.type === 'toggle') {
+        const { children, open, ...content } = block;
+        return runtime.normalizeBlockTree([
+          { ...content, type: 'text', text: String(block.text || '') },
+          ...(Array.isArray(children) ? children : []),
+        ]);
+      }
       // Convert legacy column layouts to ordinary blocks in reading order.
       if (block?.type === 'columns')
         return runtime.normalizeBlockTree(
@@ -848,7 +849,6 @@ export function registerEditor(runtime: EditorRuntime) {
       if (!block || typeof block !== 'object') continue;
       if (!block.id) block.id = runtime.uid('b');
       if (block.type === 'table') runtime.normalizeSimpleTableBlock(block);
-      if (block.type === 'toggle') runtime.normalizeToggleBlock(block);
       runtime.normalizeLegacyLinkBlock(block);
       if (block.type === 'page-link' && typeof block.pageId !== 'string') block.pageId = '';
       if (
@@ -1096,7 +1096,6 @@ export function registerEditor(runtime: EditorRuntime) {
         bullet: 'Bulleted list',
         number: 'Numbered list',
         todo: 'To-do list',
-        toggle: 'Toggle list',
         quote: 'Quote',
         callout: 'Callout',
       }[type] || 'Normal text'
@@ -1644,7 +1643,6 @@ export function registerEditor(runtime: EditorRuntime) {
       'bullet',
       'number',
       'todo',
-      'toggle',
       'quote',
       'callout',
     ]);
@@ -1654,8 +1652,7 @@ export function registerEditor(runtime: EditorRuntime) {
       block.type = type;
       if (type === 'todo' && typeof block.checked !== 'boolean') block.checked = false;
       else if (type !== 'todo') delete block.checked;
-      if (type === 'toggle' && typeof block.open !== 'boolean') block.open = false;
-      else if (type !== 'toggle') delete block.open;
+      delete block.open;
       if (runtime.isListBlock(block))
         runtime.setListIndentLevel(block, runtime.listIndentLevel(block));
       else delete block.indent;

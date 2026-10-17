@@ -45,13 +45,16 @@ test('legacy columns become ordinary blocks without losing nested content or for
     const normalized = runtime.normalizeBlockTree(source);
     assert.deepEqual(
       normalized.map((block) => block.id),
-      ['before', 'text', 'image', 'toggle', 'after'],
+      ['before', 'text', 'image', 'toggle', 'nested', 'after'],
     );
     assert.deepEqual(normalized[1], text);
     assert.deepEqual(normalized[1].inlineFormats, [{ start: 0, end: 9, type: 'bold' }]);
     assert.deepEqual(normalized[2], image);
-    assert.deepEqual(normalized[3].children, [nested]);
-    assert.equal(normalized[3].open, true);
+    assert.equal(normalized[3].type, 'text');
+    assert.equal(normalized[3].text, 'Details');
+    assert.equal(normalized[3].children, undefined);
+    assert.equal(normalized[3].open, undefined);
+    assert.deepEqual(normalized[4], nested);
     assert.ok(runtime.flattenBlocks(normalized).every((block) => block.type !== 'columns'));
     assert.deepEqual(runtime.normalizeBlockTree(normalized), normalized);
     assert.deepEqual(
@@ -61,6 +64,28 @@ test('legacy columns become ordinary blocks without losing nested content or for
       ['Old text'],
     );
     assert.deepEqual(runtime.normalizeBlockTree([{ type: 'columns', columns: null }]), []);
+    const closed = {
+      id: 'closed',
+      type: 'toggle',
+      text: 'Important',
+      open: false,
+      inlineFormats: [{ start: 0, end: 9, type: 'bold' }],
+      children: [{ id: 'inner', type: 'toggle', text: 'Inner', open: false, children: [image] }],
+    };
+    const original = structuredClone(closed);
+    const expanded = runtime.normalizeBlockTree([closed]);
+    assert.deepEqual(
+      expanded.map((block) => block.id),
+      ['closed', 'inner', 'image'],
+    );
+    assert.deepEqual(
+      expanded.map((block) => block.type),
+      ['text', 'text', 'image'],
+    );
+    assert.deepEqual(expanded[0].inlineFormats, closed.inlineFormats);
+    assert.deepEqual(expanded[2], image);
+    assert.deepEqual(closed, original);
+    assert.deepEqual(runtime.normalizeBlockTree(expanded), expanded);
   } finally {
     await server.close();
   }

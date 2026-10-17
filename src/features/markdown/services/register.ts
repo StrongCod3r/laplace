@@ -1539,7 +1539,10 @@ export function registerMarkdown(runtime: EditorRuntime) {
             .map((line, index) => (index === 0 ? `> [!NOTE] ${line}` : `> ${line}`))
             .join('\n'),
         );
-      else if (block.type === 'toggle') lines.push(`> [!NOTE] ${text}`);
+      else if (block.type === 'toggle')
+        lines.push(
+          runtime.markdownForBlocks(runtime.normalizeBlockTree([block]), workspace, paths),
+        );
       else if (block.type === 'code') {
         if (
           block.language === 'latex' &&

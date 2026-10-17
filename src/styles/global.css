@@ -353,12 +353,6 @@ body.table-cell-selecting * {
   height: 12px;
 }
 
-.toggle-prefix .ui-chevron {
-  width: 14px;
-  height: 14px;
-  margin-top: 1px;
-}
-
 .toggle {
   width: 36px;
   height: 20px;

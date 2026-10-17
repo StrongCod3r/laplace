@@ -171,7 +171,6 @@ export function registerCommands(runtime: EditorRuntime) {
       bullet: '-',
       number: '1.',
       todo: '[]',
-      toggle: '>',
       quote: '"',
       code: '```',
       divider: '---',
@@ -206,6 +205,7 @@ export function registerCommands(runtime: EditorRuntime) {
   }
 
   function applySlashType(type) {
+    if (!runtime.BLOCK_TYPES.some((blockType) => blockType.type === type)) return;
     const context = slashContext;
     const b = runtime.findBlock(runtime.activeSlashBlockId);
     if (!b) return;
@@ -264,10 +264,6 @@ export function registerCommands(runtime: EditorRuntime) {
       b.codeLineNumbers = false;
       b.mermaidPreview = true;
       b.text = '';
-    }
-    if (type === 'toggle') {
-      b.open = false;
-      if (!Array.isArray(b.children)) b.children = [];
     }
     if (type === 'table') {
       b.tableRows = Array.from({ length: 3 }, () => Array(3).fill(''));
