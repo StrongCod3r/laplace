@@ -826,7 +826,7 @@ export function createWorkspaceController(): WorkspaceController {
             alt: 'Circle, square and triangle',
             caption: 'Image example',
             imageWidth: 480,
-            imageAlign: 'left',
+            imageAlign: 'center',
           },
           {
             id: 'getting_started_page',
