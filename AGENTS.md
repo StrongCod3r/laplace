@@ -141,6 +141,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
+- Pasting an image file or a copied image block into an empty ordinary paragraph replaces that paragraph in place, preserving its block ID and surrounding blocks. Nonempty paragraphs remain intact, and image presentation metadata and undo/redo must be preserved.
+
 - Store image presentation in a JSON HTML comment immediately below the image: `<!-- laplace:image: {"width":313,"align":"right","crop":{...}} -->`. Width, alignment, and the full reversible crop settings belong there; do not read or write width suffixes in image labels. Omit default presentation, keep captions and attachment references, and preserve malformed, unsupported, or detached comments as ordinary note content.
 
 - Rich text pasted into H1–H6 adopts the destination heading's font and size. Sanitize external presentation while retaining supported inline formats and links; textual paragraphs remain in the heading, and tables and images retain their existing block paste behavior.

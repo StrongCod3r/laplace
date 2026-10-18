@@ -132,7 +132,14 @@ export function registerAttachments(runtime: EditorRuntime) {
     const index = location ? location.index + 1 : blocks.length;
     const copy = runtime.cloneBlockWithNewIds(imageBlockClipboard);
     event.preventDefault();
-    blocks.splice(index, 0, copy);
+    if (
+      location?.block.type === 'text' &&
+      !location.block.text &&
+      !location.block.children?.length
+    ) {
+      copy.id = location.block.id;
+      blocks.splice(location.index, 1, copy);
+    } else blocks.splice(index, 0, copy);
     clearSelectedImageBlock();
     runtime.clearMultiBlockSelection?.();
     runtime.scheduleSave();

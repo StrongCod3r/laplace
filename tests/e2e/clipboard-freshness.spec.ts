@@ -83,11 +83,54 @@ test('an image can still be pasted repeatedly across pages with its presentation
   await content.click();
   await content.press('Control+v');
   await expect(page.locator('#blockEditor .image-block')).toHaveCount(1);
+  await expect(page.locator('#blockEditor > .block-row')).toHaveCount(1);
   await expect(page.locator('#blockEditor .image-preview img')).toHaveAttribute('src', source!);
   await expect(page.locator('#blockEditor [data-image-caption]')).toHaveText('Copied caption');
-  await content.click();
-  await content.press('Control+v');
+  await page.locator('#blockEditor .image-preview img').click();
+  await page.keyboard.press('Control+v');
   await expect(page.locator('#blockEditor .image-block')).toHaveCount(2);
+});
+
+test('pasting an image file replaces an empty paragraph and preserves surrounding text and undo', async ({
+  page,
+}) => {
+  await page.goto('/laplace/');
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await page.locator('#newPageBtn').click();
+  const contents = page.locator('#blockEditor .block-content');
+  await contents.first().fill('Before');
+  await contents.first().press('End');
+  await contents.first().press('Enter');
+  await contents.nth(1).press('Enter');
+  await contents.nth(2).fill('After');
+  const rows = page.locator('#blockEditor > .block-row');
+  await expect(rows).toHaveCount(3);
+  const emptyId = await rows.nth(1).getAttribute('data-block-id');
+  await contents.nth(1).click();
+  await contents.nth(1).evaluate((content, source) => {
+    content.innerHTML = '<br>';
+    const data = new DataTransfer();
+    data.items.add(new File([source], 'pasted.svg', { type: 'image/svg+xml' }));
+    content.dispatchEvent(
+      new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }),
+    );
+  }, svg);
+  const image = page.locator('#blockEditor .image-preview img');
+  await expect
+    .poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth))
+    .toBe(120);
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('Before');
+  await expect(rows.nth(1)).toHaveClass(/image-block/);
+  await expect(rows.nth(1)).toHaveAttribute('data-block-id', emptyId!);
+  await expect(rows.nth(2)).toContainText('After');
+  await image.click();
+  await page.keyboard.press('Control+z');
+  await expect(page.locator('#blockEditor .image-block')).toHaveCount(0);
+  await expect(contents.nth(1)).toHaveText('');
+  await page.keyboard.press('Control+Shift+z');
+  await expect(page.locator('#blockEditor .image-block')).toHaveCount(1);
+  await expect(rows).toHaveCount(3);
 });
 
 test('a newly copied external image replaces the earlier internal image', async ({

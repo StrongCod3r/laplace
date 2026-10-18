@@ -2431,7 +2431,14 @@ export function registerEditor(runtime: EditorRuntime) {
       if (file && location) {
         e.preventDefault();
         const image = { id: runtime.uid('b'), type: 'image', src: '', caption: '', alt: '' };
-        location.blocks.splice(location.index + 1, 0, image);
+        if (
+          location.block.type === 'text' &&
+          !location.block.text &&
+          !location.block.children?.length
+        ) {
+          image.id = location.block.id;
+          location.blocks.splice(location.index, 1, image);
+        } else location.blocks.splice(location.index + 1, 0, image);
         runtime.renderBlocks(runtime.currentPage());
         runtime.loadImageFileIntoBlock(file, image.id);
         return;
