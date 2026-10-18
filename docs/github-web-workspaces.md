@@ -9,9 +9,14 @@ available separately; opening a web workspace does not migrate or replace its no
 
 Open a local folder from the workspace selector, then open Source Control. If the folder
 has no Git repository, choose **Configure GitHub synchronization**, enter a GitHub HTTPS
-repository URL and commit author, and authorize with **Connect with GitHub**. Saving
+repository URL and commit author, and authorize with **Connect with GitHub** or a personal
+access token. Saving
 initializes Git and configures the remote in the current folder; existing notes remain
-in place. Commit the notes and use Sync when ready. A remote with unrelated history
+in place. Use Sync first to download existing remote notes without creating an unrelated
+local commit. Nonconflicting local notes and local Laplace settings remain as working
+changes; conflicting note paths stop the import before files are changed. Unstage any
+local staged changes before this initial download. Commit retained local changes afterward.
+A remote with unrelated history
 is protected by the existing divergence checks and is not merged automatically.
 The workspace selector has no separate GitHub button. Previously created web workspaces
 can still be reopened from the selector and survive page reloads. Closing a
@@ -22,6 +27,30 @@ OPFS and IndexedDB belong to an origin and browser profile. Unsynced work remain
 that browser, and clearing site data removes it. Laplace requests persistent browser
 storage, but the browser decides whether to grant it. A failed clone is discarded only
 from its newly allocated OPFS directory; registered workspaces are never replaced.
+
+## Personal access tokens
+
+In Repository settings, use the Personal access token section instead of web sign-in.
+Choose the token type, enter your GitHub username and paste the token in Access token:
+
+- **Classic:** grant the `repo` scope for private repositories and pushing commits.
+  Authorize SSO for the organization when required.
+- **Fine-grained:** choose the repository owner and the repositories to synchronize,
+  then grant **Contents: Read and write** under repository permissions. Organization
+  policies may require approval before the token can access the repository.
+
+Use **Test connection** to check read access, then save. This check does not verify push
+permissions. Tokens with read-only access can fetch but cannot push commits. Editing
+GitHub Actions workflow files may require additional workflow permissions. Both token
+types use the same encrypted, workspace-and-repository-scoped browser storage as OAuth.
+Existing credentials remain compatible. Clear credentials and save to remove the local
+copy; revoke or rotate the token in GitHub when needed.
+
+Tokens do not require the OAuth service or a client secret. Browser Git still requires
+a trusted CORS gateway: use the configured GitHub service, the automatic Vite proxy in
+local development, or an explicitly configured proxy.
+
+Reference: [Managing personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
 ## Deploy the GitHub service
 
@@ -63,5 +92,12 @@ headers, and marks responses `no-store`. Deploy it behind appropriate hosting qu
 and rate limits. HTTPS is required. Do not enable response/body logging for auth or Git
 requests. The GitHub service must remain reachable for network Git operations; note
 editing and local commits remain available offline.
+
+During local Vite development on localhost or another loopback address, GitHub Git
+requests use Vite's same-origin `/api/git-proxy`, even when a GitHub service URL is
+configured. An explicitly entered CORS proxy still takes precedence; leave that field
+empty to use the automatic selection. Production builds use the configured service.
+OAuth uses the service's configured `APP_ORIGIN` independently; testing authorization
+on localhost requires a separate development service configured for that local origin.
 
 Reference: [GitHub OAuth authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps).

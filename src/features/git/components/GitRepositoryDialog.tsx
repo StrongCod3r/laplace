@@ -32,6 +32,9 @@ export function GitRepositoryDialog(props: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(props.settings);
   const [authentication, setAuthentication] = useState(props.authentication);
+  const [tokenType, setTokenType] = useState<'classic' | 'fine-grained'>(
+    props.authentication.token.startsWith('github_pat_') ? 'fine-grained' : 'classic',
+  );
   const pendingTest = useRef<AbortController | null>(null);
   const credentialGeneration = useRef(0);
   const [loadingCredentials, setLoadingCredentials] = useState(false);
@@ -95,15 +98,15 @@ export function GitRepositoryDialog(props: Props) {
       credentialScope(props.workspaceId, url) ===
       credentialScope(props.workspaceId, props.settings.url)
     ) {
-      setAuthentication(props.authentication);
+      restoreAuthentication(props.authentication);
       return;
     }
-    setAuthentication({ username: '', token: '' });
+    restoreAuthentication({ username: '', token: '' });
     if (!credentialScope(props.workspaceId, url)) return;
     setLoadingCredentials(true);
     void loadGitCredentials(props.workspaceId, url)
       .then((saved) => {
-        if (version === credentialGeneration.current) setAuthentication(saved);
+        if (version === credentialGeneration.current) restoreAuthentication(saved);
       })
       .catch((cause) => {
         if (version === credentialGeneration.current)
@@ -115,6 +118,11 @@ export function GitRepositoryDialog(props: Props) {
       .finally(() => {
         if (version === credentialGeneration.current) setLoadingCredentials(false);
       });
+  }
+
+  function restoreAuthentication(next: GitAuthentication) {
+    setAuthentication(next);
+    setTokenType(next.token.startsWith('github_pat_') ? 'fine-grained' : 'classic');
   }
 
   function editAuthentication(next: GitAuthentication) {
@@ -157,7 +165,7 @@ export function GitRepositoryDialog(props: Props) {
     if (!element) return;
     if (props.open) {
       setDraft(props.settings);
-      setAuthentication(props.authentication);
+      restoreAuthentication(props.authentication);
       if (!element.open) element.showModal();
     } else if (element.open) {
       element.close();
@@ -166,7 +174,7 @@ export function GitRepositoryDialog(props: Props) {
     }
     if (!props.open) {
       setDraft(props.settings);
-      setAuthentication(props.authentication);
+      restoreAuthentication(props.authentication);
     }
     return () => {
       pendingAuth.current?.abort();
@@ -234,88 +242,125 @@ export function GitRepositoryDialog(props: Props) {
           <Icon name="x" size="18" />
         </button>
       </header>
-      <p
-        id={props.create ? 'gitWebRepositoryDescription' : 'gitRepositoryDescription'}
-        className={styles.description}
-      >
-        {props.create
-          ? 'Clone a GitHub repository into this browser. No local folder is required.'
-          : props.initialize
-            ? `Set up GitHub synchronization for ${props.workspaceName}. Saving initializes Git in this folder and preserves your existing notes. Remote changes are applied only when you choose Sync.`
-            : `Configure Git synchronization for ${props.workspaceName}.`}
-      </p>
       <form
+        className={styles.form}
         onSubmit={(event) => {
           event.preventDefault();
           if (!testing && !loadingCredentials && !authorizing) props.onSave(draft, authentication);
         }}
       >
-        <fieldset disabled={props.busy || !props.writable || authorizing}>
-          <label>
-            Remote repository (HTTPS)
-            <input
-              autoFocus
-              type="url"
-              value={draft.url}
-              placeholder="https://github.com/user/workspace.git"
-              onInput={(event) => editRepository(event.currentTarget.value)}
-            />
-          </label>
-          <label>
-            CORS proxy (optional)
-            <input
-              type="url"
-              value={draft.corsProxy}
-              placeholder="https://your-proxy.example"
-              onInput={(event) => {
-                clearConnection();
-                setDraft({ ...draft, corsProxy: event.currentTarget.value });
-              }}
-            />
-          </label>
-          <p className={styles.hint}>
-            {!draft.corsProxy.trim() && localGitProxy(draft.url)
-              ? 'GitHub connections use the local development proxy automatically.'
-              : githubServiceUrl()
-                ? 'GitHub connections are configured for this deployment.'
-                : 'For servers that block browser access, including GitHub, configure a trusted CORS proxy.'}
-          </p>
-          <h3>Commit author</h3>
-          <div className={styles.columns}>
-            <label>
-              Author name
-              <input
-                value={draft.name}
-                autoComplete="name"
-                onInput={(event) => setDraft({ ...draft, name: event.currentTarget.value })}
-              />
-            </label>
-            <label>
-              Author email
-              <input
-                type="email"
-                value={draft.email}
-                autoComplete="email"
-                onInput={(event) => setDraft({ ...draft, email: event.currentTarget.value })}
-              />
-            </label>
-          </div>
-          <h3>Authentication</h3>
-          <button
-            type="button"
-            disabled={authorizing || !githubServiceUrl()}
-            onClick={() => void connectGitHub()}
+        <div className={styles.content}>
+          <p
+            id={props.create ? 'gitWebRepositoryDescription' : 'gitRepositoryDescription'}
+            className={styles.description}
           >
-            {authorizing ? 'Waiting for GitHub…' : 'Connect with GitHub'}
-          </button>
-          <p className={styles.hint}>
-            {githubServiceUrl()
-              ? authentication.token
-                ? 'Credentials are ready. Save to use them for this repository.'
-                : 'Authorize access on GitHub without copying an access token.'
-              : 'GitHub web sign-in requires the deployment’s GitHub service to be configured.'}
+            {props.create
+              ? 'Clone a GitHub repository into this browser. No local folder is required.'
+              : props.initialize
+                ? `Set up GitHub synchronization for ${props.workspaceName}. Saving initializes Git in this folder and preserves your existing notes. Remote changes are applied only when you choose Sync.`
+                : `Configure Git synchronization for ${props.workspaceName}.`}
           </p>
-          {!props.create && (
+          <fieldset disabled={props.busy || !props.writable || authorizing}>
+            <label>
+              Remote repository (HTTPS)
+              <input
+                autoFocus
+                type="url"
+                value={draft.url}
+                placeholder="https://github.com/user/workspace.git"
+                onInput={(event) => editRepository(event.currentTarget.value)}
+              />
+            </label>
+            <label>
+              CORS proxy (optional)
+              <input
+                type="url"
+                value={draft.corsProxy}
+                placeholder="https://your-proxy.example"
+                onInput={(event) => {
+                  clearConnection();
+                  setDraft({ ...draft, corsProxy: event.currentTarget.value });
+                }}
+              />
+            </label>
+            <p className={styles.hint}>
+              {!draft.corsProxy.trim() && localGitProxy(draft.url)
+                ? 'GitHub connections use the local development proxy automatically.'
+                : githubServiceUrl()
+                  ? 'GitHub connections are configured for this deployment.'
+                  : 'For servers that block browser access, including GitHub, configure a trusted CORS proxy.'}
+            </p>
+            <h3>Commit author</h3>
+            <div className={styles.columns}>
+              <label>
+                Author name
+                <input
+                  value={draft.name}
+                  autoComplete="name"
+                  onInput={(event) => setDraft({ ...draft, name: event.currentTarget.value })}
+                />
+              </label>
+              <label>
+                Author email
+                <input
+                  type="email"
+                  value={draft.email}
+                  autoComplete="email"
+                  onInput={(event) => setDraft({ ...draft, email: event.currentTarget.value })}
+                />
+              </label>
+            </div>
+            <h3>Authentication</h3>
+            <button
+              type="button"
+              disabled={authorizing || !githubServiceUrl()}
+              onClick={() => void connectGitHub()}
+            >
+              {authorizing ? 'Waiting for GitHub…' : 'Connect with GitHub'}
+            </button>
+            <p className={styles.hint}>
+              {githubServiceUrl()
+                ? authentication.token
+                  ? 'Credentials are ready. Save to use them for this repository.'
+                  : 'Authorize access on GitHub without copying an access token.'
+                : 'GitHub web sign-in requires the deployment’s GitHub service to be configured.'}
+            </p>
+            <h3>Personal access token</h3>
+            <p className={styles.hint}>
+              Alternatively, use a GitHub token without web sign-in. A trusted CORS proxy is still
+              required for browser Git connections.
+            </p>
+            <label>
+              <span id={props.create ? 'gitWebTokenTypeLabel' : 'gitTokenTypeLabel'}>
+                Token type
+              </span>
+              <select
+                aria-labelledby={props.create ? 'gitWebTokenTypeLabel' : 'gitTokenTypeLabel'}
+                value={tokenType}
+                onChange={(event) =>
+                  setTokenType(event.currentTarget.value as 'classic' | 'fine-grained')
+                }
+              >
+                <option value="classic">Personal access token (classic)</option>
+                <option value="fine-grained">Fine-grained personal access token</option>
+              </select>
+            </label>
+            <p className={styles.hint}>
+              {tokenType === 'classic'
+                ? 'For private repositories and pushing commits, grant the repo scope. Authorize the token for your organization’s SSO if required.'
+                : 'Select the repository owner and this repository, then grant Repository permissions → Contents: Read and write. Organization approval may be required.'}{' '}
+              <a
+                href={
+                  tokenType === 'classic'
+                    ? 'https://github.com/settings/tokens/new'
+                    : 'https://github.com/settings/personal-access-tokens/new'
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Create token on GitHub
+              </a>
+            </p>
             <div className={styles.columns}>
               <label>
                 Remote username
@@ -334,51 +379,54 @@ export function GitRepositoryDialog(props: Props) {
                   value={authentication.token}
                   autoComplete="off"
                   onInput={(event) => {
-                    editAuthentication({ ...authentication, token: event.currentTarget.value });
+                    const token = event.currentTarget.value.trim();
+                    if (token.startsWith('github_pat_')) setTokenType('fine-grained');
+                    else if (token.startsWith('ghp_')) setTokenType('classic');
+                    editAuthentication({ ...authentication, token });
                   }}
                 />
               </label>
             </div>
-          )}
-          {authentication.token && (
-            <button type="button" onClick={() => editAuthentication({ username: '', token: '' })}>
-              Clear credentials
-            </button>
-          )}
-          <p className={styles.hint}>
-            Credentials are saved encrypted in this browser for this workspace and repository. Clear
-            credentials and save to remove them. Revoke application access in GitHub to disconnect
-            the app.
-          </p>
-          <div className={styles.connectionTest}>
-            <button
-              type="button"
-              disabled={testing || loadingCredentials}
-              onClick={() => void testConnection()}
-            >
-              {testing ? 'Testing…' : 'Test connection'}
-            </button>
+            {authentication.token && (
+              <button type="button" onClick={() => editAuthentication({ username: '', token: '' })}>
+                Clear credentials
+              </button>
+            )}
             <p className={styles.hint}>
-              Checks read access using the current URL, proxy and credentials without saving
-              settings.
+              Credentials are saved encrypted in this browser for this workspace and repository.
+              Clear credentials and save to remove them. Revoke the token in GitHub Settings →
+              Developer settings, or revoke web sign-in under Applications.
             </p>
-          </div>
-        </fieldset>
-        {loadingCredentials && <p role="status">Loading saved credentials…</p>}
-        {testing && <p role="status">Testing connection…</p>}
-        {connection && (
-          <p
-            className={connection.ok ? styles.success : styles.error}
-            role={connection.ok ? 'status' : 'alert'}
-          >
-            {connection.message}
-          </p>
-        )}
-        {props.error && (
-          <p className={styles.error} role="alert">
-            {props.error}
-          </p>
-        )}
+            <div className={styles.connectionTest}>
+              <button
+                type="button"
+                disabled={testing || loadingCredentials}
+                onClick={() => void testConnection()}
+              >
+                {testing ? 'Testing…' : 'Test connection'}
+              </button>
+              <p className={styles.hint}>
+                Checks read access using the current URL, proxy and credentials without saving
+                settings.
+              </p>
+            </div>
+          </fieldset>
+          {loadingCredentials && <p role="status">Loading saved credentials…</p>}
+          {testing && <p role="status">Testing connection…</p>}
+          {connection && (
+            <p
+              className={connection.ok ? styles.success : styles.error}
+              role={connection.ok ? 'status' : 'alert'}
+            >
+              {connection.message}
+            </p>
+          )}
+          {props.error && (
+            <p className={styles.error} role="alert">
+              {props.error}
+            </p>
+          )}
+        </div>
         <footer className={styles.actions}>
           <button type="button" disabled={props.busy} onClick={props.onClose}>
             Cancel

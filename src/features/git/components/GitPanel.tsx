@@ -597,7 +597,9 @@ export function GitPanel() {
     let locked = false;
     try {
       if (
-        (action === 'commit' || action === 'commitPush' || action === 'sync') &&
+        (action === 'commit' ||
+          action === 'commitPush' ||
+          (action === 'sync' && status?.headOid)) &&
         status?.changes.length &&
         !message.trim()
       ) {
@@ -807,7 +809,7 @@ export function GitPanel() {
       setUsername(authentication.username);
       setToken(authentication.token);
       setRepositoryOpen(false);
-      setNotice('GitHub synchronization configured. Commit your notes before synchronizing.');
+      setNotice('GitHub synchronization configured. Sync to download existing remote notes.');
     } catch (cause) {
       if (active())
         setError(cause instanceof Error ? cause.message : 'Could not configure synchronization.');
@@ -945,7 +947,10 @@ export function GitPanel() {
 
   const canCommit = Boolean(writable && status?.branch && status.changes.length && message.trim());
   const canFetch = Boolean(writable && status?.branch && status.settings.url);
-  const canSync = canFetch && !diverged && (!status?.changes.length || Boolean(message.trim()));
+  const canSync =
+    canFetch &&
+    !diverged &&
+    (!status?.headOid || !status.changes.length || Boolean(message.trim()));
 
   function openSettings() {
     setError('');
@@ -1123,7 +1128,11 @@ export function GitPanel() {
               <Icon name="check" size="18" /> Commit
             </button>
             <GitActionMenu label="More commit actions" commit>
-              <button type="button" disabled={!canSync} onClick={() => void run('commitPush')}>
+              <button
+                type="button"
+                disabled={!canSync || Boolean(status?.changes.length && !message.trim())}
+                onClick={() => void run('commitPush')}
+              >
                 Commit &amp; Push
               </button>
               <button type="button" disabled={!canSync} onClick={() => void run('sync')}>

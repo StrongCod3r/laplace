@@ -173,10 +173,9 @@ export function registerWorkspace(runtime: EditorRuntime) {
   }
 
   function makeBlankWorkspace() {
-    const pageId = runtime.uid('page'),
-      tabId = runtime.uid('tab');
     return {
       name: '',
+      gettingStartedInitialized: true,
       theme: runtime.state?.theme || 'system',
       pageFont: 'system',
       treeIconSize: 14,
@@ -185,11 +184,11 @@ export function registerWorkspace(runtime: EditorRuntime) {
       showFilesAndTabIcons: true,
       showBreadcrumbIcons: false,
       folderNotesEnabled: true,
-      currentPageId: pageId,
-      activeTabId: tabId,
+      currentPageId: '__home__',
+      activeTabId: null,
       activeEditorGroupId: runtime.MAIN_EDITOR_GROUP,
-      editorLayout: { type: 'group', id: runtime.MAIN_EDITOR_GROUP, activeTabId: tabId },
-      openTabs: [{ id: tabId, kind: 'page', pageId, groupId: runtime.MAIN_EDITOR_GROUP }],
+      editorLayout: { type: 'group', id: runtime.MAIN_EDITOR_GROUP, activeTabId: null },
+      openTabs: [],
       sidebarOpen: true,
       rightSidebarOpen: true,
       leftPanelMode: 'files',
@@ -198,18 +197,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
       sidebarWidth: 276,
       rightSidebarWidth: 286,
       shortcuts: { ...runtime.DEFAULT_SHORTCUTS },
-      pages: [
-        {
-          id: pageId,
-          parentId: null,
-          folderId: null,
-          title: 'Untitled',
-          favorite: false,
-          expanded: true,
-          folderNote: false,
-          blocks: [runtime.newTextBlock()],
-        },
-      ],
+      pages: [],
       folders: [],
       activeFolderPath: '',
       editorScrollPositions: {},

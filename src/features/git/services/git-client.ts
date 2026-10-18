@@ -95,9 +95,13 @@ export async function testGitConnection(
     if (timedOut) throw new Error('Connection timed out. Check the URL, network and CORS proxy.');
     const failure = error as { code?: string; data?: { statusCode?: number } };
     const status = failure.data?.statusCode;
-    if (status === 401 || status === 403)
+    if (status === 401)
       throw new Error(
-        'Access denied. Check the username, access token and repository permissions.',
+        'Access denied (HTTP 401). The server rejected the credentials. Check that the token is complete, has not expired or been revoked, and has access to this repository.',
+      );
+    if (status === 403)
+      throw new Error(
+        'Access denied (HTTP 403). Check repository permissions and organization policies. For a fine-grained token, select the correct resource owner and repository, grant Contents access, and check whether organization approval is pending. For a classic token, check repo scope and SSO authorization.',
       );
     if (status === 404)
       throw new Error('Repository not found. Check the URL and access credentials.');
@@ -477,9 +481,20 @@ export class WorkspaceGitClient {
   }
 
   async fetchStatus() {
-    const status = await this.repositoryInfo();
-    const network = this.network(status);
-    const refs = await git.listServerRefs({ ...network, prefix: 'refs/heads/' });
+    let status = await this.repositoryInfo();
+    let network = this.network(status);
+    const refs = await git.listServerRefs({
+      ...network,
+      ...(status.headOid ? { prefix: 'refs/heads/' } : { symrefs: true }),
+    });
+    if (!status.headOid && !refs.some((ref) => ref.ref === `refs/heads/${status.remoteBranch}`)) {
+      const target = refs.find((ref) => ref.ref === 'HEAD')?.target;
+      if (target?.startsWith('refs/heads/') && refs.some((ref) => ref.ref === target)) {
+        await git.setConfig({ ...this.base, path: `branch.${status.branch}.merge`, value: target });
+        status = await this.repositoryInfo();
+        network = this.network(status);
+      }
+    }
     const exists = refs.some((ref) => ref.ref === `refs/heads/${status.remoteBranch}`);
     if (exists) await git.fetch({ ...network, singleBranch: true, tags: false });
     return this.status(!exists);
@@ -614,6 +629,64 @@ export class WorkspaceGitClient {
       throw new Error(result.error || 'The remote rejected the push.');
   }
 
+  private async receiveInitialRemote(status: GitStatus) {
+    const oid = status.remoteOid!;
+    await this.assertSupportedTree(oid);
+    const remoteFiles = await this.tree(oid);
+    const root = this.base.dir.replace(/\/$/, '');
+    const downloads: string[] = [];
+    const preserved: string[] = [];
+    const localConfiguration = new Set(
+      ['app.json', 'appearance.json', 'hotkeys.json', 'workspace.json', 'git-automation.json'].map(
+        (name) => `${APP_DIRECTORY}/${name}`,
+      ),
+    );
+    let mergedIgnore: string | undefined;
+    // Validate the entire incoming tree before modifying files, including ignored local files.
+    for (const path of remoteFiles.keys()) {
+      let local: Uint8Array;
+      try {
+        local = (await this.fs.promises.readFile(`${root}/${path}`)) as Uint8Array;
+      } catch (error) {
+        if ((error as { code?: string }).code === 'ENOENT') {
+          downloads.push(path);
+          continue;
+        }
+        throw new Error(
+          `Cannot receive remote file "${path}" without replacing a local path. Move it aside and retry.`,
+        );
+      }
+      const remote = await this.committedContent(oid, path);
+      if (path === '.gitignore') {
+        const remoteText = Buffer.from(remote).toString('utf8');
+        const localText = Buffer.from(local).toString('utf8');
+        if (remoteText !== localText) {
+          const missing = localText
+            .split(/\r?\n/)
+            .filter((line) => line && !remoteText.split(/\r?\n/).includes(line));
+          if (missing.length)
+            mergedIgnore = `${remoteText}${remoteText && !remoteText.endsWith('\n') ? '\n' : ''}${missing.join('\n')}\n`;
+          else mergedIgnore = remoteText;
+        }
+      } else if (!localConfiguration.has(path) && !Buffer.from(local).equals(Buffer.from(remote))) {
+        throw new Error(
+          `Remote file "${path}" conflicts with a local file. Both versions are preserved; move the local file aside and retry Sync.`,
+        );
+      }
+      preserved.push(path);
+    }
+    if (downloads.length) {
+      const checkout = { ...this.base, ref: oid, filepaths: downloads, noUpdateHead: true };
+      await git.checkout({ ...checkout, dryRun: true });
+      await git.checkout(checkout);
+    }
+    // Keep local settings as working changes against the downloaded history.
+    for (const filepath of preserved) await git.resetIndex({ ...this.base, filepath, ref: oid });
+    if (mergedIgnore !== undefined)
+      await this.fs.promises.writeFile(`${root}/.gitignore`, mergedIgnore);
+    await git.writeRef({ ...this.base, ref: `refs/heads/${status.branch}`, value: oid });
+  }
+
   async synchronize(message: string) {
     await this.assertReady();
     let status = await this.fetchStatus();
@@ -621,12 +694,19 @@ export class WorkspaceGitClient {
       throw new Error(
         'The branches have diverged. Integrate the changes using desktop Git and fetch again. Your local files are preserved.',
       );
-    if (status.incoming.length && status.changes.length)
+    if (!status.headOid && status.incoming.length && status.stagedChanges.length)
+      throw new Error(
+        'Unstage local changes before the first Sync. Your files and staged versions are preserved.',
+      );
+    if (status.headOid && status.incoming.length && status.changes.length)
       throw new Error(
         'There are remote changes and uncommitted local changes. Commit your local changes and integrate them using desktop Git before synchronizing.',
       );
     const worktreeUpdated = status.incoming.length > 0;
-    if (worktreeUpdated) {
+    if (worktreeUpdated && !status.headOid) {
+      await this.receiveInitialRemote(status);
+      status = await this.status();
+    } else if (worktreeUpdated) {
       // Refuse trees that the browser cannot faithfully materialize.
       await this.assertSupportedTree(status.remoteOid);
       await git.checkout({

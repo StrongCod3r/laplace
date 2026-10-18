@@ -429,79 +429,110 @@ test('browser Git pushes to a real remote and reloads received notes in the edit
   }
 });
 
-test('GitHub connections automatically use the local proxy with draft authentication and respect a custom proxy', async ({
-  page,
-}) => {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'laplace-browser-git-'));
-  const remote = await createGitRemote(temporary, 'draft-user:draft-token');
-  const github = 'https://github.com/test/workspace.git';
-  const proxied: string[] = [];
-  const direct: string[] = [];
-  page.on('request', (request) => {
-    if (request.url().startsWith('https://github.com/')) direct.push(request.url());
-  });
-  try {
-    // Model GitHub without an internet dependency. Actual proxy forwarding is tested with native Git in unit tests.
-    await page.route(
-      /\/(api\/git-proxy|custom-git-proxy)\/github\.com\/test\/workspace\.git\//,
-      async (route) => {
-        const url = new URL(route.request().url());
-        proxied.push(url.pathname);
-        const target = `${remote.url}${url.pathname.split('/workspace.git')[1]}${url.search}`;
-        await route.fulfill({ response: await route.fetch({ url: target }) });
-      },
-    );
-    await page.addInitScript(() => {
-      Object.defineProperty(window, 'showDirectoryPicker', {
-        configurable: true,
-        value: async () => navigator.storage.getDirectory(),
+for (const tokenType of ['classic', 'fine-grained'] as const) {
+  test(`GitHub ${tokenType} tokens authenticate through automatic and custom proxies and survive reload`, async ({
+    page,
+  }) => {
+    const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'laplace-browser-git-'));
+    const token =
+      tokenType === 'classic' ? 'ghp_classic-test-token' : 'github_pat_fine-grained-test-token';
+    const username = tokenType === 'classic' ? 'draft-user' : '';
+    const remote = await createGitRemote(temporary, `${username || 'git'}:${token}`);
+    const github = 'https://github.com/test/workspace.git';
+    const proxied: string[] = [];
+    const direct: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().startsWith('https://github.com/')) direct.push(request.url());
+    });
+    try {
+      // Model GitHub without an internet dependency. Actual proxy forwarding is tested with native Git in unit tests.
+      await page.route(
+        /\/(api\/git-proxy|custom-git-proxy)\/github\.com\/test\/workspace\.git\//,
+        async (route) => {
+          const url = new URL(route.request().url());
+          proxied.push(url.pathname);
+          const target = `${remote.url}${url.pathname.split('/workspace.git')[1]}${url.search}`;
+          await route.fulfill({ response: await route.fetch({ url: target }) });
+        },
+      );
+      await page.addInitScript(() => {
+        Object.defineProperty(window, 'showDirectoryPicker', {
+          configurable: true,
+          value: async () => navigator.storage.getDirectory(),
+        });
       });
-    });
-    await page.goto('/laplace/');
-    await expect(page.locator('#pageTitle')).toBeVisible();
-    await page.locator('#chooseDirectoryBtn').click();
-    await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
-    const panel = page.locator('#gitPanel');
-    await openGitFixtureSettings(page);
-    const dialog = page.getByRole('dialog', { name: 'Repository settings' });
-    await expect(dialog).toBeVisible();
-    await dialog.getByLabel('Remote repository (HTTPS)').fill(github);
-    await expect(
-      dialog.getByText('GitHub connections use the local development proxy automatically.'),
-    ).toBeVisible();
-    await dialog.getByLabel('Remote username').fill('draft-user');
-    await dialog.getByLabel('Access token').fill('wrong-token');
-    await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
-    await expect(dialog.getByRole('alert')).toContainText('Access denied.');
-    await dialog.getByLabel('Access token').fill('draft-token');
-    await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
-    await expect(dialog.getByRole('status')).toContainText('Connection successful.');
-    expect(proxied).toContain('/api/git-proxy/github.com/test/workspace.git/info/refs');
-    await dialog
-      .getByLabel('CORS proxy (optional)')
-      .fill('http://127.0.0.1:4175/custom-git-proxy/');
-    await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
-    await expect(dialog.getByRole('status')).toContainText('Connection successful.');
-    expect(proxied).toContain('/custom-git-proxy/github.com/test/workspace.git/info/refs');
-    await dialog.getByLabel('CORS proxy (optional)').fill('');
-    await dialog.getByLabel('Author name').fill('Proxy user');
-    await dialog.getByLabel('Author email').fill('proxy@example.com');
-    await dialog.getByRole('button', { name: 'Save settings' }).click();
-    await expect(dialog).toBeHidden();
-    await panel.getByLabel('Commit message').fill('Synchronize notes');
-    await panel.getByRole('button', { name: 'Sync workspace' }).click();
-    await expect(panel.getByText('Workspace synchronized.', { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
-    expect(proxied).toContain('/api/git-proxy/github.com/test/workspace.git/git-receive-pack');
-    expect(direct).toEqual([]);
-  } finally {
-    await remote.close();
-    if (!temporary.startsWith(path.join(os.tmpdir(), 'laplace-browser-git-')))
-      throw new Error('Unexpected temporary path');
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
-});
+      await page.goto('/laplace/');
+      await expect(page.locator('#pageTitle')).toBeVisible();
+      await page.locator('#chooseDirectoryBtn').click();
+      await page.getByRole('button', { name: 'Git synchronization', exact: true }).click();
+      const panel = page.locator('#gitPanel');
+      await openGitFixtureSettings(page);
+      const dialog = page.getByRole('dialog', { name: 'Repository settings' });
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel('Remote repository (HTTPS)').fill(github);
+      await expect(
+        dialog.getByText('GitHub connections use the local development proxy automatically.'),
+      ).toBeVisible();
+      await dialog.getByLabel('Remote username').fill(username);
+      await dialog.getByLabel('Token type').selectOption(tokenType);
+      await expect(
+        dialog.getByText(
+          tokenType === 'classic' ? /grant the repo scope/ : /Contents: Read and write/,
+        ),
+      ).toBeVisible();
+      await expect(dialog.getByRole('link', { name: 'Create token on GitHub' })).toHaveAttribute(
+        'href',
+        tokenType === 'classic'
+          ? 'https://github.com/settings/tokens/new'
+          : 'https://github.com/settings/personal-access-tokens/new',
+      );
+      await dialog.getByLabel('Access token').fill('wrong-token');
+      await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
+      await expect(dialog.getByRole('alert')).toContainText('Access denied (HTTP 401).');
+      await dialog.getByLabel('Access token').fill(` ${token} `);
+      await expect(dialog.getByLabel('Access token')).toHaveValue(token);
+      await expect(dialog.getByLabel('Token type')).toHaveValue(tokenType);
+      await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
+      await expect(dialog.getByRole('status')).toContainText('Connection successful.');
+      expect(proxied).toContain('/api/git-proxy/github.com/test/workspace.git/info/refs');
+      await dialog
+        .getByLabel('CORS proxy (optional)')
+        .fill('http://127.0.0.1:4175/custom-git-proxy/');
+      await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
+      await expect(dialog.getByRole('status')).toContainText('Connection successful.');
+      expect(proxied).toContain('/custom-git-proxy/github.com/test/workspace.git/info/refs');
+      await dialog.getByLabel('CORS proxy (optional)').fill('');
+      await dialog.getByLabel('Author name').fill('Proxy user');
+      await dialog.getByLabel('Author email').fill('proxy@example.com');
+      await dialog.getByRole('button', { name: 'Save settings' }).click();
+      await expect(dialog).toBeHidden();
+      await panel.getByLabel('Commit message').fill('Synchronize notes');
+      await panel.getByRole('button', { name: 'Sync workspace' }).click();
+      await expect(panel.getByText('Workspace synchronized.', { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
+      expect(proxied).toContain('/api/git-proxy/github.com/test/workspace.git/git-receive-pack');
+      expect(direct).toEqual([]);
+      const config = await page.evaluate(async () => {
+        const git = await (await navigator.storage.getDirectory()).getDirectoryHandle('.git');
+        return (await (await git.getFileHandle('config')).getFile()).text();
+      });
+      expect(config).not.toContain(token);
+      await page.reload();
+      await expect(panel.getByLabel('Commit message')).toBeVisible();
+      await repositoryAction(panel, 'Repository settings');
+      await expect(dialog.getByLabel('Access token')).toHaveValue(token);
+      await expect(dialog.getByLabel('Token type')).toHaveValue(tokenType);
+      await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
+      await expect(dialog.getByRole('status')).toContainText('Connection successful.');
+    } finally {
+      await remote.close();
+      if (!temporary.startsWith(path.join(os.tmpdir(), 'laplace-browser-git-')))
+        throw new Error('Unexpected temporary path');
+      await fs.rm(temporary, { recursive: true, force: true });
+    }
+  });
+}
 
 test('static builds explain the required GitHub proxy before attempting a direct CORS request', async ({
   page,
@@ -893,7 +924,7 @@ test('authenticated Git survives a cache-bypassing reload and supports removing 
     await repositoryAction(panel, 'Repository settings');
     await expect(dialog.getByLabel('Access token')).toHaveValue('');
     await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
-    await expect(dialog.getByRole('alert')).toContainText('Access denied.');
+    await expect(dialog.getByRole('alert')).toContainText('Access denied (HTTP 401).');
   } finally {
     await remote.close();
     if (!temporary.startsWith(path.join(os.tmpdir(), 'laplace-git-auth-')))
