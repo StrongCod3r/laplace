@@ -4,6 +4,7 @@ import type { GitWorkerRequest, GitWorkerResponse } from './git-worker-client';
 import { diffLines } from './line-diff';
 
 const methods = new Set([
+  'clone',
   'initialize',
   'configure',
   'loadAutoCommitSettings',

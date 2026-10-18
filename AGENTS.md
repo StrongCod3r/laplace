@@ -8,7 +8,7 @@ All code, code comments, and project documentation must be written in English, i
 
 ## Product and stack
 
-- Laplace is a local-first Markdown notes workspace. It uses a user-selected folder or browser storage, without a notes backend or user authentication.
+- Laplace is a local-first Markdown notes workspace. It uses a user-selected folder, browser storage, or a GitHub web workspace in OPFS, without a notes backend. Optional GitHub OAuth authorizes repository access.
 - Features include a block editor, tables, links and wikilinks, attachments, folders and folder notes, tabs, split editor groups, history, search, a graph, and Git.
 - It is a static SPA using Preact 11, TypeScript, Vite 7, and Zustand 5. `react` is an npm alias for `@preact/compat`, used for Zustand compatibility; do not introduce a second React runtime.
 - There is no router or SSR. Notes and views use workspace tabs and groups. The workspace is loaded lazily through `lazy` and `Suspense`.
@@ -187,6 +187,9 @@ Every scrollable view, panel, menu and dialog must style its scrollbar using the
 
 ## Git, PWA, and build output
 
+- The workspace selector's Add or open a local workspace button opens the native folder picker directly. There is no separate GitHub workspace button. For local folders without Git, Source Control offers Configure GitHub synchronization; saving initializes and configures Git only after reserving the workspace and draining saves, preserving local notes. Cancel must not initialize Git or start network operations.
+- Git supports local folders and web workspaces (`kind: 'web'`) backed by isolated `laplace-web/web_<UUID>` OPFS directories. Web handles use origin-granted access, never local-folder permission prompts. Clone into an empty new directory before registering or activating it; preserve hydration and save guards. Web workspace deletion requires explicit confirmation mentioning unpushed changes and commits.
+- The optional `services/github` OAuth and Git gateway is deployed separately from the static SPA. `VITE_GITHUB_SERVICE_URL` is public configuration; OAuth client and session secrets belong only in the service. Preserve state, PKCE, signed cookies, popup origin/source checks, fixed GitHub endpoints and SPA-origin restrictions. See `docs/github-web-workspaces.md`.
 - Git uses `isomorphic-git` on the selected directory. Reuse the worker per repository and serialize requests; a direct fallback exists when Worker is unavailable or the handle cannot be cloned.
 - Use `repositoryInfo()` for configuration, references, and startup without traversing files. `status()` must detect external edits; history comparison caching depends on local/remote OIDs rather than stale file state.
 - Commit saves locally; Fetch downloads references and objects; Sync protects local changes and divergence, applies a clean fast-forward, and pushes commits without force-push.

@@ -59,3 +59,10 @@ $$
 Math uses bundled KaTeX and works offline once the app's resources are cached. Invalid or unsupported formulas retain their source and display an error indication; hover over it for details.
 
 Inside a **LaTeX / Math** code block, you can enter the formula alone or include its surrounding `$$...$$` or `\[...\]` delimiters. A code block set to **Markdown** displays literal Markdown source; choose **LaTeX / Math** to render the equation.
+
+## GitHub web workspaces
+
+Git supports local folders and web workspaces stored privately in the browser, with
+GitHub authorization that does not require copying an access token. See
+[setup and deployment](docs/github-web-workspaces.md) to configure the optional OAuth
+and Git service.

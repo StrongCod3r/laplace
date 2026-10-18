@@ -3,8 +3,63 @@ import { APP_NAME, DEFAULT_VAULT_NAME } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
 import { useWorkspaceStore } from '@/store/workspace.store';
+import type { GitSettings } from '@/features/git/services/git-client';
+import type { GitAuthentication } from '@/features/git/services/git-credentials';
+import type { GitClient } from '@/features/git/services/git-worker-client';
+import type { DirectoryHandle } from '@/features/git/services/directory-fs';
 
 export function registerWorkspace(runtime: EditorRuntime) {
+  async function createWebWorkspace(
+    settings: GitSettings,
+    authentication: GitAuthentication,
+  ): Promise<void> {
+    if (
+      runtime.lifecycle.disposed ||
+      runtime.gitOperationActive ||
+      runtime.workspaceLocationSwitching ||
+      runtime.workspaceLocationClosing
+    )
+      throw new Error('Wait for the workspace operation to finish.');
+    const gateway = runtime.localStorageGateway;
+    runtime.workspaceLocationSwitching = true;
+    runtime.syncWorkspaceLocationActions();
+    let client: GitClient | undefined;
+    let directory: { id: string; handle: DirectoryHandle } | undefined;
+    let registered = false;
+    try {
+      directory = await gateway.createWebDirectory();
+      const { createGitClient } = await import('@/features/git/services/git-worker-client');
+      client = await createGitClient(directory.handle);
+      client.authenticate(authentication.username, authentication.token);
+      await client.clone(settings);
+      if (runtime.lifecycle.disposed) throw new Error('Workspace closed while cloning.');
+      const { saveGitCredentials } = await import('@/features/git/services/git-credentials');
+      await saveGitCredentials(directory.id, settings.url, authentication);
+      const name = new URL(settings.url).pathname
+        .split('/')
+        .filter(Boolean)
+        .at(-1)
+        .replace(/\.git$/, '');
+      await gateway.registerWebDirectory(directory.id, `${name} (Web)`, directory.handle);
+      registered = true;
+      await runtime.refreshWorkspaceSelector();
+    } finally {
+      try {
+        client?.dispose();
+        if (directory && !registered) {
+          const root = await navigator.storage.getDirectory();
+          const parent = await root.getDirectoryHandle('laplace-web');
+          await parent.removeEntry(directory.id, { recursive: true });
+        }
+      } finally {
+        runtime.workspaceLocationSwitching = false;
+        runtime.syncWorkspaceLocationActions();
+      }
+    }
+    if (!(await runtime.switchWorkspaceLocation(directory.id)))
+      throw new Error('Repository cloned. Select the web workspace to retry opening it.');
+  }
+
   async function getGitDirectory() {
     return runtime.localStorageGateway.getGitDirectory?.();
   }
@@ -1076,16 +1131,25 @@ export function registerWorkspace(runtime: EditorRuntime) {
     if (!location) return;
     runtime.pendingWorkspaceCloseId = location.id;
     const browser = location.kind === 'browser';
-    runtime.els.workspaceCloseTitle.textContent = browser
-      ? 'Clear Browser storage?'
-      : 'Close workspace?';
-    runtime.els.workspaceCloseMessage.textContent = browser
-      ? 'This permanently deletes all notes, workspace settings, and attachments saved in Browser storage. A new empty workspace will be created. Local folders stay unchanged.'
-      : location.active
-        ? `This closes “${location.name}” and removes it from the workspace list. Its files will remain in the folder.`
-        : `This removes “${location.name}” from the workspace list. Its files will remain in the folder.`;
-    runtime.els.workspaceCloseConfirm.textContent = browser ? 'Clear workspace' : 'Close workspace';
-    runtime.els.workspaceCloseConfirm.classList.toggle('destructive', browser);
+    const web = location.kind === 'web';
+    runtime.els.workspaceCloseTitle.textContent = web
+      ? 'Delete web workspace?'
+      : browser
+        ? 'Clear Browser storage?'
+        : 'Close workspace?';
+    runtime.els.workspaceCloseMessage.textContent = web
+      ? `This permanently deletes “${location.name}” from this browser, including changes and commits that have not been pushed. The GitHub repository is unchanged.`
+      : browser
+        ? 'This permanently deletes all notes, workspace settings, and attachments saved in Browser storage. A new empty workspace will be created. Local folders stay unchanged.'
+        : location.active
+          ? `This closes “${location.name}” and removes it from the workspace list. Its files will remain in the folder.`
+          : `This removes “${location.name}” from the workspace list. Its files will remain in the folder.`;
+    runtime.els.workspaceCloseConfirm.textContent = web
+      ? 'Delete web workspace'
+      : browser
+        ? 'Clear workspace'
+        : 'Close workspace';
+    runtime.els.workspaceCloseConfirm.classList.toggle('destructive', browser || web);
     runtime.els.workspaceAccessNotice?.classList.add('hidden');
     runtime.els.workspaceCloseDialog?.classList.remove('hidden');
     runtime.lifecycle.frame(() => runtime.els.workspaceCloseConfirm?.focus());
@@ -1170,9 +1234,11 @@ export function registerWorkspace(runtime: EditorRuntime) {
         await runtime.localStorageGateway.removeWorkspaceLocation(id);
         await runtime.refreshWorkspaceSelector();
         runtime.toast(
-          location.active
-            ? 'Workspace closed and removed from the list. Its files remain in the folder.'
-            : 'Workspace removed from the list. Its files remain in the folder.',
+          location.kind === 'web'
+            ? 'Web workspace deleted from this browser.'
+            : location.active
+              ? 'Workspace closed and removed from the list. Its files remain in the folder.'
+              : 'Workspace removed from the list. Its files remain in the folder.',
         );
       }
     } catch (error) {
@@ -2393,6 +2459,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
     saveVaultRegistry,
     activeVaultMeta,
     chooseMarkdownDirectory,
+    createWebWorkspace,
     restoreBrowserStorageWorkspace,
     saveBrowserWorkspaceLocally,
     switchWorkspaceLocation,

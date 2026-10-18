@@ -1,5 +1,5 @@
 {
-  "total": 663,
+  "total": 664,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -25,6 +25,7 @@
       "syncFilesAndTabIconSettings"
     ],
     "workspace": [
+      "createWebWorkspace",
       "getGitDirectory",
       "beginGitOperation",
       "endGitOperation",

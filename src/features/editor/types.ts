@@ -12,6 +12,7 @@ export type WorkspaceAction =
   | 'undoWorkspace'
   | 'redoWorkspace'
   | 'chooseMarkdownDirectory'
+  | 'createWebWorkspace'
   | 'switchWorkspaceLocation'
   | 'refreshMarkdownWorkspace'
   | 'setFilesTreeExpanded'

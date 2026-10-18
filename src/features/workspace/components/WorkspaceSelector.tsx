@@ -2,7 +2,6 @@ import { withModuleClasses } from '@/shared/lib/css-classes';
 import workspaceStyles from './Workspace.module.css';
 import { Icon } from '@/shared/components/Icon';
 import { useWorkspaceStore } from '@/store/workspace.store';
-
 const styles = workspaceStyles;
 
 export function WorkspaceSelector() {
@@ -32,6 +31,10 @@ export function WorkspaceSelector() {
               id="chooseDirectoryBtn"
               title="Add or open a local workspace"
               aria-label="Add or open a local workspace"
+              onClick={(event) => {
+                event.stopPropagation();
+                controller?.invoke('chooseMarkdownDirectory');
+              }}
             >
               <Icon name="folder-plus" size="16" />
             </button>

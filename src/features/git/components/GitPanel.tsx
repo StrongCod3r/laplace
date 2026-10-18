@@ -255,7 +255,8 @@ export function GitPanel() {
   }, [location?.id, controller]);
 
   useEffect(() => {
-    if (!visible || location?.kind !== 'directory' || !controller || running.current) return;
+    if (!visible || !location || location.kind === 'browser' || !controller || running.current)
+      return;
     const version = ++generation.current;
     setBusy('Reading changesâ€¦');
     setError('');
@@ -339,7 +340,8 @@ export function GitPanel() {
   useEffect(() => {
     if (
       visible ||
-      location?.kind !== 'directory' ||
+      !location ||
+      location.kind === 'browser' ||
       !controller ||
       (client.current && clientLocation.current === location.id)
     )
@@ -443,7 +445,8 @@ export function GitPanel() {
     if (
       !autoCommitSettings.enabled ||
       !workspaceId ||
-      location?.kind !== 'directory' ||
+      !location ||
+      location.kind === 'browser' ||
       !controller
     )
       return;
@@ -745,13 +748,90 @@ export function GitPanel() {
     }
   }
 
+  async function initializeRepository(
+    nextSettings: GitSettings,
+    authentication: GitAuthentication,
+  ) {
+    if (
+      !controller ||
+      !location ||
+      location.kind !== 'directory' ||
+      access !== 'writable' ||
+      running.current
+    )
+      return;
+    const workspaceId = location.id;
+    const version = generation.current;
+    const active = () =>
+      mounted.current &&
+      version === generation.current &&
+      useWorkspaceStore.getState().ui.locations.find((item) => item.active)?.id === workspaceId;
+    running.current = true;
+    setBusy('Configuring synchronization');
+    setError('');
+    let locked = false;
+    let next: GitClient | null = null;
+    try {
+      const { validateGitUrl } = await import('../services/git-client');
+      const url = validateGitUrl(nextSettings.url.trim());
+      if (new URL(url).hostname !== 'github.com')
+        throw new Error('Enter a GitHub HTTPS repository URL.');
+      if (nextSettings.corsProxy.trim())
+        validateGitUrl(nextSettings.corsProxy.trim(), 'CORS proxy');
+      if (!nextSettings.name.trim() || !nextSettings.email.trim())
+        throw new Error('Enter the commit author name and email.');
+      if (!active()) return;
+      const directory = (await controller.invoke('beginGitOperation')) as DirectoryHandle | null;
+      locked = true;
+      if (!directory || !active()) throw new Error('The workspace is no longer available.');
+      const { createGitClient } = await import('../services/git-worker-client');
+      next = await createGitClient(directory);
+      if (!active()) return;
+      const existing = await next.repositoryInfo();
+      if (!active()) return;
+      if (existing.initialized)
+        throw new Error('A Git repository already exists. Reopen Source Control to refresh it.');
+      next.authenticate(authentication.username, authentication.token);
+      await next.initialize();
+      if (!active()) return;
+      await next.configure(nextSettings);
+      if (!active()) return;
+      await saveGitCredentials(workspaceId, nextSettings.url, authentication);
+      const snapshot = await next.status();
+      if (!active()) return;
+      client.current?.dispose();
+      client.current = next;
+      clientLocation.current = workspaceId;
+      setStatus(snapshot);
+      setSettings(snapshot.settings);
+      setUsername(authentication.username);
+      setToken(authentication.token);
+      setRepositoryOpen(false);
+      setNotice('GitHub synchronization configured. Commit your notes before synchronizing.');
+    } catch (cause) {
+      if (active())
+        setError(cause instanceof Error ? cause.message : 'Could not configure synchronization.');
+    } finally {
+      try {
+        if (locked) await controller.invoke('endGitOperation', false);
+      } catch {
+        if (active()) setError('Could not restore workspace access. Reopen the workspace.');
+      } finally {
+        if (next && next !== client.current) next.dispose();
+        running.current = false;
+        if (active()) setBusy('');
+      }
+    }
+  }
+
   const disabled =
     Boolean(busy) ||
     automaticRunning ||
     gitBusy ||
-    (location?.kind === 'directory' && clientLocation.current !== location.id);
+    Boolean(location && location.kind !== 'browser' && clientLocation.current !== location.id);
   const loading = Boolean(busy || automaticRunning || refreshing || gitBusy);
   const writable = access === 'writable' && !disabled;
+  const setupAvailable = location?.kind === 'directory' && status?.initialized === false;
   const diverged = Boolean(status?.incoming.length && status.outgoing.length);
 
   function changesFor(comparison: GitComparison) {
@@ -975,7 +1055,7 @@ export function GitPanel() {
           Source Control
         </h2>
         <div className={styles.repositoryActions}>
-          {location?.kind === 'directory' && status?.initialized && (
+          {location && location.kind !== 'browser' && status?.initialized && (
             <>
               <button
                 type="button"
@@ -1013,7 +1093,7 @@ export function GitPanel() {
           )}
         </div>
       </header>
-      {location?.kind === 'directory' && status?.initialized && (
+      {location && location.kind !== 'browser' && status?.initialized && (
         <div className={styles.composer}>
           <label className={styles.messageLabel}>
             <span>Commit message</span>
@@ -1059,7 +1139,7 @@ export function GitPanel() {
         </div>
       )}
       <div className={`sidebar-scroll ${notesStyles['sidebar-scroll']}`}>
-        {location?.kind !== 'directory' ? (
+        {!location || location.kind === 'browser' ? (
           <div className={styles.empty}>
             <p>Git is not initialized in this workspace.</p>
           </div>
@@ -1068,6 +1148,15 @@ export function GitPanel() {
             {status && !status.initialized && (
               <div className={styles.empty}>
                 <p>Git is not initialized in this workspace.</p>
+                {setupAvailable && (
+                  <button
+                    type="button"
+                    disabled={loading || access !== 'writable'}
+                    onClick={openSettings}
+                  >
+                    Configure GitHub synchronization
+                  </button>
+                )}
               </div>
             )}
             {status?.initialized && (
@@ -1183,18 +1272,20 @@ export function GitPanel() {
         />
       )}
       <GitRepositoryDialog
+        initialize={setupAvailable}
         open={repositoryOpen && visible}
         workspaceName={location?.name || 'Workspace'}
         workspaceId={location?.id || ''}
         settings={settings}
         authentication={{ username, token }}
-        busy={disabled}
+        busy={setupAvailable ? loading : disabled}
         writable={access === 'writable'}
         error={error}
         onClose={() => setRepositoryOpen(false)}
-        onSave={(nextSettings, authentication) =>
-          void run('configure', { settings: nextSettings, authentication })
-        }
+        onSave={(nextSettings, authentication) => {
+          if (setupAvailable) void initializeRepository(nextSettings, authentication);
+          else void run('configure', { settings: nextSettings, authentication });
+        }}
       />
       {autoCommitDialogOpen && location?.id && (
         <GitAutoCommitDialog

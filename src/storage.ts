@@ -23,6 +23,11 @@ export interface StorageGateway {
   clearBrowserWorkspace(): Promise<void>;
   selectDirectory?(): Promise<string>;
   pickDirectory?(): Promise<string>;
+  createWebDirectory(): Promise<{
+    id: string;
+    handle: import('./features/git/services/directory-fs').DirectoryHandle;
+  }>;
+  registerWebDirectory(id: string, name: string, handle: unknown): Promise<void>;
   activatePickedDirectory?(): Promise<string>;
   listWorkspaceLocations(): Promise<WorkspaceLocation[]>;
   removeWorkspaceLocation(id: string): Promise<void>;
@@ -56,7 +61,7 @@ export interface StorageGateway {
 export interface WorkspaceLocation {
   id: string;
   name: string;
-  kind: 'browser' | 'directory';
+  kind: 'browser' | 'directory' | 'web';
   active: boolean;
 }
 
@@ -107,7 +112,12 @@ type IndexedDbRecord = {
   updatedAt?: string;
 };
 
-type SavedWorkspaceDirectory = { id: string; name: string; handle: any };
+type SavedWorkspaceDirectory = {
+  id: string;
+  name: string;
+  handle: any;
+  kind?: 'directory' | 'web';
+};
 type WorkspaceLocationState = { activeId: string | null; directories: SavedWorkspaceDirectory[] };
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -157,7 +167,7 @@ class IndexedDbStorageGateway implements StorageGateway {
     }
     if (this.directoryHandle) {
       try {
-        if ((await this.directoryHandle.queryPermission({ mode: 'readwrite' })) === 'granted') {
+        if ((await this.getDirectoryPermission()) === 'readwrite') {
           await this.getDirectoryAtPath(
             this.directoryHandle,
             [this.configuration.appDirectory],
@@ -399,6 +409,7 @@ class IndexedDbStorageGateway implements StorageGateway {
 
   async getDirectoryPermission(): Promise<'none' | 'read' | 'readwrite' | 'denied'> {
     if (!this.directoryHandle) return 'none';
+    if (this.activeWorkspaceLocationId?.startsWith('web_')) return 'readwrite';
     try {
       if ((await this.directoryHandle.queryPermission({ mode: 'readwrite' })) === 'granted')
         return 'readwrite';
@@ -412,13 +423,40 @@ class IndexedDbStorageGateway implements StorageGateway {
 
   async requestDirectoryWritePermission(): Promise<'none' | 'read' | 'readwrite' | 'denied'> {
     if (!this.directoryHandle) return 'none';
+    if (this.activeWorkspaceLocationId?.startsWith('web_')) return 'readwrite';
     const permission = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
     if (permission === 'granted') return 'readwrite';
     return this.getDirectoryPermission();
   }
 
   getDirectoryName(): string | null {
+    if (this.activeWorkspaceLocationId?.startsWith('web_')) return 'Web workspace';
     return this.directoryHandle?.name || null;
+  }
+
+  async createWebDirectory() {
+    if (!navigator.storage?.getDirectory)
+      throw new Error('Web workspaces require browser private file storage (OPFS).');
+    const root = await navigator.storage.getDirectory();
+    const parent = await root.getDirectoryHandle('laplace-web', { create: true });
+    const id = `web_${crypto.randomUUID()}`;
+    const handle = await parent.getDirectoryHandle(id, { create: true });
+    return {
+      id,
+      handle: handle as unknown as import('./features/git/services/directory-fs').DirectoryHandle,
+    };
+  }
+
+  async registerWebDirectory(id: string, name: string, handle: unknown): Promise<void> {
+    if (!id.startsWith('web_')) throw new Error('Invalid web workspace ID.');
+    const state = await this.readWorkspaceLocationState();
+    if (state.directories.some((item) => item.id === id))
+      throw new Error('The web workspace is already registered.');
+    await navigator.storage?.persist?.();
+    await this.saveWorkspaceLocationState({
+      ...state,
+      directories: [...state.directories, { id, name, handle, kind: 'web' }],
+    });
   }
 
   async listWorkspaceLocations(): Promise<WorkspaceLocation[]> {
@@ -434,7 +472,7 @@ class IndexedDbStorageGateway implements StorageGateway {
       ...state.directories.map((item) => ({
         id: item.id,
         name: item.name || item.handle?.name || 'Local workspace',
-        kind: 'directory' as const,
+        kind: item.kind === 'web' ? ('web' as const) : ('directory' as const),
         active: item.id === activeId,
       })),
     ];
@@ -445,6 +483,18 @@ class IndexedDbStorageGateway implements StorageGateway {
     const state = await this.readWorkspaceLocationState();
     if (state.activeId === id || this.activeWorkspaceLocationId === id)
       throw new Error('Switch to another workspace before closing this one.');
+    const removed = state.directories.find((item) => item.id === id);
+    if (removed?.kind === 'web') {
+      // Only generated OPFS directory IDs may be recursively removed.
+      if (!/^web_[0-9a-f-]{36}$/.test(id)) throw new Error('Invalid web workspace ID.');
+      try {
+        const root = await navigator.storage.getDirectory();
+        const parent = await root.getDirectoryHandle('laplace-web');
+        await parent.removeEntry(id, { recursive: true });
+      } catch (error) {
+        if ((error as DOMException).name !== 'NotFoundError') throw error;
+      }
+    }
     const directories = state.directories.filter((item) => item.id !== id);
     if (directories.length === state.directories.length) return;
     await this.saveWorkspaceLocationState({ activeId: state.activeId, directories });
@@ -467,8 +517,9 @@ class IndexedDbStorageGateway implements StorageGateway {
     const directories = state.directories.filter((item) => item.id !== id);
     directories.push({
       id,
-      name: this.directoryHandle.name || existing?.name || 'Local workspace',
+      name: existing?.name || this.directoryHandle.name || 'Local workspace',
       handle: this.directoryHandle,
+      kind: existing?.kind,
     });
     await this.saveWorkspaceLocationState({ activeId: id, directories });
     return id;
@@ -476,6 +527,12 @@ class IndexedDbStorageGateway implements StorageGateway {
 
   async requestWorkspaceLocationAccess(id: string): Promise<'none' | 'read' | 'readwrite'> {
     if (id === 'browser') return 'none';
+    if (id.startsWith('web_')) {
+      const saved = (await this.readWorkspaceLocationState()).directories.find(
+        (item) => item.id === id,
+      );
+      if (saved?.kind === 'web' && saved.handle) return 'readwrite';
+    }
     const handle =
       this.workspaceDirectoryHandles.get(id) ||
       (await this.readWorkspaceLocationState()).directories.find((item) => item.id === id)?.handle;
@@ -1123,6 +1180,7 @@ class IndexedDbStorageGateway implements StorageGateway {
             id: String(item.id),
             name: String(item.name || item.handle.name || 'Local workspace'),
             handle: item.handle,
+            kind: item.kind === 'web' ? 'web' : 'directory',
           }))
       : [];
     return { activeId: typeof value?.activeId === 'string' ? value.activeId : null, directories };
@@ -1155,7 +1213,9 @@ class IndexedDbStorageGateway implements StorageGateway {
       this.directoryHandle = record?.value ?? null;
     }
     if (!this.directoryHandle) throw new Error('Choose a folder to store your notes.');
-    const permission = await this.directoryHandle.queryPermission({ mode });
+    const permission = this.activeWorkspaceLocationId?.startsWith('web_')
+      ? 'granted'
+      : await this.directoryHandle.queryPermission({ mode });
     if (permission !== 'granted')
       throw new Error(
         mode === 'readwrite'

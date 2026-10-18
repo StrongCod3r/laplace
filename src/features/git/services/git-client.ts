@@ -134,6 +134,30 @@ export class WorkspaceGitClient {
     this.token = token;
   }
 
+  /** Clone only into a fresh, isolated browser workspace. Never replace existing files. */
+  async clone(settings: GitSettings) {
+    if ((await this.fs.promises!.readdir(this.base.dir)).length)
+      throw new Error('Clone requires an empty workspace.');
+    const url = validateGitUrl(settings.url.trim());
+    if (new URL(url).hostname !== 'github.com')
+      throw new Error('Web workspaces currently support GitHub repositories.');
+    const proxy = settings.corsProxy.trim()
+      ? validateGitUrl(settings.corsProxy.trim(), 'CORS proxy')
+      : '';
+    await git.clone({
+      ...this.base,
+      http: {
+        request: (request: GitHttpRequest) =>
+          http.request({ ...request, signal: AbortSignal.timeout(120_000) }),
+      },
+      url,
+      corsProxy: connectionProxy(url, proxy) || undefined,
+      singleBranch: true,
+      onAuth: () => ({ username: this.username || 'git', password: this.token }),
+    });
+    await this.configure(settings);
+  }
+
   private async optionalRef(ref: string) {
     try {
       return await git.resolveRef({ ...this.base, ref });

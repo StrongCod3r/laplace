@@ -1,3 +1,5 @@
+import { githubServiceUrl } from './github-auth';
+
 export function localGitProxy(
   repository: string,
   origin = typeof globalThis.location === 'undefined' ? '' : globalThis.location.origin,
@@ -21,6 +23,8 @@ export function localGitProxy(
 
 export function connectionProxy(repository: string, configuredProxy: string) {
   if (configuredProxy.trim()) return configuredProxy.trim().replace(/\/+$/, '');
+  const service = githubServiceUrl();
+  if (service && new URL(repository).hostname === 'github.com') return `${service}/git-proxy`;
   const local = localGitProxy(repository);
   if (local) return local;
   if (typeof globalThis.location !== 'undefined' && new URL(repository).hostname === 'github.com')

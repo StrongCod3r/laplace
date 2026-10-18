@@ -1,0 +1,8 @@
+name = "laplace-github"
+main = "worker.mjs"
+compatibility_date = "2026-10-18"
+
+[vars]
+# Replace these before deploying; configure secrets with wrangler secret put.
+APP_ORIGIN = "https://strongcod3r.github.io"
+GITHUB_CLIENT_ID = "Ov23lihMmIvpVn4Pf2z7"

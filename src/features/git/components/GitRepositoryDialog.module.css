@@ -9,6 +9,27 @@
   color: var(--text);
   box-shadow: var(--shadow);
   font-size: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
+}
+.dialog::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.dialog::-webkit-scrollbar-track,
+.dialog::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.dialog::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.dialog::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 68%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 .dialog::backdrop {
   background: rgba(0, 0, 0, 0.45);

@@ -476,10 +476,6 @@ export function registerInteractions(runtime: EditorRuntime) {
       });
       return;
     }
-    if (e.target.closest('#chooseDirectoryBtn')) {
-      void runtime.chooseMarkdownDirectory();
-      return;
-    }
     if (e.target.closest('#saveBrowserWorkspaceBtn')) {
       void runtime.saveBrowserWorkspaceLocally();
       return;
