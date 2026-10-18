@@ -163,6 +163,9 @@
 .connectionTest {
   margin-top: 20px;
 }
+.authenticationAction {
+  margin-top: 14px;
+}
 .connectionTest .hint {
   margin-bottom: 0;
 }

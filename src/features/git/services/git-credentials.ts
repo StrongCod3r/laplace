@@ -104,7 +104,7 @@ export async function loadGitCredentials(
     const authentication = JSON.parse(new TextDecoder().decode(plaintext)) as GitAuthentication;
     if (typeof authentication.username !== 'string' || typeof authentication.token !== 'string')
       throw new Error('Invalid credentials');
-    return authentication;
+    return { username: authentication.username, token: authentication.token };
   } catch {
     throw new Error(
       'Could not restore Git credentials from this browser. Re-enter the token in Repository settings.',

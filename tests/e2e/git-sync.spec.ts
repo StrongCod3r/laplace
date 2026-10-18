@@ -434,8 +434,7 @@ for (const tokenType of ['classic', 'fine-grained'] as const) {
     page,
   }) => {
     const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'laplace-browser-git-'));
-    const token =
-      tokenType === 'classic' ? 'ghp_classic-test-token' : 'github_pat_fine-grained-test-token';
+    const token = tokenType === 'classic' ? 'ghp_classic-test-token' : 'fine-grained-test-token';
     const username = tokenType === 'classic' ? 'draft-user' : '';
     const remote = await createGitRemote(temporary, `${username || 'git'}:${token}`);
     const github = 'https://github.com/test/workspace.git';
@@ -473,25 +472,16 @@ for (const tokenType of ['classic', 'fine-grained'] as const) {
       await expect(
         dialog.getByText('GitHub connections use the local development proxy automatically.'),
       ).toBeVisible();
-      await dialog.getByLabel('Remote username').fill(username);
-      await dialog.getByLabel('Token type').selectOption(tokenType);
+      await expect(dialog.getByLabel('Authentication method')).toHaveCount(0);
       await expect(
-        dialog.getByText(
-          tokenType === 'classic' ? /grant the repo scope/ : /Contents: Read and write/,
-        ),
+        dialog.getByRole('button', { name: 'Connect with GitHub', exact: true }),
       ).toBeVisible();
-      await expect(dialog.getByRole('link', { name: 'Create token on GitHub' })).toHaveAttribute(
-        'href',
-        tokenType === 'classic'
-          ? 'https://github.com/settings/tokens/new'
-          : 'https://github.com/settings/personal-access-tokens/new',
-      );
+      await dialog.getByLabel('Remote username').fill(username);
       await dialog.getByLabel('Access token').fill('wrong-token');
       await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
       await expect(dialog.getByRole('alert')).toContainText('Access denied (HTTP 401).');
       await dialog.getByLabel('Access token').fill(` ${token} `);
       await expect(dialog.getByLabel('Access token')).toHaveValue(token);
-      await expect(dialog.getByLabel('Token type')).toHaveValue(tokenType);
       await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
       await expect(dialog.getByRole('status')).toContainText('Connection successful.');
       expect(proxied).toContain('/api/git-proxy/github.com/test/workspace.git/info/refs');
@@ -522,9 +512,12 @@ for (const tokenType of ['classic', 'fine-grained'] as const) {
       await expect(panel.getByLabel('Commit message')).toBeVisible();
       await repositoryAction(panel, 'Repository settings');
       await expect(dialog.getByLabel('Access token')).toHaveValue(token);
-      await expect(dialog.getByLabel('Token type')).toHaveValue(tokenType);
       await dialog.getByRole('button', { name: 'Test connection', exact: true }).click();
       await expect(dialog.getByRole('status')).toContainText('Connection successful.');
+      await dialog.getByLabel('Access token').fill('unsaved-token');
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await repositoryAction(panel, 'Repository settings');
+      await expect(dialog.getByLabel('Access token')).toHaveValue(token);
     } finally {
       await remote.close();
       if (!temporary.startsWith(path.join(os.tmpdir(), 'laplace-browser-git-')))

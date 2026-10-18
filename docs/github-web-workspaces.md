@@ -30,8 +30,10 @@ from its newly allocated OPFS directory; registered workspaces are never replace
 
 ## Personal access tokens
 
-In Repository settings, use the Personal access token section instead of web sign-in.
-Choose the token type, enter your GitHub username and paste the token in Access token:
+In Repository settings, paste either token type into **Access token**. The optional
+**Remote username** field can specify a username; a fallback is sent when it is empty.
+Alternatively, **Connect with GitHub** obtains a token automatically and fills the same
+credentials. There is no authentication method or token type selector.
 
 - **Classic:** grant the `repo` scope for private repositories and pushing commits.
   Authorize SSO for the organization when required.
@@ -45,6 +47,10 @@ GitHub Actions workflow files may require additional workflow permissions. Both 
 types use the same encrypted, workspace-and-repository-scoped browser storage as OAuth.
 Existing credentials remain compatible. Clear credentials and save to remove the local
 copy; revoke or rotate the token in GitHub when needed.
+
+Manual and OAuth tokens use the same fields, storage and Git operations. Cancel preserves
+the saved credentials. Previously saved tokens remain compatible; obsolete method metadata
+is ignored when loading them.
 
 Tokens do not require the OAuth service or a client secret. Browser Git still requires
 a trusted CORS gateway: use the configured GitHub service, the automatic Vite proxy in

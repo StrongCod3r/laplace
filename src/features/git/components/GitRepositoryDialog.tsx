@@ -32,9 +32,6 @@ export function GitRepositoryDialog(props: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState(props.settings);
   const [authentication, setAuthentication] = useState(props.authentication);
-  const [tokenType, setTokenType] = useState<'classic' | 'fine-grained'>(
-    props.authentication.token.startsWith('github_pat_') ? 'fine-grained' : 'classic',
-  );
   const pendingTest = useRef<AbortController | null>(null);
   const credentialGeneration = useRef(0);
   const [loadingCredentials, setLoadingCredentials] = useState(false);
@@ -122,7 +119,6 @@ export function GitRepositoryDialog(props: Props) {
 
   function restoreAuthentication(next: GitAuthentication) {
     setAuthentication(next);
-    setTokenType(next.token.startsWith('github_pat_') ? 'fine-grained' : 'classic');
   }
 
   function editAuthentication(next: GitAuthentication) {
@@ -311,55 +307,9 @@ export function GitRepositoryDialog(props: Props) {
               </label>
             </div>
             <h3>Authentication</h3>
-            <button
-              type="button"
-              disabled={authorizing || !githubServiceUrl()}
-              onClick={() => void connectGitHub()}
-            >
-              {authorizing ? 'Waiting for GitHub…' : 'Connect with GitHub'}
-            </button>
             <p className={styles.hint}>
-              {githubServiceUrl()
-                ? authentication.token
-                  ? 'Credentials are ready. Save to use them for this repository.'
-                  : 'Authorize access on GitHub without copying an access token.'
-                : 'GitHub web sign-in requires the deployment’s GitHub service to be configured.'}
-            </p>
-            <h3>Personal access token</h3>
-            <p className={styles.hint}>
-              Alternatively, use a GitHub token without web sign-in. A trusted CORS proxy is still
-              required for browser Git connections.
-            </p>
-            <label>
-              <span id={props.create ? 'gitWebTokenTypeLabel' : 'gitTokenTypeLabel'}>
-                Token type
-              </span>
-              <select
-                aria-labelledby={props.create ? 'gitWebTokenTypeLabel' : 'gitTokenTypeLabel'}
-                value={tokenType}
-                onChange={(event) =>
-                  setTokenType(event.currentTarget.value as 'classic' | 'fine-grained')
-                }
-              >
-                <option value="classic">Personal access token (classic)</option>
-                <option value="fine-grained">Fine-grained personal access token</option>
-              </select>
-            </label>
-            <p className={styles.hint}>
-              {tokenType === 'classic'
-                ? 'For private repositories and pushing commits, grant the repo scope. Authorize the token for your organization’s SSO if required.'
-                : 'Select the repository owner and this repository, then grant Repository permissions → Contents: Read and write. Organization approval may be required.'}{' '}
-              <a
-                href={
-                  tokenType === 'classic'
-                    ? 'https://github.com/settings/tokens/new'
-                    : 'https://github.com/settings/personal-access-tokens/new'
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Create token on GitHub
-              </a>
+              Paste a personal access token (classic or fine-grained), or connect with GitHub to
+              obtain a token automatically.
             </p>
             <div className={styles.columns}>
               <label>
@@ -367,9 +317,10 @@ export function GitRepositoryDialog(props: Props) {
                 <input
                   value={authentication.username}
                   autoComplete="off"
-                  onInput={(event) => {
-                    editAuthentication({ ...authentication, username: event.currentTarget.value });
-                  }}
+                  placeholder="Optional"
+                  onInput={(event) =>
+                    editAuthentication({ ...authentication, username: event.currentTarget.value })
+                  }
                 />
               </label>
               <label>
@@ -378,15 +329,30 @@ export function GitRepositoryDialog(props: Props) {
                   type="password"
                   value={authentication.token}
                   autoComplete="off"
-                  onInput={(event) => {
-                    const token = event.currentTarget.value.trim();
-                    if (token.startsWith('github_pat_')) setTokenType('fine-grained');
-                    else if (token.startsWith('ghp_')) setTokenType('classic');
-                    editAuthentication({ ...authentication, token });
-                  }}
+                  onInput={(event) =>
+                    editAuthentication({
+                      ...authentication,
+                      token: event.currentTarget.value.trim(),
+                    })
+                  }
                 />
               </label>
             </div>
+            <button
+              className={styles.authenticationAction}
+              type="button"
+              disabled={authorizing || !githubServiceUrl()}
+              onClick={() => void connectGitHub()}
+            >
+              {authorizing ? 'Waiting for GitHub…' : 'Connect with GitHub'}
+            </button>
+            <p className={styles.hint}>
+              {authentication.token
+                ? 'A token is ready. Save to use it for this repository.'
+                : githubServiceUrl()
+                  ? 'Authorize repository access on GitHub without copying a token.'
+                  : 'GitHub web sign-in requires the deployment’s GitHub service to be configured. You can still enter a token manually.'}
+            </p>
             {authentication.token && (
               <button type="button" onClick={() => editAuthentication({ username: '', token: '' })}>
                 Clear credentials
