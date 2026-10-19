@@ -1,25 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function openMermaidPage(page: Page, trailingText = false) {
-  // Keep diagram geometry and asynchronous rendering deterministic, without CDN access.
-  await page.route('https://cdn.jsdelivr.net/npm/mermaid@12/**', (route) =>
-    route.fulfill({
-      contentType: 'text/javascript',
-      body: `export default {
-        initialize() {},
-        async render(id) {
-          await new Promise(resolve => setTimeout(resolve, 80));
-          return { svg: '<svg id="' + id + '" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 1100" style="max-width:500px"><rect width="500" height="1100" fill="#778899"/></svg>' };
-        }
-      };`,
-    }),
-  );
   await page.goto('/');
   await expect(page.locator('#pageTitle')).toBeVisible();
   await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);
   await page.locator('#newPageBtn').click();
   await page.evaluate((withText) => {
-    const markdown = '```mermaid\ngraph TD\n  A --> B\n```' + (withText ? '\n\nAfter diagram' : '');
+    const markdown =
+      '```mermaid\ngraph TD\n  A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L\n```' +
+      (withText ? '\n\nAfter diagram' : '');
     const data = new DataTransfer();
     data.setData('text/markdown', markdown);
     const content = document.querySelector<HTMLElement>('#blockEditor .block-content')!;

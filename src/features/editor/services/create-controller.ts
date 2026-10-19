@@ -525,18 +525,6 @@ export function createWorkspaceController(): WorkspaceController {
         simpleTableHandleHover = value;
       },
     },
-    mermaidLoadPromise: {
-      get: () => mermaidLoadPromise,
-      set: (value) => {
-        mermaidLoadPromise = value;
-      },
-    },
-    mermaidConfiguredTheme: {
-      get: () => mermaidConfiguredTheme,
-      set: (value) => {
-        mermaidConfiguredTheme = value;
-      },
-    },
     mermaidPreviewTimers: { get: () => mermaidPreviewTimers },
     mermaidRenderTokens: { get: () => mermaidRenderTokens },
     mermaidRenderSequence: {
@@ -1411,8 +1399,6 @@ export function createWorkspaceController(): WorkspaceController {
     'red',
   ]);
   let simpleTableHandleHover = { blockId: null, row: null, col: null };
-  let mermaidLoadPromise = null;
-  let mermaidConfiguredTheme = null;
   const mermaidPreviewTimers = new Map();
   const mermaidRenderTokens = new Map();
   let mermaidRenderSequence = 0;

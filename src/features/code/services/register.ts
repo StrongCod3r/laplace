@@ -4,6 +4,7 @@ import { APP_ID } from './../../../app-identity';
 import type { EditorRuntime } from '@/features/editor/types';
 import { createMathSvg, renderMathHTML } from '@/features/math/render';
 import { bindMermaidNavigation } from './mermaid-navigation';
+import { renderMermaidSvg, copyMermaidSvg } from './mermaid-renderer';
 
 export function registerCode(runtime: EditorRuntime) {
   const renderedMermaidPreviews = new WeakMap();
@@ -166,35 +167,6 @@ export function registerCode(runtime: EditorRuntime) {
     return document.body.classList.contains('dark') ? 'dark' : 'default';
   }
 
-  function configureMermaidTheme(api) {
-    const theme = runtime.currentMermaidTheme();
-    if (runtime.mermaidConfiguredTheme === theme) return;
-    api.initialize({
-      startOnLoad: false,
-      securityLevel: 'strict',
-      theme,
-      suppressErrorRendering: true,
-      fontFamily: 'Inter, system-ui, sans-serif',
-    });
-    runtime.mermaidConfiguredTheme = theme;
-  }
-
-  function ensureMermaidLibrary() {
-    if (runtime.mermaidLoadPromise) return runtime.mermaidLoadPromise;
-    runtime.mermaidLoadPromise =
-      import('https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.esm.min.mjs')
-        .then((module) => {
-          const api = module.default || module;
-          runtime.configureMermaidTheme(api);
-          return api;
-        })
-        .catch((error) => {
-          runtime.mermaidLoadPromise = null;
-          throw new Error(`Could not load Mermaid: ${error?.message || error}`);
-        });
-    return runtime.mermaidLoadPromise;
-  }
-
   function scheduleMermaidPreviews(root = runtime.els.blockEditor) {
     runtime.lifecycle.frame(() =>
       root?.querySelectorAll?.('.code-block[data-type="code"]').forEach((row) => {
@@ -248,14 +220,11 @@ export function registerCode(runtime: EditorRuntime) {
     status.textContent = 'Rendering diagram…';
     status.classList.remove('hidden', 'error');
     try {
-      const api = await runtime.ensureMermaidLibrary();
       if (runtime.mermaidRenderTokens.get(b.id) !== token || !row.isConnected) return;
-      runtime.configureMermaidTheme(api);
       const renderId = `${APP_ID}-mermaid-${++runtime.mermaidRenderSequence}`;
-      const result = await api.render(renderId, source);
+      const svg = await renderMermaidSvg(source, renderId, preview);
       if (runtime.mermaidRenderTokens.get(b.id) !== token || !row.isConnected) return;
-      renderTarget.innerHTML = result.svg;
-      if (typeof result.bindFunctions === 'function') result.bindFunctions(renderTarget);
+      renderTarget.replaceChildren(svg);
       status.classList.add('hidden');
       renderedMermaidPreviews.set(preview, { source, theme });
     } catch (error) {
@@ -271,8 +240,8 @@ export function registerCode(runtime: EditorRuntime) {
     const message = String(error?.message || error || 'Invalid Mermaid diagram')
       .replace(/\s+/g, ' ')
       .trim();
-    if (/Could not load Mermaid|failed to initialize/i.test(message))
-      return 'Mermaid preview is unavailable. Check your internet connection.';
+    if (/Could not load the diagram renderer/i.test(message))
+      return 'Diagram preview is unavailable. Reload the app to try again.';
     return `Diagram error: ${message.slice(0, 220)}`;
   }
 
@@ -411,34 +380,24 @@ export function registerCode(runtime: EditorRuntime) {
   async function downloadMermaidDiagram(row, id) {
     const block = runtime.findBlock(id);
     if (!block || block.language !== 'mermaid') return;
-    let svg = row?.querySelector('[data-mermaid-render] svg');
-    if (!svg) {
-      const source = String(block.text || '').trim();
-      if (!source) {
-        runtime.toast('Add Mermaid code before downloading the diagram');
-        return;
-      }
-      try {
-        const api = await runtime.ensureMermaidLibrary();
-        runtime.configureMermaidTheme(api);
-        const result = await api.render(
-          `${APP_ID}-mermaid-download-${++runtime.mermaidRenderSequence}`,
-          source,
-        );
-        const container = document.createElement('div');
-        container.innerHTML = result.svg;
-        svg = container.querySelector('svg');
-      } catch (error) {
-        runtime.toast(runtime.mermaidErrorMessage(error));
-        return;
-      }
-    }
-    if (!svg) {
-      runtime.toast('The Mermaid diagram could not be rendered');
+    const source = String(block.text || '').trim();
+    if (!source) {
+      runtime.toast('Add Mermaid code before downloading the diagram');
       return;
     }
-    const copy = svg.cloneNode(true);
-    if (!copy.hasAttribute('xmlns')) copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    let svg;
+    try {
+      svg = await renderMermaidSvg(
+        source,
+        `${APP_ID}-mermaid-download-${++runtime.mermaidRenderSequence}`,
+        row || document.body,
+      );
+      if (runtime.lifecycle.disposed) return;
+    } catch (error) {
+      runtime.toast(runtime.mermaidErrorMessage(error));
+      return;
+    }
+    const copy = copyMermaidSvg(svg, row || document.body);
     const blob = new Blob([new XMLSerializer().serializeToString(copy)], {
       type: 'image/svg+xml;charset=utf-8',
     });
@@ -499,8 +458,6 @@ export function registerCode(runtime: EditorRuntime) {
     highlightCode,
     highlightMermaid,
     currentMermaidTheme,
-    configureMermaidTheme,
-    ensureMermaidLibrary,
     scheduleMermaidPreviews,
     scheduleMermaidPreview,
     renderMermaidPreview,

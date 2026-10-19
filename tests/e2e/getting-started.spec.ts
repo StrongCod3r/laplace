@@ -3,12 +3,6 @@ import { expect, test } from '@playwright/test';
 test('Getting Started contains working examples of every block and preserves edits on reload', async ({
   page,
 }) => {
-  await page.route('https://cdn.jsdelivr.net/npm/mermaid@12/**', (route) =>
-    route.fulfill({
-      contentType: 'text/javascript',
-      body: `export default { initialize() {}, async render(id) { return { svg: '<svg id="'+id+'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100"><text x="10" y="50">Idea → Draft → Review → Publish</text></svg>' }; } };`,
-    }),
-  );
   await page.goto('/');
   await expect(page.locator('#pageTitle')).toHaveText('Getting Started');
   await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);

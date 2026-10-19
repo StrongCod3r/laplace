@@ -103,6 +103,8 @@ When Tab or Shift+Tab is used on a later line of a multiline quote, split at the
 
 Heading blocks support H1 through H6 in the slash menu, formatting toolbar, outline, typing shortcuts, and Markdown/HTML import and export. H4, H5, and H6 use 18 px, 16 px, and 14 px heading styles respectively.
 
+Mermaid syntax is rendered by bundled, lazily loaded Pele without a CDN dependency. Keep theme colors connected through `--pele-*` variables and resolve them in standalone SVG downloads. Preserve authored diagram directions and the existing navigation controls.
+
 Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.
 
 Mermaid previews support pointer dragging, zoom buttons, and keyboard navigation. Wheel zoom is enabled only in the fullscreen viewer; in a block preview, the wheel retains normal page scrolling. Keep zoom and pan local to each preview, retain them when preserving its DOM during unrelated edits, and exclude navigation transforms from Markdown and SVG exports. Reset restores 100% zoom and the original position.

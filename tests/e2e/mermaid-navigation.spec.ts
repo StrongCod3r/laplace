@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
 for (const docked of [false, true]) {
@@ -5,12 +6,6 @@ for (const docked of [false, true]) {
     test(`Mermaid zoom and pan work in the ${docked ? 'split' : 'main'} editor (${dark ? 'dark' : 'light'})`, async ({
       page,
     }) => {
-      await page.route('https://cdn.jsdelivr.net/npm/mermaid@12/**', (route) =>
-        route.fulfill({
-          contentType: 'text/javascript',
-          body: `export default { initialize() {}, async render(id) { return { svg: '<svg id="'+id+'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 240" style="max-width:500px"><rect x="10" y="10" width="480" height="220" fill="#778899"/></svg>' }; } };`,
-        }),
-      );
       await page.goto('/');
       await expect(page.locator('#pageTitle')).toBeVisible();
       await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);
@@ -32,6 +27,15 @@ for (const docked of [false, true]) {
       const svg = viewport.locator('svg');
       const reset = preview.locator('[data-mermaid-reset]');
       await expect(svg).toBeVisible();
+      await expect(svg).toHaveClass(/pele/);
+      const foreground = await svg.evaluate((element) =>
+        getComputedStyle(element).getPropertyValue('--pele-fg').trim(),
+      );
+      expect(foreground).toBe(
+        await page
+          .locator('body')
+          .evaluate((element) => getComputedStyle(element).getPropertyValue('--text').trim()),
+      );
       const original = await svg.boundingBox();
       await preview.getByRole('button', { name: 'Zoom in', exact: true }).click();
       await expect(reset).toHaveText('125%');
@@ -122,6 +126,19 @@ for (const docked of [false, true]) {
       await expect(svg).toBeVisible();
       await expect(root.locator('[data-code-editor]')).toHaveValue('graph TD\n A --> B');
       await expect(root.locator('[data-code-editor]')).toBeHidden();
+      const downloadEvent = page.waitForEvent('download');
+      await root.locator('[data-mermaid-download]').click();
+      const download = await downloadEvent;
+      const exported = await readFile((await download.path())!, 'utf8');
+      expect(exported).toContain('--pele-fg: ' + foreground);
+      expect(
+        await page.evaluate((source) => {
+          const svg = new DOMParser().parseFromString(source, 'image/svg+xml')
+            .documentElement as unknown as SVGSVGElement;
+          return svg.style.transform;
+        }, exported),
+      ).toBe('');
+      expect(exported).toContain('pele-flowchart');
       if (!dark && !docked) {
         await launch.click();
         await page.evaluate(async () => {

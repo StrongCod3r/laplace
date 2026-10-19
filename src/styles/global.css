@@ -77,6 +77,16 @@ body {
 }
 
 body {
+  --pele-bg: var(--code-preview-bg);
+  --pele-fg: var(--text);
+  --pele-muted: var(--muted);
+  --pele-line: var(--text);
+  --pele-surface: var(--code-bg);
+  --pele-surface-alt: var(--sidebar);
+  --pele-border: var(--border);
+  --pele-accent: var(--blue);
+  --pele-critical: var(--danger);
+  --pele-error: var(--code-error);
   overflow: hidden;
 }
 

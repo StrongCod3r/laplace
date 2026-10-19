@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { APP_ID } from './app-identity';
-// Mermaid support used by Laplace's Code block.
-// The standalone build keeps the same logic inline so it can run without a build step.
+import { renderMermaidSvg } from './features/code/services/mermaid-renderer';
+export { ensureMermaidLibrary } from './features/code/services/mermaid-renderer';
+// Mermaid syntax support rendered with bundled Pele.
 
 export const MERMAID_LANGUAGE = {
   id: 'mermaid',
@@ -10,7 +11,6 @@ export const MERMAID_LANGUAGE = {
     'flowchart graph sequenceDiagram classDiagram stateDiagram-v2 erDiagram journey gantt pie quadrantChart requirementDiagram gitGraph mindmap timeline sankey-beta xychart-beta block-beta packet-beta architecture-beta C4Context C4Container C4Component C4Dynamic subgraph end participant actor loop alt else opt par rect critical break note autonumber title section direction TB TD BT RL LR class classDef state click style linkStyle init true false',
 };
 
-let mermaidLoadPromise = null;
 let renderSequence = 0;
 const renderTokens = new Map();
 const previewTimers = new Map();
@@ -56,36 +56,13 @@ export function highlightMermaid(code) {
   return out + escapeHtml(String(code || '').slice(last));
 }
 
-export function ensureMermaidLibrary() {
-  if (mermaidLoadPromise) return mermaidLoadPromise;
-
-  mermaidLoadPromise = import('https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.esm.min.mjs')
-    .then((module) => {
-      const api = module.default || module;
-      api.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: 'dark',
-        suppressErrorRendering: true,
-        fontFamily: 'Inter, system-ui, sans-serif',
-      });
-      return api;
-    })
-    .catch((error) => {
-      mermaidLoadPromise = null;
-      throw new Error(`Could not load Mermaid: ${error?.message || error}`);
-    });
-
-  return mermaidLoadPromise;
-}
-
 export function mermaidErrorMessage(error) {
   const message = String(error?.message || error || 'Invalid Mermaid diagram')
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (/Could not load Mermaid|failed to initialize/i.test(message)) {
-    return 'Mermaid preview is unavailable. Check your internet connection.';
+  if (/Could not load the diagram renderer/i.test(message)) {
+    return 'Diagram preview is unavailable. Reload the app to try again.';
   }
   return `Diagram error: ${message.slice(0, 220)}`;
 }
@@ -112,15 +89,13 @@ export async function renderMermaidPreview({ blockId, source, row, preview }) {
   status.classList.remove('hidden', 'error');
 
   try {
-    const api = await ensureMermaidLibrary();
     if (renderTokens.get(blockId) !== token || !row.isConnected) return;
 
     const renderId = `${APP_ID}-mermaid-${++renderSequence}`;
-    const result = await api.render(renderId, text);
+    const svg = await renderMermaidSvg(text, renderId, preview);
     if (renderTokens.get(blockId) !== token || !row.isConnected) return;
 
-    renderTarget.innerHTML = result.svg;
-    if (typeof result.bindFunctions === 'function') result.bindFunctions(renderTarget);
+    renderTarget.replaceChildren(svg);
     status.classList.add('hidden');
   } catch (error) {
     if (renderTokens.get(blockId) !== token || !row.isConnected) return;

@@ -1,5 +1,5 @@
 {
-  "total": 664,
+  "total": 662,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -495,8 +495,6 @@
       "highlightCode",
       "highlightMermaid",
       "currentMermaidTheme",
-      "configureMermaidTheme",
-      "ensureMermaidLibrary",
       "scheduleMermaidPreviews",
       "scheduleMermaidPreview",
       "mermaidPreviewIsCurrent",

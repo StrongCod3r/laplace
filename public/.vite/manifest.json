@@ -3,8 +3,8 @@
     "file": "assets/WorkspacePage-8abTewCB.css",
     "src": "_WorkspacePage-8abTewCB.css"
   },
-  "_WorkspacePage-Ci4es1FW.js": {
-    "file": "assets/WorkspacePage-Ci4es1FW.js",
+  "_WorkspacePage-C1WmBnHQ.js": {
+    "file": "assets/WorkspacePage-C1WmBnHQ.js",
     "name": "WorkspacePage",
     "isDynamicEntry": true,
     "imports": [
@@ -16,7 +16,8 @@
       "src/features/git/services/git-worker-client.ts",
       "src/features/git/services/git-client.ts",
       "src/features/git/services/git-worker-client.ts",
-      "src/features/git/services/git-worker-client.ts"
+      "src/features/git/services/git-worker-client.ts",
+      "node_modules/.pnpm/pele@1.6.0/node_modules/pele/dist/pele.js"
     ],
     "css": [
       "assets/WorkspacePage-8abTewCB.css"
@@ -84,15 +85,15 @@
     ]
   },
   "index.html": {
-    "file": "assets/index-Dr09G3bt.js",
+    "file": "assets/index-mx7Zg8rf.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "dynamicImports": [
-      "_WorkspacePage-Ci4es1FW.js"
+      "_WorkspacePage-C1WmBnHQ.js"
     ],
     "css": [
-      "assets/index-CMj2cGS9.css"
+      "assets/index-Cb11Mp7P.css"
     ]
   },
   "node_modules/.pnpm/katex@0.19.0/node_modules/katex/dist/fonts/KaTeX_AMS-Regular.ttf": {
@@ -331,6 +332,12 @@
     "file": "assets/KaTeX_Typewriter-Regular-CO6r4hn1.woff2",
     "src": "node_modules/.pnpm/katex@0.19.0/node_modules/katex/dist/fonts/KaTeX_Typewriter-Regular.woff2"
   },
+  "node_modules/.pnpm/pele@1.6.0/node_modules/pele/dist/pele.js": {
+    "file": "assets/pele-GzcgIVB7.js",
+    "name": "pele",
+    "src": "node_modules/.pnpm/pele@1.6.0/node_modules/pele/dist/pele.js",
+    "isDynamicEntry": true
+  },
   "src/features/git/services/directory-fs.ts": {
     "file": "assets/directory-fs-KUIAstcR.js",
     "name": "directory-fs",
@@ -338,17 +345,17 @@
     "isDynamicEntry": true
   },
   "src/features/git/services/git-client.ts": {
-    "file": "assets/git-client-hlSA7lM3.js",
+    "file": "assets/git-client-Cu7so2zU.js",
     "name": "git-client",
     "src": "src/features/git/services/git-client.ts",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_WorkspacePage-Ci4es1FW.js"
+      "_WorkspacePage-C1WmBnHQ.js"
     ]
   },
   "src/features/git/services/git-worker-client.ts": {
-    "file": "assets/git-worker-client-B6sQMBSh.js",
+    "file": "assets/git-worker-client-CrDLkLSa.js",
     "name": "git-worker-client",
     "src": "src/features/git/services/git-worker-client.ts",
     "isDynamicEntry": true,

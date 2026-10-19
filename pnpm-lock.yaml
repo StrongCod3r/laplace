@@ -20,6 +20,9 @@ importers:
       lucide:
         specifier: ^1.50.0
         version: 1.55.0
+      pele:
+        specifier: ^1.6.0
+        version: 1.6.0
       preact:
         specifier: ^11.0.0
         version: 11.0.1
@@ -939,6 +942,10 @@ packages:
   path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
     engines: {node: '>=8'}
+
+  pele@1.6.0:
+    resolution: {integrity: sha512-VfAiVItsOGlGhvnBfphdT28VCG7mXMZxQNOwAGsCtxI2ztbUsT39MraEOYjsapLxVETkdUZscm0DdotYDQMLdw==}
+    engines: {node: '>=20'}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -1980,6 +1987,8 @@ snapshots:
   path-exists@4.0.0: {}
 
   path-type@4.0.0: {}
+
+  pele@1.6.0: {}
 
   picocolors@1.1.1: {}
 

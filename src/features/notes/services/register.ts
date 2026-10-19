@@ -1165,7 +1165,6 @@ export function registerNotes(runtime: EditorRuntime) {
       }
     }
     runtime.updateSettingsText();
-    runtime.mermaidConfiguredTheme = null;
     runtime.scheduleMermaidPreviews();
   }
 
