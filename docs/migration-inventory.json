@@ -1,5 +1,5 @@
 {
-  "total": 662,
+  "total": 650,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -306,12 +306,6 @@
       "pageLinkCountTo",
       "pagesLinkingTo",
       "buildPageGraph",
-      "graphLayout",
-      "graphTransform",
-      "applyGraphTransform",
-      "setGraphZoom",
-      "setGraphPan",
-      "applyGraphSearch",
       "renderGraphView",
       "openWikiLink"
     ],
@@ -515,12 +509,6 @@
     ],
     "interactions": [
       "bindEvents",
-      "onGraphWheel",
-      "graphPointerPosition",
-      "onGraphPointerDown",
-      "onGraphPointerMove",
-      "onGraphPointerUp",
-      "onGraphPointerCancel",
       "onPaneResizeStart",
       "onClick",
       "onImageBlockDoubleClick",

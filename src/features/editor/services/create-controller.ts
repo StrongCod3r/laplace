@@ -221,12 +221,6 @@ export function createWorkspaceController(): WorkspaceController {
         eventsBound = value;
       },
     },
-    graphViewRuntime: {
-      get: () => graphViewRuntime,
-      set: (value) => {
-        graphViewRuntime = value;
-      },
-    },
     activeSlashBlockId: {
       get: () => activeSlashBlockId,
       set: (value) => {
@@ -1225,7 +1219,6 @@ export function createWorkspaceController(): WorkspaceController {
   let selectedAttachmentPath = null;
   const ATTACHMENT_GALLERY_PAGE_SIZE = 24;
   let eventsBound = false;
-  let graphViewRuntime = { scale: 1, panX: 0, panY: 0 };
   let activeSlashBlockId = null;
   let slashIndex = 0;
   let activeEmojiBlockId = null;

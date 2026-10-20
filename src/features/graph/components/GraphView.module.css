@@ -42,73 +42,24 @@
   );
   background-size: 20px 20px;
 }
-.graph-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  user-select: none;
-  touch-action: none;
-  cursor: grab;
-}
-.graph-svg:global(.graph-panning) {
-  cursor: grabbing;
-}
-.graph-edge {
-  stroke: color-mix(in srgb, var(--muted) 32%, transparent);
-  stroke-width: 1.2;
-  vector-effect: non-scaling-stroke;
-  transition:
-    opacity 0.12s,
-    stroke 0.12s;
-}
-.graph-node {
-  cursor: pointer;
+.graph-canvas {
+  position: absolute;
+  inset: 0;
   outline: none;
-  transition: opacity 0.12s;
+  touch-action: none;
 }
-.graph-node circle {
-  fill: var(--panel);
-  stroke: color-mix(in srgb, var(--muted) 66%, var(--border));
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-  transition:
-    fill 0.12s,
-    stroke 0.12s,
-    stroke-width 0.12s;
+.graph-canvas:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--obsidian-accent);
 }
-.graph-node text {
-  fill: var(--muted);
-  font-size: 12px;
-  font-family: inherit;
-  pointer-events: auto;
-  cursor: pointer;
-  paint-order: stroke;
-  stroke: var(--workspace);
-  stroke-width: 3px;
-  stroke-linejoin: round;
-}
-.graph-node:hover circle,
-.graph-node:focus circle {
-  fill: color-mix(in srgb, var(--obsidian-accent) 16%, var(--panel));
-  stroke: var(--obsidian-accent);
-  stroke-width: 2.2;
-}
-.graph-node:hover text,
-.graph-node:focus text {
-  fill: var(--text);
-}
-.graph-node:global(.current) circle {
-  fill: color-mix(in srgb, var(--obsidian-accent) 22%, var(--panel));
-  stroke: var(--obsidian-accent);
-  stroke-width: 2.2;
-}
-.graph-node:global(.current) text {
-  fill: var(--text);
-  font-weight: 650;
-}
-.graph-node:global(.dim),
-.graph-edge:global(.dim) {
-  opacity: 0.13;
+.graph-canvas :global(.float-tooltip-kap) {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 9px;
+  font:
+    12px system-ui,
+    sans-serif;
 }
 .graph-empty {
   position: absolute;
@@ -142,4 +93,11 @@
   font-size: 10px;
   pointer-events: none;
   backdrop-filter: blur(5px);
+}
+.graph-zoom-level {
+  min-width: 40px;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }

@@ -125,11 +125,6 @@ export function registerInteractions(runtime: EditorRuntime) {
       'selectionchange',
       runtime.scheduleTextFormatToolbarFromSelection,
     );
-    runtime.lifecycle.listen(document, 'wheel', runtime.onGraphWheel, { passive: false });
-    runtime.lifecycle.listen(document, 'pointerdown', runtime.onGraphPointerDown);
-    runtime.lifecycle.listen(document, 'pointermove', runtime.onGraphPointerMove);
-    runtime.lifecycle.listen(document, 'pointerup', runtime.onGraphPointerUp);
-    runtime.lifecycle.listen(document, 'pointercancel', runtime.onGraphPointerCancel);
     runtime.lifecycle.listen(document, 'dragend', runtime.clearDragState);
     runtime.lifecycle.listen(window, 'beforeinstallprompt', (event) => {
       if (matchMedia('(display-mode: standalone)').matches) return;
@@ -167,76 +162,6 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.scheduleImageCropDialogLayout(runtime.activeImageCropBlockId);
       runtime.fitImageBlockViewer();
     });
-  }
-
-  function onGraphWheel(e) {
-    if (runtime.state.mainView !== 'graph' || !e.target.closest?.('[data-graph-svg]')) return;
-    e.preventDefault();
-    runtime.setGraphZoom(runtime.graphViewRuntime.scale * (e.deltaY > 0 ? 0.9 : 1.1));
-  }
-
-  function graphPointerPosition(svg, e) {
-    const matrix = svg.getScreenCTM();
-    if (!matrix) return null;
-    const point = svg.createSVGPoint();
-    point.x = e.clientX;
-    point.y = e.clientY;
-    return point.matrixTransform(matrix.inverse());
-  }
-
-  function onGraphPointerDown(e) {
-    if (runtime.state.mainView !== 'graph' || e.button !== 0 || e.isPrimary === false) return;
-    const svg = e.target.closest?.('[data-graph-svg]');
-    if (!svg) return;
-    const point = runtime.graphPointerPosition(svg, e);
-    if (!point) return;
-    runtime.graphViewRuntime.pointerDrag = {
-      pointerId: e.pointerId,
-      svg,
-      startX: point.x,
-      startY: point.y,
-      originX: runtime.graphViewRuntime.panX,
-      originY: runtime.graphViewRuntime.panY,
-      moved: false,
-    };
-  }
-
-  function onGraphPointerMove(e) {
-    const drag = runtime.graphViewRuntime.pointerDrag;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    const point = runtime.graphPointerPosition(drag.svg, e);
-    if (!point) return;
-    const deltaX = point.x - drag.startX,
-      deltaY = point.y - drag.startY;
-    if (!drag.moved && Math.hypot(deltaX, deltaY) < 3) return;
-    if (!drag.moved) {
-      drag.moved = true;
-      drag.svg.classList.add('graph-panning');
-      try {
-        drag.svg.setPointerCapture(e.pointerId);
-      } catch {}
-    }
-    e.preventDefault();
-    runtime.setGraphPan(drag.originX + deltaX, drag.originY + deltaY);
-  }
-
-  function onGraphPointerUp(e) {
-    const drag = runtime.graphViewRuntime.pointerDrag;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    runtime.graphViewRuntime.pointerDrag = null;
-    drag.svg.classList.remove('graph-panning');
-    if (!drag.moved) return;
-    runtime.graphViewRuntime.suppressNodeClick = true;
-    runtime.lifecycle.timeout(() => {
-      runtime.graphViewRuntime.suppressNodeClick = false;
-    });
-  }
-
-  function onGraphPointerCancel(e) {
-    const drag = runtime.graphViewRuntime.pointerDrag;
-    if (!drag || drag.pointerId !== e.pointerId) return;
-    runtime.graphViewRuntime.pointerDrag = null;
-    drag.svg.classList.remove('graph-panning');
   }
 
   function onPaneResizeStart(e) {
@@ -645,25 +570,6 @@ export function registerInteractions(runtime: EditorRuntime) {
     const backlink = e.target.closest('[data-backlink-page]');
     if (backlink) {
       runtime.openPage(backlink.dataset.backlinkPage);
-      return;
-    }
-    const graphNode = e.target.closest('[data-graph-page]');
-    if (graphNode) {
-      if (runtime.graphViewRuntime.suppressNodeClick) return;
-      runtime.openPage(graphNode.dataset.graphPage, { newTab: true });
-      return;
-    }
-    if (e.target.closest('[data-graph-fit]')) {
-      runtime.setGraphZoom(1);
-      runtime.setGraphPan(0, 0);
-      return;
-    }
-    if (e.target.closest('[data-graph-zoom-in]')) {
-      runtime.setGraphZoom(runtime.graphViewRuntime.scale * 1.2);
-      return;
-    }
-    if (e.target.closest('[data-graph-zoom-out]')) {
-      runtime.setGraphZoom(runtime.graphViewRuntime.scale / 1.2);
       return;
     }
     const selectionRow = e.target.closest(
@@ -1580,6 +1486,13 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function onMouseDown(e) {
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      const pane = e.target.closest?.('.dock-pane[data-editor-group]');
+      if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
+      runtime.navigateHistory(e.button === 3 ? -1 : 1);
+      return;
+    }
     const floatingTextPanel = e.target.closest?.(
       '#textFormatToolbar,#linkEditPanel,[data-link-hover-menu]',
     );
@@ -2188,6 +2101,10 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function onAuxClick(e) {
+    if (e.button === 3 || e.button === 4) {
+      e.preventDefault();
+      return;
+    }
     if (e.button !== 1) return;
     const backlink = e.target.closest?.('[data-backlink-page]');
     if (backlink) {
@@ -2409,10 +2326,6 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     if (e.target.matches?.('[data-format-link-input]')) {
       runtime.renderInlineLinkResults(e.target.value);
-      return;
-    }
-    if (e.target.matches?.('[data-graph-search]')) {
-      runtime.applyGraphSearch(e.target.value);
       return;
     }
     if (e.target.matches?.('[data-page-link-search]')) {
@@ -3167,13 +3080,6 @@ export function registerInteractions(runtime: EditorRuntime) {
         .forEach((m) => m.classList.add('hidden'));
       return;
     }
-    const keyboardGraphNode = e.target.closest?.('[data-graph-page]');
-    if (keyboardGraphNode && (e.key === 'Enter' || e.key === ' ')) {
-      e.preventDefault();
-      runtime.openPage(keyboardGraphNode.dataset.graphPage, { newTab: true });
-      return;
-    }
-
     if (!runtime.els.commandPalette.classList.contains('hidden')) {
       const items = [...runtime.els.commandResults.querySelectorAll('[data-command]')];
       if (e.key === 'ArrowDown') {
@@ -4594,12 +4500,6 @@ export function registerInteractions(runtime: EditorRuntime) {
 
   Object.assign(runtime, {
     bindEvents,
-    onGraphWheel,
-    graphPointerPosition,
-    onGraphPointerDown,
-    onGraphPointerMove,
-    onGraphPointerUp,
-    onGraphPointerCancel,
     onPaneResizeStart,
     onClick,
     onImageBlockDoubleClick,

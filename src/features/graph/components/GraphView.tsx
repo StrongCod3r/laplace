@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef } from 'preact/hooks';
+import { GraphScene } from '../services/scene';
 import { withModuleClasses } from '@/shared/lib/css-classes';
 import graphStyles from './GraphView.module.css';
 import attachmentsStyles from '../../attachments/components/Attachments.module.css';
@@ -8,7 +10,34 @@ const styles = { ...graphStyles, ...attachmentsStyles };
 
 export function GraphView() {
   const graph = useWorkspaceStore((state) => state.ui.graph);
-  const positions = new Map(graph.nodes.map((node) => [node.id, node]));
+  const active = useWorkspaceStore((state) => state.ui.mainView === 'graph');
+  const vaultId = useWorkspaceStore((state) => state.ui.activeVaultId);
+  const canvasHost = useRef<HTMLDivElement>(null);
+  const zoomLabel = useRef<HTMLOutputElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const scene = useRef<GraphScene | null>(null);
+
+  useLayoutEffect(() => {
+    if (!canvasHost.current) return;
+    const instance = new GraphScene(
+      canvasHost.current,
+      (id) => {
+        useWorkspaceStore.getState().controller?.invoke('openPage', id, { newTab: true });
+      },
+      zoomLabel.current,
+    );
+    scene.current = instance;
+    if (search.current) search.current.value = '';
+    return () => {
+      instance.dispose();
+      scene.current = null;
+    };
+  }, [vaultId]);
+
+  useLayoutEffect(() => {
+    scene.current?.setActive(active);
+    if (active) scene.current?.setGraph(graph);
+  }, [active, graph, vaultId]);
   return (
     <section
       id="graphView"
@@ -26,6 +55,9 @@ export function GraphView() {
           <div className={withModuleClasses(styles, 'graph-controls')}>
             <input
               className={withModuleClasses(styles, 'graph-search')}
+              ref={search}
+              onInput={(event) => scene.current?.search(event.currentTarget.value)}
+              aria-label="Filter notes"
               data-graph-search
               type="search"
               placeholder="Filter notes…"
@@ -33,13 +65,24 @@ export function GraphView() {
             />
             <button
               className={withModuleClasses(styles, 'graph-control-btn')}
+              onClick={() => scene.current?.zoom(1 / 1.2)}
+              aria-label="Zoom out"
               data-graph-zoom-out
               title="Zoom out"
             >
               <Icon name="minus" size="14" />
             </button>
+            <output
+              ref={zoomLabel}
+              className={withModuleClasses(styles, 'graph-zoom-level')}
+              aria-label="Zoom level"
+            >
+              100%
+            </output>
             <button
               className={withModuleClasses(styles, 'graph-control-btn')}
+              onClick={() => scene.current?.fit()}
+              aria-label="Fit graph"
               data-graph-fit
               title="Fit graph"
             >
@@ -47,6 +90,8 @@ export function GraphView() {
             </button>
             <button
               className={withModuleClasses(styles, 'graph-control-btn')}
+              onClick={() => scene.current?.zoom(1.2)}
+              aria-label="Zoom in"
               data-graph-zoom-in
               title="Zoom in"
             >
@@ -55,61 +100,15 @@ export function GraphView() {
           </div>
         </div>
         <div className={withModuleClasses(styles, 'graph-stage')}>
-          {graph.nodes.length ? (
-            <svg
-              className={withModuleClasses(styles, 'graph-svg')}
-              data-graph-svg
-              viewBox="0 0 1000 700"
-              preserveAspectRatio="xMidYMid meet"
-            >
-              <rect x="0" y="0" width="1000" height="700" fill="transparent" />
-              <g
-                data-graph-viewport
-                transform={`translate(${500 * (1 - graph.scale) + graph.panX} ${350 * (1 - graph.scale) + graph.panY}) scale(${graph.scale})`}
-              >
-                {graph.edges.map((edge) => {
-                  const a = positions.get(edge.source);
-                  const b = positions.get(edge.target);
-                  return a && b ? (
-                    <line
-                      key={`${edge.source}:${edge.target}`}
-                      className={withModuleClasses(styles, 'graph-edge')}
-                      data-graph-edge
-                      data-graph-source={edge.source}
-                      data-graph-target={edge.target}
-                      x1={a.x.toFixed(1)}
-                      y1={a.y.toFixed(1)}
-                      x2={b.x.toFixed(1)}
-                      y2={b.y.toFixed(1)}
-                    />
-                  ) : null;
-                })}
-                {graph.nodes.map((node) => {
-                  const radius = Math.min(15, 6 + Math.sqrt(node.degree) * 2.1);
-                  return (
-                    <g
-                      key={node.id}
-                      className={withModuleClasses(
-                        styles,
-                        `graph-node ${node.current ? 'current' : ''}`,
-                      )}
-                      data-graph-page={node.id}
-                      data-graph-title={node.title}
-                      transform={`translate(${node.x.toFixed(1)} ${node.y.toFixed(1)})`}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Open ${node.title}`}
-                    >
-                      <circle r={radius.toFixed(1)} />
-                      <text x={(radius + 6).toFixed(1)} y="4">
-                        {node.title}
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
-            </svg>
-          ) : (
+          <div
+            ref={canvasHost}
+            className={withModuleClasses(styles, 'graph-canvas')}
+            data-graph-canvas
+            tabIndex={0}
+            role="group"
+            aria-label="Note graph. Middle-click or Ctrl/Cmd-click a node to open its page. Drag nodes to move them, drag the background to pan, and scroll to zoom. Use arrow keys to select a note, Enter or Space to open it, plus and minus to zoom, and zero to fit."
+          />
+          {!graph.nodes.length && (
             <div className={withModuleClasses(styles, 'graph-empty')}>
               <div>
                 <b>No notes yet</b>Create pages and connect them with Link to page blocks.
@@ -117,7 +116,7 @@ export function GraphView() {
             </div>
           )}
           <div className={withModuleClasses(styles, 'graph-legend')}>
-            Drag to move · click a node to open · Link to page connects notes
+            Middle-click or Ctrl/Cmd-click to open · drag to rearrange · scroll to zoom
           </div>
         </div>
       </div>

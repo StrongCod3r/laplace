@@ -167,6 +167,10 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Navigation and performance
 
+Graph view uses the bundled `force-graph` canvas library for rendering, D3 physics, dragging, panning, zooming, and fitting. Do not restore the former bespoke simulation or edge router. Standard D3 collision forces provide node clearance. Actual page parents and enabled folder-note ownership define hierarchy edges; ordinary references must not invent parents. Copy model nodes and edges before passing them to the library because its simulation mutates them. Positions and camera remain session-local, outside the document and Zustand snapshots. Preserve positions across metadata updates. Nodes open pages with middle-click or Ctrl/Cmd-click; ordinary clicks and modifier dragging do not navigate. Arrow keys select notes and Enter/Space opens the selected note. Preserve search, theme-aware rendering, parent sizing, family colors, and distinct hierarchy/reference links. Preact owns the shell and the library owns its canvas host. Pause animation while the graph or document is hidden, and destroy the instance and observers on unmount or workspace changes.
+
+The mouse X1 and X2 buttons navigate back and forward through the existing page history. Use the pane under the pointer when applicable, otherwise the active editor group. Prevent browser navigation and handle each press only once.
+
 Ctrl/Cmd+Alt+T reopens the most recently closed tab and is configurable under Reopen closed tab. Keep a bounded closure history per vault in controller memory, restore its tab position and group when available, and skip notes that no longer exist. If the original group has closed, reopen in the active group.
 
 Page or tab switching should avoid work proportional to the entire workspace content. Preserve batched snapshot publication and tab updates. Navigation changes use `scheduleSave('view')` to avoid cloning all notes or adding content entries to undo/redo. Do not scan attachments during navigation when the view does not need them.

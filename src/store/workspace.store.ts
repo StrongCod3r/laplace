@@ -76,7 +76,7 @@ const initialUI: WorkspaceUI = {
   tree: [],
   favorites: [],
   recent: [],
-  graph: { nodes: [], edges: [], scale: 1, panX: 0, panY: 0 },
+  graph: { nodes: [], edges: [] },
   gallery: {
     items: [],
     count: 0,
@@ -115,14 +115,7 @@ interface SnapshotRuntime {
   filesTreeSelection: Set<string>;
   filesTreeSelectionCleared: boolean;
   countWords(page: Note): number;
-  buildPageGraph(): {
-    nodes: Array<{ id: string; title: string; current: boolean; degree: number }>;
-    edges: GraphModel['edges'];
-  };
-  graphLayout(
-    graph: ReturnType<SnapshotRuntime['buildPageGraph']>,
-  ): Map<string, { x: number; y: number }>;
-  graphViewRuntime: { scale: number; panX: number; panY: number };
+  buildPageGraph(): GraphModel;
   flattenBlocks(blocks: Note['blocks']): Note['blocks'];
   pagesLinkingTo(id: string): Note[];
   pageLinkCountTo(page: Note, id: string): number;
@@ -271,27 +264,8 @@ export function publishWorkspace(
       words: runtime.countWords(page),
       blocks: page.blocks.length,
     }));
-  let graph: GraphModel = {
-    nodes: [],
-    edges: [],
-    scale: runtime.graphViewRuntime.scale,
-    panX: runtime.graphViewRuntime.panX,
-    panY: runtime.graphViewRuntime.panY,
-  };
-  if (document.mainView === 'graph') {
-    const built = runtime.buildPageGraph();
-    const positions = runtime.graphLayout(built);
-    graph = {
-      nodes: built.nodes.map((node) => ({
-        ...node,
-        ...(positions.get(node.id) || { x: 500, y: 350 }),
-      })),
-      edges: built.edges,
-      scale: runtime.graphViewRuntime.scale,
-      panX: runtime.graphViewRuntime.panX,
-      panY: runtime.graphViewRuntime.panY,
-    };
-  }
+  const graph: GraphModel =
+    document.mainView === 'graph' ? runtime.buildPageGraph() : { nodes: [], edges: [] };
   const filter = runtime.attachmentGalleryFilter || '';
   const filtered = filterAttachments(
     runtime.attachmentListItems,
@@ -396,7 +370,9 @@ export function publishWorkspace(
   } else {
     context.headings = runtime
       .flattenBlocks(current.blocks)
-      .filter((block) => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(block.type) && block.text?.trim())
+      .filter(
+        (block) => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(block.type) && block.text?.trim(),
+      )
       .map((block) => ({ id: block.id, text: block.text || '', level: block.type.slice(1) }));
     if (!context.headings.length)
       context.empty = 'No headings in this note. Add H1 through H6 blocks to build an outline.';
