@@ -1,4 +1,6 @@
 .graph-toolbar {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -30,6 +32,41 @@
   gap: 5px;
   min-width: 0;
 }
+.attachments-filter {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  max-width: 360px;
+  margin-left: auto;
+}
+.attachments-filter input {
+  width: 100%;
+  min-width: 0;
+  height: 29px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.attachments-filter input::placeholder {
+  color: var(--muted);
+}
+.attachments-filter input:focus-visible {
+  outline: 2px solid var(--obsidian-accent, var(--blue));
+  outline-offset: 2px;
+}
+.attachments-filter input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.attachments-filter span {
+  color: var(--text);
+  font-size: 11px;
+}
 .graph-control-btn {
   min-width: 29px;
   height: 29px;
@@ -47,7 +84,7 @@
 .attachments-cleanup-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 }
 .graph-control-btn:disabled {
   opacity: 0.5;
@@ -73,29 +110,34 @@
   bottom: 0;
   left: 0;
   height: auto;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--workspace);
-  padding-bottom: 58px;
 }
-.attachments-view {
+.attachments-gallery-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 58px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
 }
-.attachments-view::-webkit-scrollbar {
+.attachments-gallery-content::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
-.attachments-view::-webkit-scrollbar-track,
-.attachments-view::-webkit-scrollbar-corner {
+.attachments-gallery-content::-webkit-scrollbar-track,
+.attachments-gallery-content::-webkit-scrollbar-corner {
   background: transparent;
 }
-.attachments-view::-webkit-scrollbar-thumb {
+.attachments-gallery-content::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--muted) 42%, transparent);
   border: 3px solid transparent;
   background-clip: padding-box;
   border-radius: 999px;
 }
-.attachments-view::-webkit-scrollbar-thumb:hover {
+.attachments-gallery-content::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--muted) 68%, transparent);
   border: 3px solid transparent;
   background-clip: padding-box;
@@ -114,6 +156,14 @@
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--panel);
+}
+.attachment-gallery-unreferenced {
+  border-color: color-mix(in srgb, var(--obsidian-accent, var(--blue)) 60%, var(--border));
+  background: color-mix(in srgb, var(--obsidian-accent, var(--blue)) 7%, var(--panel));
+}
+.attachment-gallery-unreferenced .attachment-gallery-reference-trigger {
+  color: var(--text);
+  font-weight: 650;
 }
 .attachment-gallery-thumb {
   width: 100%;

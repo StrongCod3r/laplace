@@ -13,6 +13,7 @@ import type { RecentNote } from '@/features/dashboard/types';
 import type { GraphModel } from '@/features/graph/types';
 import type { GalleryModel } from '@/features/attachments/types';
 import { attachmentReferences } from '@/features/attachments/services/attachment-references';
+import { filterAttachments } from '@/features/attachments/services/filter-attachments';
 import type { WorkspaceController } from '@/features/editor/types';
 import type { GitDiffDocument } from '@/features/git/types';
 
@@ -79,6 +80,9 @@ const initialUI: WorkspaceUI = {
   gallery: {
     items: [],
     count: 0,
+    totalCount: 0,
+    filter: '',
+    filterError: '',
     page: 0,
     pageCount: 1,
     selectedPath: null,
@@ -126,6 +130,7 @@ interface SnapshotRuntime {
   attachmentListLoading: boolean;
   attachmentListError: string;
   attachmentGalleryPage: number;
+  attachmentGalleryFilter?: string;
   ATTACHMENT_GALLERY_PAGE_SIZE: number;
   isImageAttachment(item: AttachmentEntry): boolean;
   attachmentRelativePath(path: string): string;
@@ -287,9 +292,14 @@ export function publishWorkspace(
       panY: runtime.graphViewRuntime.panY,
     };
   }
+  const filter = runtime.attachmentGalleryFilter || '';
+  const filtered = filterAttachments(
+    runtime.attachmentListItems,
+    document.mainView === 'attachments' ? filter : '',
+  );
   const pageCount = Math.max(
     1,
-    Math.ceil(runtime.attachmentListItems.length / runtime.ATTACHMENT_GALLERY_PAGE_SIZE),
+    Math.ceil(filtered.items.length / runtime.ATTACHMENT_GALLERY_PAGE_SIZE),
   );
   const galleryPage = Math.max(0, Math.min(runtime.attachmentGalleryPage, pageCount - 1));
   const referencesByAttachment =
@@ -299,7 +309,7 @@ export function publishWorkspace(
         )
       : (new Map() as ReturnType<typeof attachmentReferences>);
   const gallery: GalleryModel = {
-    items: runtime.attachmentListItems
+    items: filtered.items
       .slice(
         galleryPage * runtime.ATTACHMENT_GALLERY_PAGE_SIZE,
         (galleryPage + 1) * runtime.ATTACHMENT_GALLERY_PAGE_SIZE,
@@ -314,7 +324,10 @@ export function publishWorkspace(
           referencesByAttachment.get(runtime.normalizeAttachmentPath(item.path))?.values() || [],
         ).sort((left, right) => left.title.localeCompare(right.title)),
       })),
-    count: runtime.attachmentListItems.length,
+    count: filtered.items.length,
+    totalCount: runtime.attachmentListItems.length,
+    filter,
+    filterError: filtered.error,
     page: galleryPage,
     pageCount,
     selectedPath: runtime.selectedAttachmentPath || null,

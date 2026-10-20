@@ -3,6 +3,7 @@
 import type { EditorRuntime } from '@/features/editor/types';
 import { attachmentReferenceSources, findUnusedAttachments } from './unused-attachments';
 import { normalizeImageCrop } from './image-presentation';
+import { filterAttachments } from './filter-attachments';
 
 export function registerAttachments(runtime: EditorRuntime) {
   let imageViewerZoom = 1;
@@ -227,7 +228,10 @@ export function registerAttachments(runtime: EditorRuntime) {
 
     const pageCount = Math.max(
       1,
-      Math.ceil(runtime.attachmentListItems.length / runtime.ATTACHMENT_GALLERY_PAGE_SIZE),
+      Math.ceil(
+        filterAttachments(runtime.attachmentListItems, runtime.attachmentGalleryFilter || '').items
+          .length / runtime.ATTACHMENT_GALLERY_PAGE_SIZE,
+      ),
     );
     runtime.attachmentGalleryPage = Math.max(
       0,
@@ -1309,7 +1313,14 @@ export function registerAttachments(runtime: EditorRuntime) {
     );
   }
 
+  function setAttachmentGalleryFilter(pattern: string) {
+    runtime.attachmentGalleryFilter = pattern;
+    runtime.attachmentGalleryPage = 0;
+    runtime.publish();
+  }
+
   Object.assign(runtime, {
+    setAttachmentGalleryFilter,
     attachmentIcon,
     formatAttachmentSize,
     attachmentRelativePath,

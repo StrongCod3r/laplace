@@ -2,7 +2,7 @@ import { withModuleClasses } from '@/shared/lib/css-classes';
 import attachmentsStyles from './Attachments.module.css';
 import { Icon, NoteIcon } from '@/shared/components/Icon';
 import { useWorkspaceStore } from '@/store/workspace.store';
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 const styles = attachmentsStyles;
 
@@ -12,11 +12,17 @@ export function AttachmentsView() {
   const controller = useWorkspaceStore((state) => state.controller);
   const writable = useWorkspaceStore((state) => state.ui.access === 'writable' && !state.gitBusy);
   const [cleaning, setCleaning] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    contentRef.current?.scrollTo(0, 0);
+  }, [gallery.page, gallery.filter]);
   const status = gallery.loading
     ? 'Loading files…'
     : gallery.error
       ? 'Folder unavailable'
-      : `${gallery.count} file${gallery.count === 1 ? '' : 's'} · .attachments`;
+      : gallery.filter
+        ? `${gallery.count} of ${gallery.totalCount} files · .attachments`
+        : `${gallery.count} file${gallery.count === 1 ? '' : 's'} · .attachments`;
   const start = gallery.page * 24;
   return (
     <section
@@ -30,6 +36,26 @@ export function AttachmentsView() {
           <b>Attachments</b>
           <span>{status}</span>
         </div>
+        <div className={withModuleClasses(styles, 'attachments-filter')}>
+          <input
+            type="text"
+            aria-label="Filter attachments by regular expression"
+            placeholder="Filter by regex…"
+            title="Filter attachment paths by regular expression (case-insensitive)"
+            value={gallery.filter}
+            aria-invalid={!!gallery.filterError}
+            aria-describedby={gallery.filterError ? 'attachmentsFilterError' : undefined}
+            spellcheck={false}
+            onInput={(event) =>
+              controller?.invoke('setAttachmentGalleryFilter', event.currentTarget.value)
+            }
+          />
+          {gallery.filterError && (
+            <span id="attachmentsFilterError" role="status">
+              {gallery.filterError}
+            </span>
+          )}
+        </div>
         <div className={withModuleClasses(styles, 'graph-controls')}>
           <button
             type="button"
@@ -37,8 +63,15 @@ export function AttachmentsView() {
               styles,
               `graph-control-btn attachments-cleanup-btn${cleaning ? ' cleaning' : ''}`,
             )}
-            disabled={!writable || !controller || gallery.loading || cleaning || !gallery.count}
-            title="Delete attachments that are not referenced in this workspace"
+            disabled={
+              !writable || !controller || gallery.loading || cleaning || !gallery.totalCount
+            }
+            title={
+              cleaning
+                ? 'Checking unused files…'
+                : 'Delete attachments that are not referenced in this workspace'
+            }
+            aria-label={cleaning ? 'Checking unused files…' : 'Clean unused assets'}
             onClick={async () => {
               setCleaning(true);
               try {
@@ -48,8 +81,7 @@ export function AttachmentsView() {
               }
             }}
           >
-            <Icon name={cleaning ? 'loader-circle' : 'trash'} size="16" />
-            <span>{cleaning ? 'Checking unused files…' : 'Clean unused assets'}</span>
+            <Icon name={cleaning ? 'loader-circle' : 'brush-cleaning'} size="16" />
           </button>
           <button
             type="button"
@@ -63,127 +95,136 @@ export function AttachmentsView() {
           </button>
         </div>
       </header>
-      {gallery.loading ? (
-        <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
-          Loading attachments…
-        </div>
-      ) : gallery.error ? (
-        <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
-          {gallery.error}
-          <button
-            type="button"
-            className={withModuleClasses(styles, 'attachments-retry-btn')}
-            data-attachments-refresh
-          >
-            Try again
-          </button>
-        </div>
-      ) : !gallery.count ? (
-        <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
-          No files in .attachments yet.
-        </div>
-      ) : (
-        <div className={withModuleClasses(styles, 'attachments-gallery-grid')} role="list">
-          {gallery.items.map((item) => (
-            <div
-              key={item.path}
-              className={withModuleClasses(styles, 'attachment-gallery-card')}
-              role="listitem"
+      <div ref={contentRef} className={withModuleClasses(styles, 'attachments-gallery-content')}>
+        {gallery.loading ? (
+          <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
+            Loading attachments…
+          </div>
+        ) : gallery.error ? (
+          <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
+            {gallery.error}
+            <button
+              type="button"
+              className={withModuleClasses(styles, 'attachments-retry-btn')}
+              data-attachments-refresh
             >
-              {item.image ? (
-                <button
-                  type="button"
-                  className={withModuleClasses(styles, 'attachment-gallery-thumb')}
-                  data-attachment-preview={item.path}
-                  title={`Preview ${item.name}`}
-                  aria-label={`Preview image ${item.name}`}
-                >
-                  <img
-                    src={item.source}
-                    data-attachment-path={item.path}
-                    alt={item.name}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </button>
-              ) : (
-                <div
-                  className={withModuleClasses(
-                    styles,
-                    'attachment-gallery-thumb attachment-gallery-file',
-                  )}
-                  aria-hidden="true"
-                >
-                  <NoteIcon html={item.iconHTML} />
-                </div>
-              )}
-              <div className={withModuleClasses(styles, 'attachment-gallery-copy')}>
-                <b title={item.name}>{item.name}</b>
-              </div>
-              <div className={withModuleClasses(styles, 'attachment-gallery-actions')}>
-                <button
-                  type="button"
-                  className={withModuleClasses(styles, 'attachment-gallery-reference-trigger')}
-                  data-attachment-references-path={item.path}
-                  aria-pressed={gallery.selectedPath === item.path}
-                  aria-label={`Show references for ${item.name}`}
-                >
-                  {item.references.length
-                    ? `Used in ${item.references.length} ${item.references.length === 1 ? 'page' : 'pages'}`
-                    : 'Not referenced'}
-                </button>
-                {item.image && (
+              Try again
+            </button>
+          </div>
+        ) : !gallery.count ? (
+          <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
+            {gallery.filterError
+              ? 'Enter a valid regular expression to filter attachments.'
+              : gallery.totalCount
+                ? 'No attachments match this expression.'
+                : 'No files in .attachments yet.'}
+          </div>
+        ) : (
+          <div className={withModuleClasses(styles, 'attachments-gallery-grid')} role="list">
+            {gallery.items.map((item) => (
+              <div
+                key={item.path}
+                className={withModuleClasses(
+                  styles,
+                  `attachment-gallery-card${item.references.length ? '' : ' attachment-gallery-unreferenced'}`,
+                )}
+                role="listitem"
+              >
+                {item.image ? (
                   <button
                     type="button"
-                    className={withModuleClasses(styles, 'attachment-gallery-copy-action')}
-                    data-attachment-copy={item.path}
-                    title={`Copy ${item.name} for pasting into a page`}
-                    aria-label={`Copy image attachment ${item.name}`}
+                    className={withModuleClasses(styles, 'attachment-gallery-thumb')}
+                    data-attachment-preview={item.path}
+                    title={`Preview ${item.name}`}
+                    aria-label={`Preview image ${item.name}`}
                   >
-                    <Icon name="copy" size="14" />
+                    <img
+                      src={item.source}
+                      data-attachment-path={item.path}
+                      alt={item.name}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </button>
+                ) : (
+                  <div
+                    className={withModuleClasses(
+                      styles,
+                      'attachment-gallery-thumb attachment-gallery-file',
+                    )}
+                    aria-hidden="true"
+                  >
+                    <NoteIcon html={item.iconHTML} />
+                  </div>
                 )}
-                <button
-                  type="button"
-                  className={withModuleClasses(styles, 'attachment-gallery-delete')}
-                  data-attachment-delete={item.path}
-                  title={`Delete ${item.name}`}
-                  aria-label={`Delete attachment ${item.name}`}
-                >
-                  <Icon name="trash" size="14" />
-                </button>
+                <div className={withModuleClasses(styles, 'attachment-gallery-copy')}>
+                  <b title={item.name}>{item.name}</b>
+                </div>
+                <div className={withModuleClasses(styles, 'attachment-gallery-actions')}>
+                  <button
+                    type="button"
+                    className={withModuleClasses(styles, 'attachment-gallery-reference-trigger')}
+                    data-attachment-references-path={item.path}
+                    aria-pressed={gallery.selectedPath === item.path}
+                    aria-label={`Show references for ${item.name}`}
+                  >
+                    {item.references.length
+                      ? `Used in ${item.references.length} ${item.references.length === 1 ? 'page' : 'pages'}`
+                      : 'Not referenced'}
+                  </button>
+                  {item.image && (
+                    <button
+                      type="button"
+                      className={withModuleClasses(styles, 'attachment-gallery-copy-action')}
+                      data-attachment-copy={item.path}
+                      title={`Copy ${item.name} for pasting into a page`}
+                      aria-label={`Copy image attachment ${item.name}`}
+                    >
+                      <Icon name="copy" size="14" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={withModuleClasses(styles, 'attachment-gallery-delete')}
+                    data-attachment-delete={item.path}
+                    title={`Delete ${item.name}`}
+                    aria-label={`Delete attachment ${item.name}`}
+                  >
+                    <Icon name="trash" size="14" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {gallery.pageCount > 1 && (
-        <nav
-          className={withModuleClasses(styles, 'attachments-pagination')}
-          aria-label="Attachment pages"
-        >
-          <button
-            type="button"
-            data-attachment-page={gallery.page - 1}
-            disabled={gallery.page === 0}
+            ))}
+          </div>
+        )}
+        {gallery.pageCount > 1 && (
+          <nav
+            className={withModuleClasses(styles, 'attachments-pagination')}
+            aria-label="Attachment pages"
           >
-            <Icon name="chevron-left" size="15" />
-            <span>Previous</span>
-          </button>
-          <span>
-            Showing {start + 1}–{Math.min(start + 24, gallery.count)} of {gallery.count} · Page{' '}
-            {gallery.page + 1} of {gallery.pageCount}
-          </span>
-          <button
-            type="button"
-            data-attachment-page={gallery.page + 1}
-            disabled={gallery.page >= gallery.pageCount - 1}
-          >
-            <span>Next</span>
-            <Icon name="chevron-right" size="15" />
-          </button>
-        </nav>
-      )}
+            <button
+              type="button"
+              data-attachment-page={gallery.page - 1}
+              disabled={gallery.page === 0}
+            >
+              <Icon name="chevron-left" size="15" />
+              <span>Previous</span>
+            </button>
+            <span>
+              Showing {start + 1}–{Math.min(start + 24, gallery.count)} of {gallery.count} · Page{' '}
+              {gallery.page + 1} of {gallery.pageCount}
+            </span>
+            <button
+              type="button"
+              data-attachment-page={gallery.page + 1}
+              disabled={gallery.page >= gallery.pageCount - 1}
+            >
+              <span>Next</span>
+              <Icon name="chevron-right" size="15" />
+            </button>
+          </nav>
+        )}
+      </div>
     </section>
   );
 }

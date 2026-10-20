@@ -14,6 +14,9 @@ export interface AttachmentReference {
 export interface GalleryModel {
   items: AttachmentCard[];
   count: number;
+  totalCount: number;
+  filter: string;
+  filterError: string;
   page: number;
   pageCount: number;
   selectedPath: string | null;

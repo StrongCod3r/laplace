@@ -30,7 +30,8 @@ export type WorkspaceAction =
   | 'serializeMarkdownWorkspace'
   | 'workspaceFromMarkdown'
   | 'parseMarkdownBlocks'
-  | 'cleanupUnusedAttachments';
+  | 'cleanupUnusedAttachments'
+  | 'setAttachmentGalleryFilter';
 
 export interface WorkspaceController {
   start(): Promise<void>;
