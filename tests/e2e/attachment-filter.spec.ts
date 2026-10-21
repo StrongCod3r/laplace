@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('Attachments keeps its header fixed and filters all pages by regex', async ({ page }) => {
+test('Attachments keeps its header fixed and filters all pages by file pattern', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     Object.defineProperty(window, 'showDirectoryPicker', {
       configurable: true,
@@ -24,7 +26,7 @@ test('Attachments keeps its header fixed and filters all pages by regex', async 
   const gallery = page.getByRole('region', { name: 'Attachments', exact: true });
   const content = gallery.locator('.attachments-gallery-content');
   const header = gallery.locator('header');
-  const filter = gallery.getByRole('textbox', { name: 'Filter attachments by regular expression' });
+  const filter = gallery.getByRole('textbox', { name: 'Filter attachments by file pattern' });
   await expect(gallery.getByRole('listitem')).toHaveCount(24);
   for (const theme of ['light', 'dark']) {
     await page.evaluate((value) => {
@@ -41,20 +43,26 @@ test('Attachments keeps its header fixed and filters all pages by regex', async 
   }
   await gallery.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(gallery.getByRole('listitem')).toHaveCount(6);
-  await filter.fill('ASSET-(00|29)\\.pdf$');
-  await expect(gallery.getByRole('listitem')).toHaveCount(2);
+  await filter.fill('ASSET-2?.PDF');
+  await expect(gallery.getByRole('listitem')).toHaveCount(10);
+  await expect(gallery.getByRole('listitem').locator('b')).toHaveText([
+    ...Array.from({ length: 10 }, (_, index) => `asset-${20 + index}.pdf`),
+  ]);
+  await expect(gallery.getByRole('navigation', { name: 'Attachment pages' })).toHaveCount(0);
+  await expect(content).toHaveJSProperty('scrollTop', 0);
+  await filter.fill('asset-00.pdf; asset-29.pdf;');
   await expect(gallery.getByRole('listitem').locator('b')).toHaveText([
     'asset-00.pdf',
     'asset-29.pdf',
   ]);
-  await expect(gallery.getByRole('navigation', { name: 'Attachment pages' })).toHaveCount(0);
-  await expect(content).toHaveJSProperty('scrollTop', 0);
   await filter.fill('[');
-  await expect(filter).toHaveAttribute('aria-invalid', 'true');
-  await expect(gallery.getByRole('status')).toHaveText('Invalid regular expression');
+  await expect(filter).toHaveAttribute('aria-invalid', 'false');
+  await expect(content).toContainText('No attachments match this pattern.');
   await filter.fill('does-not-exist');
   await expect(filter).toHaveAttribute('aria-invalid', 'false');
-  await expect(content).toContainText('No attachments match this expression.');
+  await expect(content).toContainText('No attachments match this pattern.');
+  await filter.fill('*.pdf');
+  await expect(gallery.getByRole('listitem')).toHaveCount(24);
   await filter.fill('');
   await expect(gallery.getByRole('listitem')).toHaveCount(24);
 });

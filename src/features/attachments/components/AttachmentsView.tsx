@@ -39,9 +39,9 @@ export function AttachmentsView() {
         <div className={withModuleClasses(styles, 'attachments-filter')}>
           <input
             type="text"
-            aria-label="Filter attachments by regular expression"
-            placeholder="Filter by regex…"
-            title="Filter attachment paths by regular expression (case-insensitive)"
+            aria-label="Filter attachments by file pattern"
+            placeholder="Filter files, e.g. *.svg;*.png"
+            title="Separate file patterns with ; to match any. * matches text, ? matches one character, ** matches folders (case-insensitive)"
             value={gallery.filter}
             aria-invalid={!!gallery.filterError}
             aria-describedby={gallery.filterError ? 'attachmentsFilterError' : undefined}
@@ -114,9 +114,9 @@ export function AttachmentsView() {
         ) : !gallery.count ? (
           <div className={withModuleClasses(styles, 'attachments-gallery-status')}>
             {gallery.filterError
-              ? 'Enter a valid regular expression to filter attachments.'
+              ? 'Enter a valid file pattern to filter attachments.'
               : gallery.totalCount
-                ? 'No attachments match this expression.'
+                ? 'No attachments match this pattern.'
                 : 'No files in .attachments yet.'}
           </div>
         ) : (

@@ -143,6 +143,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
+The Attachments gallery filters filenames and path suffixes using case-insensitive file patterns: `*` matches within a path segment, `?` matches one character, and `**` spans folders. Separate patterns with `;` to match any of them, for example `*.svg;*.png`. Trim surrounding whitespace and ignore empty entries; an empty pattern list shows all attachments. Other punctuation is literal; the filter does not accept regular expressions.
+
 - Pasting an image file or a copied image block into an empty ordinary paragraph replaces that paragraph in place, preserving its block ID and surrounding blocks. Nonempty paragraphs remain intact, and image presentation metadata and undo/redo must be preserved.
 
 - Store image presentation in a JSON HTML comment immediately below the image: `<!-- laplace:image: {"width":313,"align":"right","crop":{...}} -->`. Width, alignment, and the full reversible crop settings belong there; do not read or write width suffixes in image labels. Omit default presentation, keep captions and attachment references, and preserve malformed, unsupported, or detached comments as ordinary note content.
