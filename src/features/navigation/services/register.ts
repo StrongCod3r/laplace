@@ -9,6 +9,7 @@ export function registerNavigation(runtime: EditorRuntime) {
   let editorScrollSaveTimer = null;
   const plainTextTabs = new Set<string>();
   const closedTabs = new Map<string, { tab: EditorTab; index: number }[]>();
+  const recentTabsByVault = new Map<string, string[]>();
 
   function plainTextKey(page, tabId = runtime.state.activeTabId) {
     return JSON.stringify([runtime.activeVaultId, tabId, page.id]);
@@ -446,6 +447,12 @@ export function registerNavigation(runtime: EditorRuntime) {
       runtime.editorGroup(runtime.state.editorLayout, active.groupId).activeTabId = active.id;
     }
 
+    const openIds = new Set(runtime.state.openTabs.map((tab) => tab.id));
+    const recentTabs = (recentTabsByVault.get(runtime.activeVaultId) || []).filter(
+      (id) => openIds.has(id) && id !== runtime.state.activeTabId,
+    );
+    if (openIds.has(runtime.state.activeTabId)) recentTabs.unshift(runtime.state.activeTabId);
+    recentTabsByVault.set(runtime.activeVaultId, recentTabs);
     runtime.publish();
     runtime.lifecycle.frame(() =>
       runtime.els.tabsScroll
@@ -546,10 +553,17 @@ export function registerNavigation(runtime: EditorRuntime) {
     if (wasActive) runtime.cancelPageOperations();
     runtime.state.openTabs.splice(index, 1);
     if (wasActive) {
+      const tabsById = new Map(runtime.state.openTabs.map((tab) => [tab.id, tab]));
+      const recentTabs = (recentTabsByVault.get(runtime.activeVaultId) || [])
+        .map((id) => tabsById.get(id))
+        .filter(Boolean);
       const next =
+        recentTabs.find((tab) => tab.groupId === groupId) ||
         runtime.groupTabs(groupId)[0] ||
+        recentTabs[0] ||
         runtime.state.openTabs[Math.min(index, runtime.state.openTabs.length - 1)] ||
         null;
+      if (next) runtime.editorGroup(runtime.state.editorLayout, next.groupId).activeTabId = next.id;
       if (next?.kind === 'graph') {
         runtime.state.activeEditorGroupId = next.groupId;
         runtime.state.activeTabId = next.id;

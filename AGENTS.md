@@ -169,6 +169,8 @@ The Attachments gallery filters filenames and path suffixes using case-insensiti
 
 ### Navigation and performance
 
+Closing the active tab returns to the most recently visited open tab in the same editor group, including Graph and Attachments views, before falling back to another group. Track tab recency per vault in controller memory, outside the saved workspace document.
+
 In the page search palette, Ctrl/Cmd+Enter or Ctrl/Cmd+click opens the selected page in a new active tab. Enter and ordinary clicks replace the current tab as usual.
 
 Fit the graph camera on the first simulation tick after warmup, before painting. Do not automatically change zoom when the simulation stops.

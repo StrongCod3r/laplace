@@ -95,6 +95,9 @@ test('native canvas supports normal clicks, Ctrl-click and middle-click navigati
   await page.waitForTimeout(100);
   await page.mouse.click(next.x, next.y, { button: 'middle' });
   await expect(page.locator('#pageTitle')).toBeVisible();
+  await page.locator('#tabsScroll .editor-tab.active [data-tab-close]').click();
+  await expect(page.locator('#graphView')).toBeVisible();
+  await expect(page.locator('#tabsScroll .editor-tab.active')).toContainText('Graph');
   expect(errors).toEqual([]);
 });
 

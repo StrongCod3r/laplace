@@ -10,6 +10,24 @@ async function addNotes(page: Page) {
   }
 }
 
+test('closing the active tab returns to the last visited tab and ignores background closures', async ({
+  page,
+}) => {
+  await addNotes(page);
+  const tabs = await page
+    .locator('#tabsScroll .editor-tab')
+    .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('data-tab-id')));
+  const first = page.locator(`#tabsScroll [data-tab-id="${tabs[1]}"]`);
+  const second = page.locator(`#tabsScroll [data-tab-id="${tabs[2]}"]`);
+  await first.click();
+  await second.click();
+  await page.locator(`#tabsScroll [data-tab-id="${tabs[0]}"] [data-tab-close]`).click();
+  await expect(second).toHaveClass(/active/);
+  await second.locator('[data-tab-close]').click();
+  await expect(first).toHaveClass(/active/);
+  await expect(page.locator('#pageTitle')).toHaveText('First note');
+});
+
 test('Ctrl+Alt+T reopens closed notes in order and retains their tab position and source view', async ({
   page,
 }) => {
