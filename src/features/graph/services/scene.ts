@@ -1,6 +1,7 @@
 import ForceGraph, { type NodeObject, type LinkObject } from 'force-graph';
 import { forceCollide, forceLink, forceManyBody } from 'd3-force';
 import type { GraphModel, GraphNode } from '../types';
+import { GraphFamilyColors } from './family-colors';
 
 type SceneNode = GraphNode & NodeObject;
 type SceneLink = LinkObject<SceneNode> & {
@@ -19,6 +20,7 @@ export class GraphScene {
   private disposed = false;
   private initialFit = true;
   private topology = '';
+  private familyColors = new GraphFamilyColors();
   private query = '';
   private selected: SceneNode | null = null;
   private hovered: SceneNode | null = null;
@@ -106,6 +108,7 @@ export class GraphScene {
   }
 
   setGraph(model: GraphModel) {
+    this.familyColors.update(model.nodes.filter((node) => node.degree).map((node) => node.rootId));
     const previous = new Map(this.graph.graphData().nodes.map((node) => [node.id, node]));
     // D3 adds coordinates and replaces link IDs with node objects, so always copy inputs.
     const nodes = model.nodes.map(
@@ -175,9 +178,7 @@ export class GraphScene {
     if (!this.matches(node)) return `color-mix(in srgb, ${this.muted} 15%, transparent)`;
     if (node.current || node === this.selected || node === this.hovered) return this.accent;
     if (!node.degree) return this.muted;
-    let hash = 0;
-    for (const char of node.rootId) hash = (hash * 31 + char.charCodeAt(0)) | 0;
-    return `hsl(${Math.abs(hash) % 360} 52% 56%)`;
+    return this.familyColors.color(node.rootId) || this.muted;
   };
   private linkColor = (link: SceneLink) => {
     const visible = [link.source, link.target].some(
