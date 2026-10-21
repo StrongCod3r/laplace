@@ -65,8 +65,16 @@ export class GraphScene {
       })
       .warmupTicks(100)
       .cooldownTicks(220)
-      .onEngineStop(() => {
-        if (this.initialFit && this.active && this.graph.graphData().nodes.length) this.fit();
+      .onEngineTick(() => {
+        // Fit the warmed layout before its first paint, rather than after visible cooling.
+        if (
+          this.initialFit &&
+          this.active &&
+          this.host.clientWidth &&
+          this.host.clientHeight &&
+          this.graph.graphData().nodes.length
+        )
+          this.fit();
       });
     this.graph.d3Force('center', null);
     this.graph.d3Force('charge', forceManyBody<SceneNode>().strength(-140).distanceMax(650));

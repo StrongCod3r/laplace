@@ -1097,7 +1097,9 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     const cmd = e.target.closest('[data-command]');
     if (cmd) {
-      runtime.runCommand(cmd.dataset.command, cmd.dataset.pageId);
+      runtime.runCommand(cmd.dataset.command, cmd.dataset.pageId, {
+        newTab: e.ctrlKey || e.metaKey,
+      });
       return;
     }
     const treeContextAction = e.target.closest('[data-tree-context-action]');
@@ -3094,7 +3096,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       }
       if (e.key === 'Enter' && items[runtime.commandIndex]) {
         e.preventDefault();
-        items[runtime.commandIndex].click();
+        const item = items[runtime.commandIndex];
+        runtime.runCommand(item.dataset.command, item.dataset.pageId, { newTab: mod });
       }
       return;
     }

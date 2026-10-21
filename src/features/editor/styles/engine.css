@@ -1150,6 +1150,7 @@ dialog[data-mermaid-viewer] {
 .mermaid-render {
   min-width: 0;
   min-height: 100px;
+  outline: none;
   overflow: hidden;
   cursor: grab;
   touch-action: none;
@@ -1158,11 +1159,6 @@ dialog[data-mermaid-viewer] {
 
 .mermaid-render[data-panning] {
   cursor: grabbing;
-}
-
-.mermaid-render:focus-visible {
-  outline: 2px solid var(--obsidian-accent);
-  outline-offset: 2px;
 }
 
 .mermaid-render svg {

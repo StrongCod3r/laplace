@@ -36,6 +36,31 @@ async function selectFirst(page: import('@playwright/test').Page) {
   return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
 }
 
+test('reloading the graph keeps its initial zoom when the simulation cools', async ({ page }) => {
+  await openGraph(page, 32);
+  await page.evaluate(async () => {
+    const { useWorkspaceStore } = await import(
+      new URL('src/store/workspace.store.ts', location.href).href
+    );
+    await useWorkspaceStore.getState().controller.flush();
+  });
+  await page.reload();
+  await expect(page.locator('[data-graph-canvas] canvas')).toBeVisible();
+  const zoomLevels = await page.getByLabel('Zoom level').evaluate(async (label) => {
+    // The first tick fits the warmed layout before painting it.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    const levels = new Set([label.textContent]);
+    for (let frame = 0; frame < 260; frame++) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      levels.add(label.textContent);
+    }
+    return [...levels];
+  });
+  expect(zoomLevels).toHaveLength(1);
+});
+
 test('native canvas supports normal clicks, Ctrl-click and middle-click navigation', async ({
   page,
 }) => {

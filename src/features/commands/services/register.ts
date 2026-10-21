@@ -459,13 +459,13 @@ export function registerCommands(runtime: EditorRuntime) {
     items[runtime.commandIndex]?.scrollIntoView({ block: 'nearest' });
   }
 
-  function runCommand(cmd, pageId) {
+  function runCommand(cmd, pageId, { newTab = false } = {}) {
     runtime.els.commandPalette.classList.add('hidden');
     runtime.els.blockMenu.classList.add('hidden');
     document
       .querySelectorAll('[data-page-menu-trigger][aria-expanded="true"]')
       .forEach((button) => button.setAttribute('aria-expanded', 'false'));
-    if (cmd === 'open-page') runtime.openPage(pageId);
+    if (cmd === 'open-page') runtime.openPage(pageId, { newTab });
     if (cmd === 'new-page') runtime.createPage();
     if (cmd === 'graph-view') runtime.openGraphTab();
     if (cmd === 'change-page-icon')
