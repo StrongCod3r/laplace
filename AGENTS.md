@@ -181,7 +181,7 @@ Files and Favorites open notes and folder notes in a new active tab with Ctrl/Cm
 
 Git change lists open existing workspace notes in a new active tab with Ctrl/Cmd+click or middle-click. Ordinary clicks show the diff. Shift+click selects a range; Ctrl/Cmd+Shift+click adds a range. Non-note and deleted file entries must not create notes.
 
-Center the graph camera at 100% zoom on the first simulation tick after warmup, before painting. Keep automatic fitting disabled; the Fit control remains available. Do not automatically change zoom when the simulation stops.
+Fit the graph camera to all nodes on the first simulation tick after warmup, before painting. Fit only on the scene's first presentation; preserve the user's camera on subsequent navigation and metadata updates. The Fit control remains available. Do not automatically change zoom when the simulation stops.
 
 Assign distinct, evenly spaced hues to ownership families in the graph, rather than hashing root IDs into colors. Keep assigned colors stable for the scene's lifetime, and place new families in the largest unused hue gap. Unlinked notes keep the muted theme color.
 

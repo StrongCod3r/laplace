@@ -36,9 +36,24 @@ async function selectFirst(page: import('@playwright/test').Page) {
   return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
 }
 
-test('reloading the graph keeps its initial zoom when the simulation cools', async ({ page }) => {
+test('the graph starts fitted and preserves its camera after navigation and cooling', async ({
+  page,
+}) => {
   await openGraph(page, 32);
-  await expect(page.getByLabel('Zoom level')).toHaveText('100%');
+  const label = page.getByLabel('Zoom level');
+  await expect(label).not.toHaveText('100%');
+  await page.locator('[data-graph-zoom-out]').click();
+  const adjustedZoom = await label.textContent();
+  await page.evaluate(async () => {
+    const { useWorkspaceStore } = await import(
+      new URL('src/store/workspace.store.ts', location.href).href
+    );
+    const controller = useWorkspaceStore.getState().controller;
+    controller.invoke('openPage', controller.getDocument().pages[0].id, { newTab: true });
+  });
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await page.locator('[data-ribbon-action="graph"]').click();
+  await expect(label).toHaveText(adjustedZoom!);
   await page.evaluate(async () => {
     const { useWorkspaceStore } = await import(
       new URL('src/store/workspace.store.ts', location.href).href
@@ -48,7 +63,7 @@ test('reloading the graph keeps its initial zoom when the simulation cools', asy
   await page.reload();
   await expect(page.locator('[data-graph-canvas] canvas')).toBeVisible();
   const zoomLevels = await page.getByLabel('Zoom level').evaluate(async (label) => {
-    // The first tick centers the warmed layout at 100% before painting it.
+    // The first tick fits the warmed layout before painting it.
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
@@ -59,7 +74,9 @@ test('reloading the graph keeps its initial zoom when the simulation cools', asy
     }
     return [...levels];
   });
-  expect(zoomLevels).toEqual(['100%']);
+  expect(zoomLevels).toHaveLength(1);
+  expect(zoomLevels[0]).toMatch(/^\d+%$/);
+  expect(zoomLevels[0]).not.toBe('100%');
 });
 
 test('native canvas supports normal clicks, Ctrl-click and middle-click navigation', async ({

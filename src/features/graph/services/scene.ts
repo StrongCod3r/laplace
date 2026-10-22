@@ -68,7 +68,7 @@ export class GraphScene {
       .warmupTicks(100)
       .cooldownTicks(220)
       .onEngineTick(() => {
-        // Center the warmed layout at 100% before its first paint.
+        // Fit the warmed layout before its first paint, then preserve the user's camera.
         if (
           this.initialCamera &&
           this.active &&
@@ -76,15 +76,7 @@ export class GraphScene {
           this.host.clientHeight &&
           this.graph.graphData().nodes.length
         ) {
-          this.initialCamera = false;
-          const bounds = this.graph.getGraphBbox();
-          if (bounds)
-            this.graph.centerAt(
-              (bounds.x[0] + bounds.x[1]) / 2,
-              (bounds.y[0] + bounds.y[1]) / 2,
-              0,
-            );
-          this.graph.zoom(1, 0);
+          this.fit();
         }
       });
     this.graph.d3Force('center', null);
