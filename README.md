@@ -2,6 +2,20 @@
 
 A local-first Markdown workspace for writing and organizing notes stored in a local folder or in your browser.
 
+## Features
+
+- Block editor with tables, images, code blocks, and diagram previews.
+- Folders, folder notes, wikilinks, search, and a graph of connected notes.
+- Tabs, split editors, Markdown source preview, and undo/redo.
+- Optional GitHub synchronization through the Source Control panel.
+- Light and dark themes and an installable PWA.
+
+## Your notes
+
+Choose a local folder from the workspace selector, or use browser storage. Local workspaces keep notes as `.md` files, attachments in `.attachments/`, and settings in `.laplace/`. The core app needs no notes backend.
+
+Browser workspaces belong to the current site origin and browser profile. Clearing site data removes browser-stored notes; export or synchronize important work before doing so.
+
 ## Requirements
 
 Node.js 22.12 or newer and pnpm or npm.
@@ -22,7 +36,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite (by default, `http://localhost:3000`).
+Open the local URL printed by Vite (by default, `http://localhost:3000/laplace/`).
 
 ## Build and preview
 
@@ -40,29 +54,23 @@ npm run build
 npm run preview
 ```
 
-The build checks TypeScript and writes the static site to `public/`. Open the URL printed by the preview server, or deploy the contents of `public/` to a static hosting provider.
+The build checks TypeScript and writes the static site to `public/`. Open the URL printed by the preview server, or deploy the contents of `public/` to a static hosting provider. The default base path is `/laplace/`; adjust Vite's `base` for a different deployment path. PWA source assets live in `pwa-assets/`.
 
-## Math
+## GitHub synchronization
 
-Use `/equation` and choose **Inline equation** (the square root icon) to open a LaTeX field with a live preview. The command works at the start of a block or after a space within a paragraph or table cell, replacing only the command at the cursor. Press Enter or **Done** to insert the formula, or Escape to cancel. Click an existing equation to edit or remove it. You can also select text and use **Inline equation** in the formatting toolbar. These edits support undo/redo and work in split panes and table cells.
+Open **Source Control** in a local workspace and choose **Configure GitHub synchronization**. Connect with GitHub or provide a personal access token. GitHub OAuth requires the optional service; browser Git also needs a CORS proxy, supplied automatically by Vite during local development.
 
-Typing `$x^2 + y^2 = z^2$` or `\(\frac{a}{b}\)` remains supported. Formulas stay rendered while editing the surrounding paragraph; placing the text cursor inside a formula reveals its original source for direct editing.
+See [GitHub setup and deployment](docs/github-web-workspaces.md) for credentials, synchronization behavior, and browser-backed Git workspaces.
 
-Choose **LaTeX / Math** in a code block's language menu to render a formula. Blocks start in **Preview**; use the display mode button to select **Code**, **Preview**, or **Split horizontally**. The toolbar also downloads the formula as a standalone SVG with embedded fonts. Imported fenced blocks also accept `tex`, `math`, and `katex`. Display math between separate `$$` lines is supported and keeps those delimiters when saved:
+## Development
 
-```text
-$$
-\int_0^1 x^2\,dx = \frac{1}{3}
-$$
+```bash
+npm run typecheck
+npm test
+npm run test:e2e
+npm run format:check
 ```
 
-Math uses bundled KaTeX and works offline once the app's resources are cached. Invalid or unsupported formulas retain their source and display an error indication; hover over it for details.
+The equivalent pnpm commands are supported. Browser tests use Playwright with Edge on Windows.
 
-Inside a **LaTeX / Math** code block, you can enter the formula alone or include its surrounding `$$...$$` or `\[...\]` delimiters. A code block set to **Markdown** displays literal Markdown source; choose **LaTeX / Math** to render the equation.
-
-## GitHub web workspaces
-
-Git supports local folders and web workspaces stored privately in the browser, with
-GitHub authorization that does not require copying an access token. See
-[setup and deployment](docs/github-web-workspaces.md) to configure the optional OAuth
-and Git service.
+Built with Preact, TypeScript, Vite, and Zustand. See [client architecture](docs/client-spa-architecture.md) for the code structure and [AGENTS.md](AGENTS.md) for development and data-protection rules.
