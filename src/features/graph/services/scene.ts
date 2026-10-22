@@ -18,7 +18,7 @@ export class GraphScene {
   private themeObserver: MutationObserver;
   private active = false;
   private disposed = false;
-  private initialFit = true;
+  private initialCamera = true;
   private topology = '';
   private familyColors = new GraphFamilyColors();
   private query = '';
@@ -68,15 +68,24 @@ export class GraphScene {
       .warmupTicks(100)
       .cooldownTicks(220)
       .onEngineTick(() => {
-        // Fit the warmed layout before its first paint, rather than after visible cooling.
+        // Center the warmed layout at 100% before its first paint.
         if (
-          this.initialFit &&
+          this.initialCamera &&
           this.active &&
           this.host.clientWidth &&
           this.host.clientHeight &&
           this.graph.graphData().nodes.length
-        )
-          this.fit();
+        ) {
+          this.initialCamera = false;
+          const bounds = this.graph.getGraphBbox();
+          if (bounds)
+            this.graph.centerAt(
+              (bounds.x[0] + bounds.x[1]) / 2,
+              (bounds.y[0] + bounds.y[1]) / 2,
+              0,
+            );
+          this.graph.zoom(1, 0);
+        }
       });
     this.graph.d3Force('center', null);
     this.graph.d3Force('charge', forceManyBody<SceneNode>().strength(-140).distanceMax(650));
@@ -135,11 +144,11 @@ export class GraphScene {
     this.refresh();
   }
   zoom(factor: number) {
-    this.initialFit = false;
+    this.initialCamera = false;
     this.graph.zoom(Math.max(0.05, Math.min(8, this.graph.zoom() * factor)), 0);
   }
   fit() {
-    this.initialFit = false;
+    this.initialCamera = false;
     if (this.graph.graphData().nodes.length) {
       this.graph.zoomToFit(0, 60);
     }

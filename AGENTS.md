@@ -175,7 +175,7 @@ Closing the active tab returns to the most recently visited open tab in the same
 
 In the page search palette, Ctrl/Cmd+Enter or Ctrl/Cmd+click opens the selected page in a new active tab. Enter and ordinary clicks replace the current tab as usual.
 
-Fit the graph camera on the first simulation tick after warmup, before painting. Do not automatically change zoom when the simulation stops.
+Center the graph camera at 100% zoom on the first simulation tick after warmup, before painting. Keep automatic fitting disabled; the Fit control remains available. Do not automatically change zoom when the simulation stops.
 
 Assign distinct, evenly spaced hues to ownership families in the graph, rather than hashing root IDs into colors. Keep assigned colors stable for the scene's lifetime, and place new families in the largest unused hue gap. Unlinked notes keep the muted theme color.
 

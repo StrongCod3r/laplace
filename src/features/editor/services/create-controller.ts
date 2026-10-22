@@ -675,7 +675,7 @@ export function createWorkspaceController(): WorkspaceController {
           {
             id: 'getting_started_text',
             type: 'text',
-            text: 'A paragraph with an inline equation: $E = mc^2$.',
+            text: 'Laplace is a local-first Markdown workspace for writing and organizing your notes. Install it as a Progressive Web App (PWA) to work offline once the app has loaded.',
           },
           {
             id: 'getting_started_heading_1',
@@ -761,6 +761,11 @@ export function createWorkspaceController(): WorkspaceController {
             id: 'getting_started_callout',
             type: 'callout',
             text: 'A callout highlights a useful idea.',
+          },
+          {
+            id: 'getting_started_inline_equation',
+            type: 'text',
+            text: 'A paragraph with an inline equation: $E = mc^2$.',
           },
           {
             id: 'getting_started_divider',

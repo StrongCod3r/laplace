@@ -38,6 +38,7 @@ async function selectFirst(page: import('@playwright/test').Page) {
 
 test('reloading the graph keeps its initial zoom when the simulation cools', async ({ page }) => {
   await openGraph(page, 32);
+  await expect(page.getByLabel('Zoom level')).toHaveText('100%');
   await page.evaluate(async () => {
     const { useWorkspaceStore } = await import(
       new URL('src/store/workspace.store.ts', location.href).href
@@ -47,7 +48,7 @@ test('reloading the graph keeps its initial zoom when the simulation cools', asy
   await page.reload();
   await expect(page.locator('[data-graph-canvas] canvas')).toBeVisible();
   const zoomLevels = await page.getByLabel('Zoom level').evaluate(async (label) => {
-    // The first tick fits the warmed layout before painting it.
+    // The first tick centers the warmed layout at 100% before painting it.
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
@@ -58,7 +59,7 @@ test('reloading the graph keeps its initial zoom when the simulation cools', asy
     }
     return [...levels];
   });
-  expect(zoomLevels).toHaveLength(1);
+  expect(zoomLevels).toEqual(['100%']);
 });
 
 test('native canvas supports normal clicks, Ctrl-click and middle-click navigation', async ({
