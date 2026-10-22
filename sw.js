@@ -1,7 +1,7 @@
 const BASE = new URL('./', self.location.href);
 const CACHE_PREFIX = `laplace-shell-${encodeURIComponent(BASE.pathname)}-preact-`;
 const LEGACY_CACHE_PREFIX = `laplace-shell-${encodeURIComponent(BASE.pathname)}-react-`;
-const CACHE_NAME = `${CACHE_PREFIX}835f382583364eb6`;
+const CACHE_NAME = `${CACHE_PREFIX}8fc03cd81b69dbe7`;
 const shellUrl = new URL('index.html', BASE).href;
 const APP_SHELL = [
   'index.html',
