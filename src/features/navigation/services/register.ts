@@ -869,11 +869,11 @@ export function registerNavigation(runtime: EditorRuntime) {
     runtime.syncNavigationButtons();
   }
 
-  function openFolderBreadcrumb(path) {
+  function openFolderBreadcrumb(path, { newTab = false } = {}) {
     const normalized = runtime.normalizeFolderPath(path);
     if (!normalized) return;
     if (!runtime.folderByPath(normalized)) runtime.ensureFolderEntries(normalized);
-    void runtime.selectMarkdownFolder(normalized);
+    void runtime.selectMarkdownFolder(normalized, { newTab });
   }
 
   function breadcrumbBarMarkup(page, groupId = runtime.state.activeEditorGroupId) {

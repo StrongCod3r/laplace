@@ -578,7 +578,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (
       selectionRow &&
       e.target.closest('[data-action="select-folder"],[data-action="open-page"]') &&
-      (e.shiftKey || e.ctrlKey || e.metaKey)
+      e.shiftKey
     ) {
       e.preventDefault();
       runtime.hideFloatingMenus();
@@ -598,7 +598,7 @@ export function registerInteractions(runtime: EditorRuntime) {
         return;
       }
       if (e.target.closest('[data-action="select-folder"]')) {
-        void runtime.selectMarkdownFolder(path);
+        void runtime.selectMarkdownFolder(path, { newTab: e.ctrlKey || e.metaKey });
         return;
       }
     }
@@ -647,7 +647,9 @@ export function registerInteractions(runtime: EditorRuntime) {
       if (e.target.closest('[data-action="open-page"]')) {
         runtime.state.activeFolderPath = '';
         runtime.filesTreeSelectionCleared = false;
-        runtime.openPage(id);
+        runtime.openPage(id, {
+          newTab: e.ctrlKey || e.metaKey,
+        });
         return;
       }
     }
@@ -668,12 +670,14 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     const folderCrumb = e.target.closest('[data-crumb-folder-path]');
     if (folderCrumb) {
-      runtime.openFolderBreadcrumb(folderCrumb.dataset.crumbFolderPath);
+      runtime.openFolderBreadcrumb(folderCrumb.dataset.crumbFolderPath, {
+        newTab: e.ctrlKey || e.metaKey,
+      });
       return;
     }
     const crumb = e.target.closest('[data-crumb-id]');
     if (crumb) {
-      runtime.openPage(crumb.dataset.crumbId);
+      runtime.openPage(crumb.dataset.crumbId, { newTab: e.ctrlKey || e.metaKey });
       return;
     }
     const homeCard = e.target.closest('[data-home-page]');
@@ -2170,7 +2174,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     const folderCrumb = e.target.closest('[data-crumb-folder-path]');
     if (folderCrumb) {
       e.preventDefault();
-      runtime.openFolderBreadcrumb(folderCrumb.dataset.crumbFolderPath);
+      runtime.openFolderBreadcrumb(folderCrumb.dataset.crumbFolderPath, { newTab: true });
       return;
     }
     const homeCard = e.target.closest('[data-home-page]');

@@ -27,13 +27,12 @@ for (const docked of [false, true]) {
         sources.map((source) => source.getAttribute('data-page-id')),
       );
       if (multiple) {
-        await page
-          .locator('#pageTree .page-tree-row')
-          .filter({ hasText: 'Drop destination' })
+        await sources[0].click({ button: 'right' });
+        await page.keyboard.press('Escape');
+        await sources
+          .at(-1)!
           .locator('.tree-page-btn')
-          .click({ modifiers: ['Control'] });
-        for (const source of sources)
-          await source.locator('.tree-page-btn').click({ modifiers: ['Control'] });
+          .click({ modifiers: ['Shift'] });
         await expect(page.locator('#pageTree .page-tree-row[aria-selected="true"]')).toHaveCount(
           sources.length,
         );

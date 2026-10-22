@@ -38,7 +38,7 @@ function Rows({ items, favorites = false }: { items: TreeItem[]; favorites?: boo
           <button
             className={withModuleClasses(styles, 'folder-select-btn')}
             data-action="select-folder"
-            title={`Use ${item.title} as the current folder`}
+            title={`Use ${item.title} as the current folder · Ctrl/Cmd-click or middle-click for new tab`}
           >
             <span className={withModuleClasses(styles, 'tree-icon folder-icon')}>
               <NoteIcon html={item.iconHTML} />
@@ -78,7 +78,7 @@ function Rows({ items, favorites = false }: { items: TreeItem[]; favorites?: boo
           <button
             className={withModuleClasses(styles, 'tree-page-btn')}
             data-action="open-page"
-            title="Open page · Middle-click for new tab"
+            title="Open page · Ctrl/Cmd-click or middle-click for new tab"
           >
             <span className={withModuleClasses(styles, 'tree-icon')}>
               <NoteIcon html={item.iconHTML} />
