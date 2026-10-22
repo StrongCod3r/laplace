@@ -169,6 +169,12 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
   display: none;
 }
 
+.context-menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
 .tree-context-summary {
   padding: 7px 10px;
   color: var(--muted);

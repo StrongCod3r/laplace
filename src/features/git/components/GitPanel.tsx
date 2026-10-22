@@ -68,6 +68,7 @@ function Changes({
   comparison,
   onSelect,
   onContext,
+  onOpen,
 }: {
   changes: GitChange[];
   onPreview?: (path: string) => void;
@@ -75,6 +76,7 @@ function Changes({
   comparison?: GitComparison;
   onSelect?: (path: string, event: TargetedMouseEvent<HTMLButtonElement>) => void;
   onContext?: (path: string, x: number, y: number) => void;
+  onOpen?: (path: string) => void;
 }) {
   return (
     <ul className={styles.files}>
@@ -83,7 +85,7 @@ function Changes({
           {onPreview ? (
             <button
               type="button"
-              title={change.path}
+              title={`${change.path} · Ctrl/Cmd-click or middle-click to open note in new tab`}
               aria-label={`${change.path} ${labels[change.marker || change.kind]}`}
               data-git-path={change.path}
               data-git-comparison={comparison}
@@ -92,6 +94,15 @@ function Changes({
               onClick={(event) =>
                 onSelect ? onSelect(change.path, event) : onPreview(change.path)
               }
+              onMouseDown={(event) => {
+                if (event.button === 1) event.preventDefault();
+              }}
+              onAuxClick={(event) => {
+                if (event.button !== 1) return;
+                event.preventDefault();
+                event.stopPropagation();
+                onOpen?.(change.path);
+              }}
               onContextMenu={(event) => {
                 if (!onContext) return;
                 event.preventDefault();
@@ -848,11 +859,24 @@ export function GitPanel() {
   }
 
   function fileInteractions(comparison: GitComparison) {
+    const openNote = (path: string) => {
+      if (disabled || discardRequest || !controller) return;
+      const note = controller.getDocument().pages.find((page) => page.filePath === path);
+      if (!note) return;
+      setFileMenu(null);
+      controller.invoke('openPage', note.id, { newTab: true });
+    };
     return {
       comparison,
+      onOpen: openNote,
       selectedPaths: selection?.comparison === comparison ? selection.paths : [],
       onSelect: (path: string, event: TargetedMouseEvent<HTMLButtonElement>) => {
         if (disabled || discardRequest) return;
+        if (!event.shiftKey && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          openNote(path);
+          return;
+        }
         setFileMenu(null);
         const previous = selection?.comparison === comparison ? selection : null;
         let paths = [path];
@@ -862,10 +886,6 @@ export function GitPanel() {
             end = ordered.indexOf(path);
           if (start >= 0) paths = ordered.slice(Math.min(start, end), Math.max(start, end) + 1);
           if (event.ctrlKey || event.metaKey) paths = [...new Set([...previous.paths, ...paths])];
-        } else if (event.ctrlKey || event.metaKey) {
-          paths = previous?.paths.includes(path)
-            ? previous.paths.filter((item) => item !== path)
-            : [...(previous?.paths || []), path];
         }
         setSelection({
           comparison,
@@ -917,6 +937,7 @@ export function GitPanel() {
       },
       {
         label: 'Copy path',
+        separatorBefore: true,
         icon: 'copy',
         action: () => {
           void navigator.clipboard
@@ -929,6 +950,7 @@ export function GitPanel() {
     if (local) {
       items.push({
         label: menu.comparison === 'staged' ? 'Unstage changes' : 'Stage changes',
+        separatorBefore: true,
         icon: menu.comparison === 'staged' ? 'minus' : 'plus',
         disabled: !writable,
         action: () =>
@@ -936,6 +958,7 @@ export function GitPanel() {
       });
       items.push({
         label: 'Discard changes',
+        separatorBefore: true,
         icon: 'trash',
         danger: true,
         disabled: !writable,

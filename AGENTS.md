@@ -179,6 +179,8 @@ Breadcrumb notes and folder notes open in a new active tab with Ctrl/Cmd+click o
 
 Files and Favorites open notes and folder notes in a new active tab with Ctrl/Cmd+click or middle-click in the active editor group. Ordinary clicks replace the current tab. Files uses Shift+click for range selection; Ctrl/Cmd+Shift+click adds a range to the selection.
 
+Git change lists open existing workspace notes in a new active tab with Ctrl/Cmd+click or middle-click. Ordinary clicks show the diff. Shift+click selects a range; Ctrl/Cmd+Shift+click adds a range. Non-note and deleted file entries must not create notes.
+
 Center the graph camera at 100% zoom on the first simulation tick after warmup, before painting. Keep automatic fitting disabled; the Fit control remains available. Do not automatically change zoom when the simulation stops.
 
 Assign distinct, evenly spaced hues to ownership families in the graph, rather than hashing root IDs into colors. Keep assigned colors stable for the scene's lifetime, and place new families in the largest unused hue gap. Unlinked notes keep the muted theme color.
@@ -206,6 +208,8 @@ Lay out Files, Favorites, and Git as a static header above a separate scrollable
 The Files, Favorites, and Git ribbon buttons toggle their associated left panel: clicking the visible panel's button hides the sidebar; clicking another panel's button opens that panel. There is no separate left sidebar toggle button in the ribbon.
 
 Git activity uses an indeterminate horizontal progress bar below the Commit controls, without visible progress messages or a spinner. Keep the composer and progress outside the file list's scroll container.
+
+Folder, note, and Git file context menus separate action groups with theme-aware dividers. Keep Delete last and separated from other actions, including multiselection menus; Git keeps its existing Discard changes action last.
 
 ## Theme-aware scrollbars
 

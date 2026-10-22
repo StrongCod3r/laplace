@@ -1,4 +1,5 @@
 import { createPortal } from 'preact/compat';
+import { Fragment } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { Icon } from '@/shared/components/Icon';
 import styles from './GitPanel.module.css';
@@ -8,6 +9,7 @@ export interface FileMenuItem {
   icon: string;
   disabled?: boolean;
   danger?: boolean;
+  separatorBefore?: boolean;
   action(): void;
 }
 
@@ -82,20 +84,22 @@ export function GitFileContextMenu({
     >
       {count > 1 && <div className={styles.contextCaption}>{count} files selected</div>}
       {items.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          role="menuitem"
-          disabled={item.disabled}
-          className={item.danger ? styles.dangerAction : undefined}
-          onClick={() => {
-            onClose();
-            item.action();
-          }}
-        >
-          <Icon name={item.icon} size="16" />
-          {item.label}
-        </button>
+        <Fragment key={item.label}>
+          {item.separatorBefore && <div className={styles.contextSeparator} role="separator" />}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={item.disabled}
+            className={item.danger ? styles.dangerAction : undefined}
+            onClick={() => {
+              onClose();
+              item.action();
+            }}
+          >
+            <Icon name={item.icon} size="16" />
+            {item.label}
+          </button>
+        </Fragment>
       ))}
     </div>,
     document.body,

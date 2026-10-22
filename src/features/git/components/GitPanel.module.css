@@ -487,6 +487,12 @@
   opacity: 0.45;
   cursor: default;
 }
+.contextSeparator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
 .contextCaption {
   padding: 6px 10px;
   color: var(--muted);

@@ -49,7 +49,23 @@ test('Git context menu handles multiple files, staging, unstaging and confirmed 
   const row = (path: string, comparison = 'unstaged') =>
     panel.locator('[data-git-path="' + path + '"][data-git-comparison="' + comparison + '"]');
   await expect(row('A.md')).toBeVisible();
-  await row('A.md').click({ modifiers: ['Control'] });
+  for (const gesture of ['control', 'meta', 'middle'] as const) {
+    const tabs = page.locator('.editor-tab');
+    const before = await tabs.count();
+    await row('A.md').click({
+      button: gesture === 'middle' ? 'middle' : 'left',
+      modifiers: gesture === 'control' ? ['Control'] : gesture === 'meta' ? ['Meta'] : [],
+    });
+    await expect(tabs).toHaveCount(before + 1);
+    await expect(page.locator('#pageTitle')).toHaveText('A');
+    await expect(page.locator('#blockEditor')).toContainText('A draft');
+    await expect(
+      page.getByRole('region', { name: 'File comparison: A.md', exact: true }),
+    ).toHaveCount(0);
+    await page.locator('.editor-tab.active [data-tab-close]').click();
+  }
+  await row('A.md').click({ button: 'right' });
+  await page.keyboard.press('Escape');
   await row('B.md').click({ modifiers: ['Shift'] });
   await expect(row('A.md')).toHaveAttribute('aria-pressed', 'true');
   await expect(row('B.md')).toHaveAttribute('aria-pressed', 'true');
@@ -66,8 +82,9 @@ test('Git context menu handles multiple files, staging, unstaging and confirmed 
   await expect(row('B.md', 'staged')).toBeVisible();
   await expect(row('A.md')).toHaveCount(0);
   await expect(row('C.md')).toBeVisible();
-  await row('A.md', 'staged').click({ modifiers: ['Control'] });
-  await row('B.md', 'staged').click({ modifiers: ['Control'] });
+  await row('A.md', 'staged').click({ button: 'right' });
+  await page.keyboard.press('Escape');
+  await row('B.md', 'staged').click({ modifiers: ['Shift'] });
   await row('B.md', 'staged').click({ button: 'right' });
   await expect(menu).toContainText('2 files selected');
   await menu.getByRole('menuitem', { name: 'Unstage changes', exact: true }).click();
@@ -126,8 +143,9 @@ test('Git context menu handles multiple files, staging, unstaging and confirmed 
   expect(restored.disk).toBe('A original\n');
   expect(restored.notes).toContainEqual({ title: 'A', text: 'A original' });
   expect(restored.notes).toContainEqual({ title: 'B', text: 'B draft' });
-  await row('B.md').click({ modifiers: ['Control'] });
-  await row('C.md').click({ modifiers: ['Control'] });
+  await row('B.md').click({ button: 'right' });
+  await page.keyboard.press('Escape');
+  await row('C.md').click({ modifiers: ['Shift'] });
   await row('C.md').click({ button: 'right' });
   await menu.getByRole('menuitem', { name: 'Discard changes', exact: true }).click();
   await expect(confirmation).toContainText('B.md');

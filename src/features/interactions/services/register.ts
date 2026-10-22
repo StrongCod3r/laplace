@@ -1207,8 +1207,12 @@ export function registerInteractions(runtime: EditorRuntime) {
     const page = id ? runtime.pageById(id) : null,
       folder = path ? runtime.folderByPath(path) : null;
     if ((isFolder && !folder) || (!isFolder && !page)) return;
+    const separator = runtime.htmlWithStyles(
+      '<div class="context-menu-separator" role="separator"></div>',
+    );
     let items = isFolder
       ? runtime.treeContextMenuButton('open-folder', 'Open folder', { folderPath: path }) +
+        separator +
         runtime.treeContextMenuButton('convert-folder-to-note', 'Convert to Note', {
           folderPath: path,
         }) +
@@ -1217,11 +1221,13 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.treeContextMenuButton('duplicate-folder', 'Duplicate folder', {
           folderPath: path,
         }) +
+        separator +
         runtime.treeContextMenuButton('delete-folder', 'Delete folder', {
           folderPath: path,
           danger: true,
         })
       : runtime.treeContextMenuButton('open-page', 'Open note', { pageId: id }) +
+        separator +
         (runtime.representedFolderForPage(page)
           ? ''
           : runtime.treeContextMenuButton('convert-page-to-folder', 'Convert to Folder', {
@@ -1233,6 +1239,7 @@ export function registerInteractions(runtime: EditorRuntime) {
           page.favorite ? 'Remove from favorites' : 'Add to favorites',
           { pageId: id },
         ) +
+        separator +
         runtime.treeContextMenuButton('delete-page', 'Delete note', { pageId: id, danger: true });
     if (selected.length > 1) items = runtime.treeSelectionMenuHTML(selected);
     const menu = runtime.els.blockMenu,
@@ -1249,9 +1256,9 @@ export function registerInteractions(runtime: EditorRuntime) {
       )
         button.disabled = true;
     });
-    const height = menu.querySelectorAll('button').length * 38 + (selected.length > 1 ? 36 : 8);
-    menu.style.top = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8)) + 'px';
     menu.classList.remove('hidden');
+    const height = menu.getBoundingClientRect().height;
+    menu.style.top = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8)) + 'px';
   }
 
   function treeSelectionMenuHTML(items) {
@@ -1259,6 +1266,9 @@ export function registerInteractions(runtime: EditorRuntime) {
     const folders = items.filter((item) => item.type === 'folder');
     const button = (action, label, danger = false) =>
       runtime.treeContextMenuButton(action, label, { danger });
+    const separator = runtime.htmlWithStyles(
+      '<div class="context-menu-separator" role="separator"></div>',
+    );
     let html =
       runtime.htmlWithStyles('<div class="tree-context-summary">') +
       items.length +
@@ -1274,6 +1284,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       );
     }
     if (folders.length) {
+      if (notes.length) html += separator;
       html += button(
         'expand-selected',
         'Expand ' + folders.length + ' folder' + (folders.length === 1 ? '' : 's'),
@@ -1283,7 +1294,11 @@ export function registerInteractions(runtime: EditorRuntime) {
         'Duplicate ' + folders.length + ' folder' + (folders.length === 1 ? '' : 's'),
       );
     }
-    return html + button('delete-selected', 'Delete ' + items.length + ' selected items', true);
+    return (
+      html +
+      separator +
+      button('delete-selected', 'Delete ' + items.length + ' selected items', true)
+    );
   }
 
   function treeSelectionDeletion(items) {
