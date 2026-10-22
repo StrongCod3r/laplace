@@ -324,9 +324,28 @@ button.attachment-gallery-thumb {
 }
 .attachments-pagination button {
   min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+}
+.attachments-pagination button:hover:not(:disabled) {
+  background: var(--hover);
+}
+.attachments-pagination button:focus-visible {
+  outline: 2px solid var(--obsidian-accent, var(--blue));
+  outline-offset: 2px;
 }
 .attachments-pagination button:disabled {
-  opacity: 0.42;
+  background: transparent;
+  color: var(--muted);
   cursor: default;
 }
 .attachment-preview-backdrop {

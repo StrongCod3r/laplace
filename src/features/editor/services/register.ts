@@ -2162,9 +2162,11 @@ export function registerEditor(runtime: EditorRuntime) {
   function pasteRichHtmlIntoBlock(content, html) {
     const parsed = runtime.parseRichHtmlBlocks(html);
     const block = runtime.findBlock(content?.closest('.block-row')?.dataset.blockId);
+    const heading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(block?.type);
+    const singleParagraph = parsed.length === 1 && parsed[0].type === 'text';
     if (
       runtime.workspaceAccess === 'writable' &&
-      ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(block?.type) &&
+      (heading || (singleParagraph && runtime.isTextLikeBlock(block))) &&
       parsed.length &&
       parsed.every((item) => ['text', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(item.type))
     ) {
@@ -2172,7 +2174,10 @@ export function registerEditor(runtime: EditorRuntime) {
       const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
       if (!range || !content.contains(range.commonAncestorContainer)) return false;
       const root = new DOMParser().parseFromString(html, 'text/html').body;
-      const payload = runtime.richHtmlInlinePayload(root, { tableCell: true });
+      const payload = runtime.richHtmlInlinePayload(root, {
+        tableCell: true,
+        preserveBoundaryWhitespace: !heading,
+      });
       if (!payload.text) return false;
       const fragment = range.createContextualFragment(
         runtime.inlineTextHTML({

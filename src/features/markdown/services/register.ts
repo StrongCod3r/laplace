@@ -489,7 +489,10 @@ export function registerMarkdown(runtime: EditorRuntime) {
     );
   }
 
-  function richHtmlInlinePayload(root, { skipNestedLists = false, tableCell = false } = {}) {
+  function richHtmlInlinePayload(
+    root,
+    { skipNestedLists = false, tableCell = false, preserveBoundaryWhitespace = false } = {},
+  ) {
     let value = '';
     const links = [],
       formats = [];
@@ -567,10 +570,16 @@ export function registerMarkdown(runtime: EditorRuntime) {
       if (blockBoundary && next && !value.endsWith('\n')) value += '\n';
     };
     walk(root);
-    const clean = tableCell ? value.replace(/^ +| +$/g, '') : value.trim();
-    const leading = tableCell
-      ? value.length - value.replace(/^ +/, '').length
-      : value.length - value.trimStart().length;
+    const clean = preserveBoundaryWhitespace
+      ? value
+      : tableCell
+        ? value.replace(/^ +| +$/g, '')
+        : value.trim();
+    const leading = preserveBoundaryWhitespace
+      ? 0
+      : tableCell
+        ? value.length - value.replace(/^ +/, '').length
+        : value.length - value.trimStart().length;
     const normalizedLinks = runtime.normalizeInlineLinkRanges(
       links.map((link) => ({
         start: Math.max(0, link.start - leading),
@@ -683,22 +692,33 @@ export function registerMarkdown(runtime: EditorRuntime) {
     };
 
     const processContainer = (container, quoteLevel = 0) => {
+      const blockTags =
+        'h1,h2,h3,h4,h5,h6,p,div,section,article,header,footer,main,aside,figure,figcaption,ul,ol,li,blockquote,pre,table,hr,img';
+      const inline = doc.createElement('div');
+      const flushInline = () => {
+        if (!inline.hasChildNodes()) return;
+        const block = runtime.richHtmlBlockFromElement(
+          inline,
+          quoteLevel ? 'quote' : 'text',
+          quoteLevel > 1 ? { quoteDepth: quoteLevel } : {},
+        );
+        if (block?.text) pushBlock(block);
+        inline.replaceChildren();
+      };
       for (const node of container.childNodes) {
         if (node.nodeType === Node.TEXT_NODE) {
-          const value = String(node.nodeValue || '').trim();
-          if (value)
-            blocks.push({
-              id: runtime.uid('b'),
-              type: quoteLevel ? 'quote' : 'text',
-              text: value,
-              ...(quoteLevel > 1 ? { quoteDepth: quoteLevel } : {}),
-            });
+          inline.appendChild(node.cloneNode(true));
           continue;
         }
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
         const el = node,
           tag = el.tagName;
         if (['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(tag)) continue;
+        if (!el.matches(blockTags) && !el.querySelector(blockTags)) {
+          inline.appendChild(el.cloneNode(true));
+          continue;
+        }
+        flushInline();
         if (
           el.querySelector('img[data-pasted-svg]') &&
           !el.querySelector('h1,h2,h3,h4,h5,h6,p,ul,ol,blockquote,pre,table,hr') &&
@@ -801,9 +821,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
             });
           continue;
         }
-        const structural = el.querySelector(
-          'h1,h2,h3,h4,h5,h6,p,ul,ol,blockquote,pre,table,hr,img',
-        );
+        const structural = el.querySelector(blockTags);
         if (structural) {
           processContainer(el, quoteLevel);
           continue;
@@ -816,6 +834,7 @@ export function registerMarkdown(runtime: EditorRuntime) {
           ),
         );
       }
+      flushInline();
     };
 
     processContainer(doc.body);

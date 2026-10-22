@@ -143,6 +143,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
+- Rich HTML fragments with inline code, emphasis, or links remain in the same paragraph. Group consecutive inline siblings when importing HTML, and insert a single pasted paragraph into the current text block at the selection, retaining surrounding text, spaces, inline metadata, block identity, and undo/redo. Structural HTML elements still delimit separate blocks.
+
 The Attachments gallery filters filenames and path suffixes using case-insensitive file patterns: `*` matches within a path segment, `?` matches one character, and `**` spans folders. Separate patterns with `;` to match any of them, for example `*.svg;*.png`. Trim surrounding whitespace and ignore empty entries; an empty pattern list shows all attachments. Other punctuation is literal; the filter does not accept regular expressions.
 
 - Pasting an image file or a copied image block into an empty ordinary paragraph replaces that paragraph in place, preserving its block ID and surrounding blocks. Nonempty paragraphs remain intact, and image presentation metadata and undo/redo must be preserved.
