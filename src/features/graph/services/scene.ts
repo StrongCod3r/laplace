@@ -65,6 +65,8 @@ export class GraphScene {
         if (event.ctrlKey || event.metaKey) this.openPage(node.id);
       })
       .onNodeDrag(() => separateGraphFamilies(this.graph.graphData().nodes))
+      .onBackgroundClick(this.onFamilyClick)
+      .onLinkClick((_link, event) => this.onFamilyClick(event))
       .onZoom(({ k }) => {
         if (zoomLabel) zoomLabel.textContent = `${Math.round(k * 100)}%`;
       })
@@ -108,6 +110,7 @@ export class GraphScene {
     host.addEventListener('keydown', this.onKeyDown);
     host.addEventListener('mousedown', this.onMouseDown, true);
     host.addEventListener('auxclick', this.onAuxClick);
+    host.addEventListener('dblclick', this.onDoubleClick);
     document.addEventListener('visibilitychange', this.updateActivity);
     this.updateActivity();
   }
@@ -176,6 +179,7 @@ export class GraphScene {
     this.host.removeEventListener('keydown', this.onKeyDown);
     this.host.removeEventListener('mousedown', this.onMouseDown, true);
     this.host.removeEventListener('auxclick', this.onAuxClick);
+    this.host.removeEventListener('dblclick', this.onDoubleClick);
     document.removeEventListener('visibilitychange', this.updateActivity);
     this.graph._destructor();
     this.host.replaceChildren();
@@ -306,6 +310,50 @@ export class GraphScene {
       Math.hypot(event.clientX - down.x, event.clientY - down.y) < 5
     )
       this.openPage(down.node.id);
+  };
+  private onDoubleClick = (event: MouseEvent) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+      return;
+    const node = this.nodeAt(event);
+    if (!node) return;
+    event.preventDefault();
+    this.initialCamera = false;
+    this.selected = node;
+    this.host.focus({ preventScroll: true });
+    this.host.setAttribute(
+      'aria-label',
+      `Note graph. Selected: ${node.title}. Press Enter to open.`,
+    );
+    this.graph.centerAt(node.x, node.y, 250);
+    this.graph.zoom(Math.max(this.graph.zoom(), 2.5), 250);
+    this.refresh();
+  };
+  private onFamilyClick = (event: MouseEvent) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+      return;
+    const bounds = this.host.getBoundingClientRect();
+    const point = this.graph.screen2GraphCoords(
+      event.clientX - bounds.left,
+      event.clientY - bounds.top,
+    );
+    const region = createFamilyRegions(this.graph.graphData().nodes).find(
+      (family) => Math.hypot(point.x - family.x, point.y - family.y) <= family.radius,
+    );
+    if (!region || this.nodeAt(event)) return;
+    this.initialCamera = false;
+    this.host.focus({ preventScroll: true });
+    this.graph.centerAt(region.x, region.y, 250);
+    this.graph.zoom(
+      Math.max(
+        0.05,
+        Math.min(
+          8,
+          (this.host.clientWidth - 100) / (region.radius * 2),
+          (this.host.clientHeight - 100) / (region.radius * 2),
+        ),
+      ),
+      250,
+    );
   };
   private onKeyDown = (event: KeyboardEvent) => {
     const nodes = this.graph.graphData().nodes.filter(this.matches);

@@ -189,6 +189,10 @@ Draw each ownership family with at least two nodes inside a dashed circle with a
 
 Keep family circles separated with a gap using D3 collision on family bounds after simulation ticks and during dragging. Translate families as rigid groups, preserve their internal node positions and the dragged node's pointer position, and keep these adjustments in the scene's mutable copies.
 
+Double-clicking a graph node centers it with a short zoom animation to at least 250%, preserving a closer zoom. Background double-clicks do not zoom. Keep modified clicks and middle-clicks available for opening notes.
+
+Clicking inside a family circle, including its links, centers and fits that whole circle with a short animation. Node clicks retain their own actions, and background dragging pans without triggering family focus. Clicks outside circles do not change the camera.
+
 Graph view uses the bundled `force-graph` canvas library for rendering, D3 physics, dragging, panning, zooming, and fitting. Do not restore the former bespoke simulation or edge router. Standard D3 collision forces provide node clearance. Actual page parents and enabled folder-note ownership define hierarchy edges; ordinary references must not invent parents. Copy model nodes and edges before passing them to the library because its simulation mutates them. Positions and camera remain session-local, outside the document and Zustand snapshots. Preserve positions across metadata updates. Nodes open pages with middle-click or Ctrl/Cmd-click; ordinary clicks and modifier dragging do not navigate. Arrow keys select notes and Enter/Space opens the selected note. Preserve search, theme-aware rendering, parent sizing, family colors, and distinct hierarchy/reference links. Preact owns the shell and the library owns its canvas host. Pause animation while the graph or document is hidden, and destroy the instance and observers on unmount or workspace changes.
 
 The mouse X1 and X2 buttons navigate back and forward through the existing page history. Use the pane under the pointer when applicable, otherwise the active editor group. Prevent browser navigation and handle each press only once.

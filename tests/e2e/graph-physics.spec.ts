@@ -119,6 +119,108 @@ test('native canvas supports normal clicks, Ctrl-click and middle-click navigati
   expect(errors).toEqual([]);
 });
 
+test('double-click focuses a node without opening it or zooming on the background', async ({
+  page,
+}) => {
+  await openGraph(page, 16);
+  const center = await selectFirst(page);
+  const zoom = page.getByLabel('Zoom level');
+  const host = page.locator('[data-graph-canvas]');
+  const bounds = (await host.boundingBox())!;
+  // Move the selected node away from the center by panning the background.
+  await page.mouse.move(bounds.x + 20, bounds.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 100, bounds.y + 60, { steps: 8 });
+  await page.mouse.up();
+  await page.mouse.move(center.x + 80, center.y + 40);
+  const tooltip = host.locator('.float-tooltip-kap');
+  await expect(tooltip).toBeVisible();
+  const title = await tooltip.textContent();
+  await page.mouse.dblclick(center.x + 80, center.y + 40);
+  await expect(zoom).toHaveText('250%');
+  await expect(page.locator('#graphView')).toBeVisible();
+  // The same node must now be under the viewport center.
+  await page.mouse.move(center.x, center.y);
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText(title!);
+  await page.locator('[data-graph-zoom-in]').click();
+  await expect(zoom).toHaveText('300%');
+  await page.mouse.dblclick(center.x, center.y);
+  await expect(zoom).toHaveText('300%');
+  await page.mouse.dblclick(bounds.x + 15, bounds.y + 15);
+  await expect(zoom).toHaveText('300%');
+});
+
+test('clicking inside a family circle centers and fits the group', async ({ page }) => {
+  await page.goto('/laplace/');
+  const result = await page.evaluate(async () => {
+    const { GraphScene } = await import(
+      new URL('src/features/graph/services/scene.ts', location.href).href
+    );
+    const { createFamilyRegions } = await import(
+      new URL('src/features/graph/services/family-regions.ts', location.href).href
+    );
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;inset:0;width:600px;height:400px;z-index:9999';
+    document.body.append(host);
+    let opened = 0;
+    const scene = new GraphScene(host, () => opened++, null);
+    // Keep this fixture stationary so camera assertions use exact geometry.
+    const graph = scene.graph;
+    graph.warmupTicks(0).cooldownTicks(0);
+    scene.setActive(true);
+    scene.setGraph({
+      nodes: [0, 1, 2].map((i) => ({
+        id: String(i),
+        title: `Note ${i}`,
+        parentId: i === 1 ? '0' : null,
+        rootId: i === 1 ? '0' : String(i),
+        current: false,
+        degree: i < 2 ? 1 : 0,
+        childCount: i === 0 ? 1 : 0,
+        depth: i === 1 ? 1 : 0,
+        x: i * 300,
+        y: 0,
+      })),
+      edges: [{ source: '0', target: '1', kind: 'hierarchy' }],
+    });
+    scene.fit();
+    const region = createFamilyRegions(graph.graphData().nodes)[0];
+    const before = graph.zoom();
+    const canvas = host.querySelector('canvas')!;
+    const click = async (x: number, y: number) => {
+      const point = graph.graph2ScreenCoords(x, y);
+      const options = { clientX: point.x, clientY: point.y, bubbles: true, pointerId: 1 };
+      canvas.dispatchEvent(new PointerEvent('pointermove', options));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { ...options, buttons: 1 }));
+      canvas.dispatchEvent(new PointerEvent('pointerup', options));
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    };
+    try {
+      await click(region.x, region.y + region.radius - 10);
+      const center = graph.centerAt();
+      const focused = graph.zoom();
+      const centered = Math.hypot(center.x - region.x, center.y - region.y) < 0.1;
+      const fits = region.radius * 2 * focused <= host.clientHeight - 99;
+      // Outside the circle and at least ten graph units beyond its edge.
+      await click(region.x, region.y + region.radius + 15);
+      const unchanged = Math.abs(graph.zoom() - focused) < 0.001;
+      return { centered, fits, zoomedIn: focused > before, unchanged, opened };
+    } finally {
+      scene.dispose();
+      host.remove();
+    }
+  });
+  expect(result).toEqual({
+    centered: true,
+    fits: true,
+    zoomedIn: true,
+    unchanged: true,
+    opened: 0,
+  });
+});
+
 test('search, keyboard access, zoom, resize and both themes work with canvas', async ({
   page,
 }, testInfo) => {

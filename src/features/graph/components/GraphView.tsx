@@ -106,7 +106,7 @@ export function GraphView() {
             data-graph-canvas
             tabIndex={0}
             role="group"
-            aria-label="Note graph. Middle-click or Ctrl/Cmd-click a node to open its page. Drag nodes to move them, drag the background to pan, and scroll to zoom. Use arrow keys to select a note, Enter or Space to open it, plus and minus to zoom, and zero to fit."
+            aria-label="Note graph. Click inside a family circle to focus the group. Double-click a node to center and zoom in. Middle-click or Ctrl/Cmd-click a node to open its page. Drag nodes to move them, drag the background to pan, and scroll to zoom. Use arrow keys to select a note, Enter or Space to open it, plus and minus to zoom, and zero to fit."
           />
           {!graph.nodes.length && (
             <div className={withModuleClasses(styles, 'graph-empty')}>
@@ -116,7 +116,8 @@ export function GraphView() {
             </div>
           )}
           <div className={withModuleClasses(styles, 'graph-legend')}>
-            Middle-click or Ctrl/Cmd-click to open · drag to rearrange · scroll to zoom
+            Click a circle or double-click a node to focus · Middle-click or Ctrl/Cmd-click to open
+            · drag to rearrange · scroll to zoom
           </div>
         </div>
       </div>
