@@ -43,6 +43,7 @@ test('the graph starts fitted and preserves its camera after navigation and cool
   const label = page.getByLabel('Zoom level');
   await expect(label).not.toHaveText('100%');
   await page.locator('[data-graph-zoom-out]').click();
+  await page.waitForTimeout(350);
   const adjustedZoom = await label.textContent();
   await page.evaluate(async () => {
     const { useWorkspaceStore } = await import(
@@ -116,6 +117,21 @@ test('native canvas supports normal clicks, Ctrl-click and middle-click navigati
   await page.locator('#tabsScroll .editor-tab.active [data-tab-close]').click();
   await expect(page.locator('#graphView')).toBeVisible();
   await expect(page.locator('#tabsScroll .editor-tab.active')).toContainText('Graph');
+  await page.getByLabel('Fit graph', { exact: true }).click();
+  await page.waitForTimeout(350);
+  const zoom = page.getByLabel('Zoom level');
+  const fittedZoom = await zoom.textContent();
+  const node = await selectFirst(page);
+  await page.locator('[data-graph-zoom-in]').click();
+  await page.waitForTimeout(350);
+  await page.mouse.click(node.x, node.y, { button: 'right' });
+  await expect(zoom).toHaveText(fittedZoom!);
+  await expect(page.locator('#graphView')).toBeVisible();
+  await page.locator('[data-graph-zoom-in]').click();
+  await page.waitForTimeout(350);
+  const bounds = (await page.locator('[data-graph-canvas]').boundingBox())!;
+  await page.mouse.click(bounds.x + 10, bounds.y + 10, { button: 'right' });
+  await expect(zoom).toHaveText(fittedZoom!);
   expect(errors).toEqual([]);
 });
 
@@ -184,7 +200,7 @@ test('clicking inside a family circle centers and fits the group', async ({ page
       })),
       edges: [{ source: '0', target: '1', kind: 'hierarchy' }],
     });
-    scene.fit();
+    scene.fit(0);
     const region = createFamilyRegions(graph.graphData().nodes)[0];
     const before = graph.zoom();
     const canvas = host.querySelector('canvas')!;
@@ -247,7 +263,7 @@ test('search, keyboard access, zoom, resize and both themes work with canvas', a
     }, theme);
     await page.getByLabel('Filter notes').fill('');
     await page.getByLabel('Fit graph', { exact: true }).click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(350);
     await page
       .locator('#graphView')
       .screenshot({ path: testInfo.outputPath(`force-graph-${theme}.png`) });

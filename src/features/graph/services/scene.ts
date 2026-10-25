@@ -67,6 +67,9 @@ export class GraphScene {
       .onNodeDrag(() => separateGraphFamilies(this.graph.graphData().nodes))
       .onBackgroundClick(this.onFamilyClick)
       .onLinkClick((_link, event) => this.onFamilyClick(event))
+      .onBackgroundRightClick(() => this.fit())
+      .onNodeRightClick(() => this.fit())
+      .onLinkRightClick(() => this.fit())
       .onZoom(({ k }) => {
         if (zoomLabel) zoomLabel.textContent = `${Math.round(k * 100)}%`;
       })
@@ -82,7 +85,7 @@ export class GraphScene {
           this.host.clientHeight &&
           this.graph.graphData().nodes.length
         ) {
-          this.fit();
+          this.fit(0);
         }
       });
     this.graph.d3Force('center', null);
@@ -144,9 +147,9 @@ export class GraphScene {
   }
   zoom(factor: number) {
     this.initialCamera = false;
-    this.graph.zoom(Math.max(0.05, Math.min(8, this.graph.zoom() * factor)), 0);
+    this.graph.zoom(Math.max(0.05, Math.min(8, this.graph.zoom() * factor)), 250);
   }
-  fit() {
+  fit(duration = 250) {
     this.initialCamera = false;
     if (this.graph.graphData().nodes.length) {
       const nodes = this.graph.graphData().nodes;
@@ -158,7 +161,11 @@ export class GraphScene {
         bounds.y[0] = Math.min(bounds.y[0], region.y - region.radius);
         bounds.y[1] = Math.max(bounds.y[1], region.y + region.radius);
       }
-      this.graph.centerAt((bounds.x[0] + bounds.x[1]) / 2, (bounds.y[0] + bounds.y[1]) / 2, 0);
+      this.graph.centerAt(
+        (bounds.x[0] + bounds.x[1]) / 2,
+        (bounds.y[0] + bounds.y[1]) / 2,
+        duration,
+      );
       this.graph.zoom(
         Math.max(
           0.05,
@@ -168,7 +175,7 @@ export class GraphScene {
             (this.host.clientHeight - 120) / Math.max(1, bounds.y[1] - bounds.y[0]),
           ),
         ),
-        0,
+        duration,
       );
     }
   }
