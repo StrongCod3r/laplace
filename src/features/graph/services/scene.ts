@@ -2,6 +2,8 @@ import ForceGraph, { type NodeObject, type LinkObject } from 'force-graph';
 import { forceCollide, forceLink, forceManyBody } from 'd3-force';
 import type { GraphModel, GraphNode } from '../types';
 import { GraphFamilyColors } from './family-colors';
+import { createFamilyRegions, graphNodeRadius as radius } from './family-regions';
+import { separateGraphFamilies } from './family-collision';
 
 type SceneNode = GraphNode & NodeObject;
 type SceneLink = LinkObject<SceneNode> & {
@@ -9,7 +11,6 @@ type SceneLink = LinkObject<SceneNode> & {
   target: string | number | SceneNode;
   kind: 'link' | 'hierarchy';
 };
-const radius = (node: SceneNode) => 5 + Math.min(12, Math.sqrt(node.childCount) * 3);
 
 /** Keeps mutable library data and canvas state outside the workspace document. */
 export class GraphScene {
@@ -50,6 +51,7 @@ export class GraphScene {
       .nodeCanvasObjectMode(() => 'after')
       .nodeCanvasObject(this.paintLabel)
       .nodeColor(this.nodeColor)
+      .onRenderFramePre(this.paintFamilies)
       .linkColor(this.linkColor)
       .linkWidth((link) => (link.kind === 'hierarchy' ? 1.5 : 0.8))
       .linkLineDash((link) => (link.kind === 'link' ? [4, 4] : null))
@@ -62,12 +64,14 @@ export class GraphScene {
         this.refresh();
         if (event.ctrlKey || event.metaKey) this.openPage(node.id);
       })
+      .onNodeDrag(() => separateGraphFamilies(this.graph.graphData().nodes))
       .onZoom(({ k }) => {
         if (zoomLabel) zoomLabel.textContent = `${Math.round(k * 100)}%`;
       })
       .warmupTicks(100)
       .cooldownTicks(220)
       .onEngineTick(() => {
+        separateGraphFamilies(this.graph.graphData().nodes);
         // Fit the warmed layout before its first paint, then preserve the user's camera.
         if (
           this.initialCamera &&
@@ -142,7 +146,27 @@ export class GraphScene {
   fit() {
     this.initialCamera = false;
     if (this.graph.graphData().nodes.length) {
-      this.graph.zoomToFit(0, 60);
+      const nodes = this.graph.graphData().nodes;
+      const bounds = this.graph.getGraphBbox();
+      if (!bounds) return;
+      for (const region of createFamilyRegions(nodes)) {
+        bounds.x[0] = Math.min(bounds.x[0], region.x - region.radius);
+        bounds.x[1] = Math.max(bounds.x[1], region.x + region.radius);
+        bounds.y[0] = Math.min(bounds.y[0], region.y - region.radius);
+        bounds.y[1] = Math.max(bounds.y[1], region.y + region.radius);
+      }
+      this.graph.centerAt((bounds.x[0] + bounds.x[1]) / 2, (bounds.y[0] + bounds.y[1]) / 2, 0);
+      this.graph.zoom(
+        Math.max(
+          0.05,
+          Math.min(
+            8,
+            (this.host.clientWidth - 120) / Math.max(1, bounds.x[1] - bounds.x[0]),
+            (this.host.clientHeight - 120) / Math.max(1, bounds.y[1] - bounds.y[0]),
+          ),
+        ),
+        0,
+      );
     }
   }
   dispose() {
@@ -187,20 +211,54 @@ export class GraphScene {
     );
     return `color-mix(in srgb, ${link.kind === 'hierarchy' ? this.accent : this.muted} ${visible ? 45 : 8}%, transparent)`;
   };
+  private paintFamilies = (ctx: CanvasRenderingContext2D, scale: number) => {
+    ctx.save();
+    for (const region of createFamilyRegions(this.graph.graphData().nodes)) {
+      const color = this.familyColors.color(region.rootId) || this.muted;
+      const matches = region.nodes.some((node) => this.matches(node));
+      ctx.beginPath();
+      ctx.arc(region.x, region.y, region.radius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = matches ? 0.045 : 0.012;
+      ctx.fill();
+      ctx.globalAlpha = matches ? 0.55 : 0.1;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.25 / scale;
+      ctx.setLineDash([5 / scale, 5 / scale]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (scale < 0.25 || !matches) continue;
+      ctx.globalAlpha = 1;
+      ctx.font = `600 ${11 / scale}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3 / scale;
+      ctx.strokeStyle = this.background;
+      const title = region.title.length > 36 ? `${region.title.slice(0, 35)}…` : region.title;
+      const y = region.y - region.radius + 10 / scale;
+      ctx.strokeText(title, region.x, y);
+      ctx.fillText(title, region.x, y);
+    }
+    ctx.restore();
+  };
   private paintLabel = (node: SceneNode, ctx: CanvasRenderingContext2D, scale: number) => {
     if (!this.matches(node)) return;
-    const focused = node === this.hovered || node === this.selected || node.current || !!this.query;
+    const focused = node === this.selected || node.current || !!this.query;
     if (!focused && (scale < 0.25 || (scale < 1 && !node.childCount))) return;
-    ctx.font = `${node.childCount ? 600 : 400} ${11 / scale}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3 / scale;
-    ctx.strokeStyle = this.background;
-    ctx.fillStyle = this.text;
-    const title = node.title.length > 36 ? `${node.title.slice(0, 35)}…` : node.title;
-    ctx.strokeText(title, node.x!, node.y! + radius(node) + 4 / scale);
-    ctx.fillText(title, node.x!, node.y! + radius(node) + 4 / scale);
+    // The library tooltip provides the hovered node's name without a second canvas label.
+    if (node !== this.hovered) {
+      ctx.font = `${node.childCount ? 600 : 400} ${11 / scale}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3 / scale;
+      ctx.strokeStyle = this.background;
+      ctx.fillStyle = this.text;
+      const title = node.title.length > 36 ? `${node.title.slice(0, 35)}…` : node.title;
+      ctx.strokeText(title, node.x!, node.y! + radius(node) + 4 / scale);
+      ctx.fillText(title, node.x!, node.y! + radius(node) + 4 / scale);
+    }
     if (node === this.selected) {
       ctx.beginPath();
       ctx.arc(node.x!, node.y!, radius(node) + 4 / scale, 0, Math.PI * 2);

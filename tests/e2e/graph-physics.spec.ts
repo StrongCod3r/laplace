@@ -200,6 +200,21 @@ test('library data is isolated and disposal removes its canvas', async ({ page }
     for (const node of nodes) Object.freeze(node);
     Object.freeze(model.edges[0]);
     const labels: string[] = [];
+    let dashedCircles = 0;
+    let drawingCircle = false;
+    const originalArc = CanvasRenderingContext2D.prototype.arc;
+    const originalStroke = CanvasRenderingContext2D.prototype.stroke;
+    CanvasRenderingContext2D.prototype.arc = function (...args) {
+      drawingCircle = args[2] > 30;
+      originalArc.apply(this, args);
+    };
+    CanvasRenderingContext2D.prototype.stroke = function (path?: Path2D) {
+      if (drawingCircle && this.getLineDash().length) dashedCircles++;
+      drawingCircle = false;
+      const stroke = originalStroke.bind(this);
+      if (path) stroke(path);
+      else stroke();
+    };
     const original = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function (text, ...args) {
       labels.push(text);
@@ -213,9 +228,78 @@ test('library data is isolated and disposal removes its canvas', async ({ page }
     scene.setActive(false);
     scene.dispose();
     CanvasRenderingContext2D.prototype.fillText = original;
+    CanvasRenderingContext2D.prototype.arc = originalArc;
+    CanvasRenderingContext2D.prototype.stroke = originalStroke;
     const removed = !host.querySelector('canvas');
     host.remove();
-    return { unchanged, removed, labels: labels.includes('Child') };
+    return { unchanged, removed, labels: labels.includes('Child'), circles: dashedCircles > 0 };
   });
-  expect(result).toEqual({ unchanged: true, removed: true, labels: true });
+  expect(result).toEqual({ unchanged: true, removed: true, labels: true, circles: true });
+});
+
+test('overlapping families separate without distorting groups or moving the dragged node', async ({
+  page,
+}) => {
+  await page.goto('/laplace/');
+  const result = await page.evaluate(async () => {
+    const { separateGraphFamilies } = await import(
+      new URL('src/features/graph/services/family-collision.ts', location.href).href
+    );
+    const { createFamilyRegions } = await import(
+      new URL('src/features/graph/services/family-regions.ts', location.href).href
+    );
+    const nodes = Array.from({ length: 20 }, (_, family) =>
+      Array.from({ length: 3 }, (_, member) => ({
+        id: `${family}-${member}`,
+        rootId: `${family}-0`,
+        title: `Family ${family}`,
+        current: false,
+        degree: 2,
+        childCount: member === 0 ? 2 : 0,
+        parentId: member === 0 ? null : `${family}-0`,
+        depth: member === 0 ? 0 : 1,
+        x: member * (family + 10),
+        y: member * 12,
+        vx: 0,
+        vy: 0,
+        fx: family === 0 && member === 0 ? 0 : undefined,
+        fy: family === 0 && member === 0 ? 0 : undefined,
+      })),
+    ).flat();
+    const original = structuredClone(nodes);
+    const gap = () => {
+      const circles: { x: number; y: number; radius: number }[] = createFamilyRegions(nodes);
+      return Math.min(
+        ...circles.flatMap((a, i) =>
+          circles.slice(i + 1).map((b) => Math.hypot(a.x - b.x, a.y - b.y) - a.radius - b.radius),
+        ),
+      );
+    };
+    separateGraphFamilies(nodes);
+    const initialGap = gap();
+    const rigid = nodes.every((node, i) => {
+      const root = nodes[Math.floor(i / 3) * 3];
+      const oldRoot = original[Math.floor(i / 3) * 3];
+      return (
+        Math.abs(node.x - root.x - (original[i].x - oldRoot.x)) < 0.001 &&
+        Math.abs(node.y - root.y - (original[i].y - oldRoot.y)) < 0.001
+      );
+    });
+    // Expanding the dragged family must also clear all neighboring circles.
+    nodes[0].x = nodes[0].fx = 200;
+    nodes[0].y = nodes[0].fy = 200;
+    separateGraphFamilies(nodes);
+    return {
+      initialGap,
+      draggedGap: gap(),
+      rigid,
+      pinned: nodes[0].x === 200 && nodes[0].y === 200,
+      velocities: nodes.every((node) => node.vx === 0 && node.vy === 0),
+    };
+  });
+  expect(result.initialGap).toBeGreaterThan(0);
+  expect(result.draggedGap).toBeGreaterThan(0);
+  expect(result.rigid).toBe(true);
+  expect(result.pinned).toBe(true);
+  expect(result.velocities).toBe(true);
 });

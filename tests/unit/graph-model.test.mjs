@@ -14,6 +14,9 @@ const { createPageGraph } = await loadModule('../../src/features/graph/services/
 const { GraphFamilyColors } = await loadModule(
   '../../src/features/graph/services/family-colors.ts',
 );
+const { createFamilyRegions, graphNodeRadius } = await loadModule(
+  '../../src/features/graph/services/family-regions.ts',
+);
 function graph(count, edges = [], parents = {}) {
   return createPageGraph(
     Array.from({ length: count }, (_, index) => ({
@@ -84,4 +87,39 @@ test('family colors stay stable through metadata changes, additions and removal'
     baseline,
   );
   assert.equal(new Set(['a', 'b', 'c', 'd', 'e'].map((id) => palette.color(id))).size, 5);
+});
+
+test('family circles enclose every member and follow moved nodes without mutating the model', () => {
+  const model = graph(5, [{ source: '2', target: '3' }], { 1: '0', 2: '0', 4: '3' });
+  const nodes = model.nodes.map((node, index) => ({ ...node, x: index * 80, y: index * -25 }));
+  const baseline = structuredClone(nodes);
+  const regions = createFamilyRegions(nodes);
+  assert.deepEqual(
+    regions.map((region) => region.rootId),
+    ['0', '3'],
+  );
+  assert.equal(regions[0].title, 'Note 0');
+  assert.equal(regions[0].nodes.length, 3);
+  for (const region of regions)
+    for (const node of region.nodes)
+      assert.ok(
+        Math.hypot(node.x - region.x, node.y - region.y) + graphNodeRadius(node) + 35 <
+          region.radius,
+      );
+  assert.deepEqual(nodes, baseline);
+  nodes[2].x += 500;
+  assert.ok(createFamilyRegions(nodes)[0].radius > regions[0].radius);
+});
+
+test('isolated notes and uninitialized coordinates do not create family circles', () => {
+  const model = graph(4, [{ source: '0', target: '1' }], { 3: '2' });
+  assert.deepEqual(createFamilyRegions(model.nodes), []);
+  const nodes = model.nodes.map((node) => ({ ...node, x: 0, y: 0 }));
+  nodes[3].x = NaN;
+  assert.deepEqual(createFamilyRegions(nodes), []);
+  nodes[3].x = 20;
+  assert.deepEqual(
+    createFamilyRegions(nodes).map((region) => region.rootId),
+    ['2'],
+  );
 });
