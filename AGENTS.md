@@ -171,6 +171,7 @@ The Attachments gallery filters filenames and path suffixes using case-insensiti
 
 - The toolbar appears for both single-block selection and text spanning multiple blocks, through native DOM selection or custom drag selection.
 - For multiple blocks, apply formatting, color, clearing, or block type changes to all selected segments while respecting partial boundaries in the first and last segments. Commit the change as one history operation.
+- Deleting a selection spanning paragraphs removes every complete block between its endpoints, including images, Link to page blocks, tables, dividers, code, and Mermaid or LaTeX previews. Support native and custom drag selections in main and split editors; preserve unselected boundary text, surrounding blocks, and undo/redo. Removing an image or page-link block must retain the attachment file and linked page.
 - A format appears active when all segments have it. Toggling a mixed selection applies it uniformly; remove it when all segments already have it. Link editing requires a single fragment.
 - After rendering, rebuild DOM references, selection, and highlights; interacting with the toolbar must not clear the selection being formatted.
 - `inlineSelectionViewportRect` recalculates geometry and clips against the viewport and overflow ancestors, including docks and horizontal table scrolling. On scroll, reposition panels and hide them when no selected text remains visible; retain the state needed to show them again when returning.

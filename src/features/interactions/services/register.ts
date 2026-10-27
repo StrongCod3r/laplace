@@ -2065,10 +2065,22 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.clearMultiBlockSelection();
       return false;
     }
-    const selectedTables = runtime
-      .multiSelectionTables()
-      .map((row) => row.dataset.blockId)
-      .filter(Boolean);
+    const ordered = runtime.orderedMultiSelectionPoints();
+    const selectedBlocks = ordered
+      ? [...runtime.els.blockEditor.querySelectorAll('.block-row[data-block-id]')]
+          .filter((row) => {
+            if (row.contains(ordered.start.content) || row.contains(ordered.end.content))
+              return false;
+            return (
+              ordered.start.content.compareDocumentPosition(row) &
+                Node.DOCUMENT_POSITION_FOLLOWING &&
+              row.compareDocumentPosition(ordered.end.content) & Node.DOCUMENT_POSITION_FOLLOWING
+            );
+          })
+          .map((row) => row.dataset.blockId)
+      : [];
+    runtime.flushHistoryPending();
+    runtime.captureHistoryBeforeInput({ inputType: 'deleteContentBackward' });
     const first = segments[0],
       firstContainer = first.location.blocks,
       firstIndex = first.location.index;
@@ -2094,8 +2106,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       }
     }
 
-    for (let i = selectedTables.length - 1; i >= 0; i--) {
-      const location = runtime.findBlockLocation(selectedTables[i]);
+    for (let i = selectedBlocks.length - 1; i >= 0; i--) {
+      const location = runtime.findBlockLocation(selectedBlocks[i]);
       if (location) {
         affectedLists.add(location.blocks);
         location.blocks.splice(location.index, 1);
@@ -3058,6 +3070,30 @@ export function registerInteractions(runtime: EditorRuntime) {
       return;
     }
     const keyboardInlineSelection = runtime.captureInlineSelection();
+    if (
+      keyboardInlineSelection?.segments &&
+      e.target.closest?.('.block-content') &&
+      runtime.els.blockEditor?.contains(e.target) &&
+      (e.key === 'Backspace' || e.key === 'Delete')
+    ) {
+      const first = keyboardInlineSelection.segments[0],
+        last = keyboardInlineSelection.segments.at(-1);
+      runtime.multiBlockSelection = {
+        anchor: {
+          content: first.content,
+          ...runtime.textNodePointForOffset(first.content, first.start),
+        },
+        focus: {
+          content: last.content,
+          ...runtime.textNodePointForOffset(last.content, last.end),
+        },
+        active: true,
+        dragging: false,
+      };
+      e.preventDefault();
+      runtime.deleteMultiBlockSelection();
+      return;
+    }
     if (keyboardInlineSelection && mod) {
       runtime.inlineSelectionState = keyboardInlineSelection;
       const key = e.key.toLowerCase();

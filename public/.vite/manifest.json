@@ -1,6 +1,10 @@
 {
-  "_WorkspacePage-CmLrXXbX.js": {
-    "file": "assets/WorkspacePage-CmLrXXbX.js",
+  "_WorkspacePage-DdX71NyG.css": {
+    "file": "assets/WorkspacePage-DdX71NyG.css",
+    "src": "_WorkspacePage-DdX71NyG.css"
+  },
+  "_WorkspacePage-XpqovVty.js": {
+    "file": "assets/WorkspacePage-XpqovVty.js",
     "name": "WorkspacePage",
     "isDynamicEntry": true,
     "imports": [
@@ -80,17 +84,13 @@
       "assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf"
     ]
   },
-  "_WorkspacePage-DdX71NyG.css": {
-    "file": "assets/WorkspacePage-DdX71NyG.css",
-    "src": "_WorkspacePage-DdX71NyG.css"
-  },
   "index.html": {
-    "file": "assets/index-prTxMtif.js",
+    "file": "assets/index-PYs6MrL1.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "dynamicImports": [
-      "_WorkspacePage-CmLrXXbX.js"
+      "_WorkspacePage-XpqovVty.js"
     ],
     "css": [
       "assets/index-vXvJE4Jz.css"
@@ -345,17 +345,17 @@
     "isDynamicEntry": true
   },
   "src/features/git/services/git-client.ts": {
-    "file": "assets/git-client-DGaUO_nf.js",
+    "file": "assets/git-client-DfLxUrhF.js",
     "name": "git-client",
     "src": "src/features/git/services/git-client.ts",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_WorkspacePage-CmLrXXbX.js"
+      "_WorkspacePage-XpqovVty.js"
     ]
   },
   "src/features/git/services/git-worker-client.ts": {
-    "file": "assets/git-worker-client-CwP5qhXi.js",
+    "file": "assets/git-worker-client-FfC-tVEq.js",
     "name": "git-worker-client",
     "src": "src/features/git/services/git-worker-client.ts",
     "isDynamicEntry": true,
