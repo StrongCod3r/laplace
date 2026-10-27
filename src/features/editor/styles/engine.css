@@ -698,11 +698,11 @@
 }
 
 .code-toolbar {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+  position: relative;
   z-index: 4;
+  width: max-content;
   height: 29px;
+  margin: 5px 5px 5px auto;
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
@@ -827,21 +827,12 @@
   display: none;
 }
 
-.code-block.mermaid-mode-code .code-editor-wrap,
-.code-block.mermaid-mode-split .code-editor-wrap,
-.code-block.math-mode-code .code-editor-wrap,
-.code-block.math-mode-split .code-editor-wrap {
-  padding-top: 39px;
-}
-
 .code-block.mermaid-mode-preview .mermaid-preview {
   min-height: 180px;
-  padding-top: 39px;
   border-top: 0;
 }
 
 .code-block.math-mode-preview .math-preview {
-  padding-top: 45px;
   border-top: 0;
 }
 
@@ -849,7 +840,6 @@
   display: flex;
   min-width: 0;
   max-width: 100%;
-  padding-top: 39px;
   background: var(--code-bg);
 }
 
@@ -996,8 +986,10 @@
 
 .mermaid-preview {
   position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
   min-height: 140px;
-  padding: 17px 20px 20px;
   border-top: 1px solid var(--code-preview-border);
   background: var(--code-preview-bg);
   overflow: hidden;
@@ -1058,7 +1050,8 @@ dialog[data-mermaid-viewer] {
 
 .mermaid-preview[data-mermaid-fullscreen] .mermaid-render {
   position: absolute;
-  inset: 40px;
+  inset: 0;
+  padding: 0;
 }
 
 .mermaid-preview[data-mermaid-fullscreen] .mermaid-canvas {
@@ -1153,8 +1146,12 @@ dialog[data-mermaid-viewer] {
 }
 
 .mermaid-render {
+  position: relative;
+  z-index: 0;
+  flex: 1;
   min-width: 0;
   min-height: 100px;
+  padding: 17px 20px 20px;
   outline: none;
   overflow: hidden;
   cursor: grab;

@@ -59,7 +59,7 @@ export function createMermaidViewer() {
     const fit = () => {
       const width = Math.max(
         1,
-        Math.min(fullViewport.clientWidth, fullViewport.clientHeight * ratio),
+        Math.min(fullViewport.clientWidth - 80, (fullViewport.clientHeight - 80) * ratio),
       );
       svg.style.width = `${width}px`;
       svg.style.maxWidth = 'none';
