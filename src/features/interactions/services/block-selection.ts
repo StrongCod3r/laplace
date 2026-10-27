@@ -174,6 +174,43 @@ export function clippedSelectionRect(element: HTMLElement): SelectionRectangle |
   return result.right > result.left && result.bottom > result.top ? result : null;
 }
 
+/** Match block surfaces without letting padding or borders spill outside the editor. */
+export function blockSelectionGeometry(
+  row: HTMLElement,
+  root: HTMLElement,
+): {
+  rect: SelectionRectangle;
+  radius: string;
+} | null {
+  const rect = clippedSelectionRect(row);
+  if (!rect) return null;
+  const content = root.getBoundingClientRect();
+  rect.left = Math.max(rect.left, content.left);
+  rect.right = Math.min(rect.right, content.right);
+  if (rect.right <= rect.left) return null;
+  if (
+    !row.matches(
+      '.code-block,[data-type="callout"],.image-block,.simple-table-block,.page-block,.page-link-block',
+    )
+  )
+    return { rect, radius: '0px' };
+  const original = row.getBoundingClientRect();
+  const style = getComputedStyle(row);
+  const left = rect.left <= original.left + 0.5;
+  const right = rect.right >= original.right - 0.5;
+  const top = rect.top <= original.top + 0.5;
+  const bottom = rect.bottom >= original.bottom - 0.5;
+  return {
+    rect,
+    radius: [
+      top && left ? style.borderTopLeftRadius : '0px',
+      top && right ? style.borderTopRightRadius : '0px',
+      bottom && right ? style.borderBottomRightRadius : '0px',
+      bottom && left ? style.borderBottomLeftRadius : '0px',
+    ].join(' '),
+  };
+}
+
 export function rectangleSelectionBounds(
   selection: RectangleBlockSelection,
   clip = true,

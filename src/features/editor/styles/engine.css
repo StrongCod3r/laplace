@@ -2977,22 +2977,19 @@ dialog[data-mermaid-viewer] {
 .multi-block-selection-rect {
   position: fixed;
   display: block;
+  box-sizing: border-box;
+  border: 0;
   border-radius: 0;
-  background: color-mix(in srgb, var(--blue) 28%, transparent);
+  background: var(--editor-selection-background);
   pointer-events: none;
-}
-
-.multi-block-selection-rect.multi-block-selection-table,
-.multi-block-selection-rect.multi-block-selection-block {
-  background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 
 .multi-block-selection-box {
   position: fixed;
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--blue) 72%, transparent);
+  border: 1px solid Highlight;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--blue) 10%, transparent);
+  background: transparent;
   pointer-events: none;
 }
 

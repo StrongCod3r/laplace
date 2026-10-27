@@ -13,6 +13,7 @@
   --border: rgba(55, 53, 47, 0.13);
   --blue: #2383e2;
   --blue-hover: #1a73cb;
+  --editor-selection-background: color-mix(in srgb, Highlight 35%, transparent);
   --danger: #eb5757;
   --code-bg: #f7f7f5;
   --code-toolbar-bg: #ffffff;
@@ -476,18 +477,15 @@ body {
 /* Consistent, centered More (…) icon */
 /* Page icon picker tabs */
 
-/* Cross-block text selection: Chromium constrains native selection to one contenteditable host, so Laplace paints a continuous selection across block editors. */
-body.dark .multi-block-selection-rect {
-  background: color-mix(in srgb, var(--blue) 38%, transparent);
-}
-
-body.dark .multi-block-selection-rect.multi-block-selection-table,
-body.dark .multi-block-selection-rect.multi-block-selection-block {
-  background: color-mix(in srgb, var(--blue) 18%, transparent);
-}
-
-body.dark .multi-block-selection-box {
-  background: color-mix(in srgb, var(--blue) 16%, transparent);
+/* Native text and imperative block selections share the same system highlight color. */
+.block-content::selection,
+.block-content *::selection,
+[data-table-cell]::selection,
+[data-table-cell] *::selection,
+.plain-text-content::selection,
+.plain-text-content *::selection {
+  background: var(--editor-selection-background);
+  color: inherit;
 }
 
 /* Docked editor tabs and recursive Obsidian-style split panes. */

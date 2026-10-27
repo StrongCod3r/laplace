@@ -13,6 +13,7 @@ import { copyInlineMathSelection } from '@/features/math/clipboard';
 import { selectedInlineMathHosts } from '@/features/math/selection';
 import {
   blockBoundaryPoint,
+  blockSelectionGeometry,
   canStartRectangleSelection,
   clippedSelectionRect,
   isRectangleSelection,
@@ -1842,9 +1843,15 @@ export function registerInteractions(runtime: EditorRuntime) {
     for (const row of topLevelSelectedRows(selectedBlockRows(root, selection))) {
       const block = runtime.findBlock(row.dataset.blockId);
       if (!rectangle && runtime.isTextLikeBlock(block)) continue;
-      const rect = clippedSelectionRect(row);
-      if (rect)
-        paint(rect, 'multi-block-selection-rect multi-block-selection-block', row.dataset.blockId);
+      const geometry = blockSelectionGeometry(row, root);
+      if (geometry) {
+        const mark = paint(
+          geometry.rect,
+          'multi-block-selection-rect multi-block-selection-block',
+          row.dataset.blockId,
+        );
+        if (mark) mark.style.borderRadius = geometry.radius;
+      }
     }
     if (!rectangle) {
       const native = window.getSelection();

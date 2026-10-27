@@ -169,6 +169,7 @@ The Attachments gallery filters filenames and path suffixes using case-insensiti
 
 ### Selection and floating panels
 
+- Native editor text and painted selection overlays share `--editor-selection-background`. Keep block highlights borderless, preserve the corner radii of rounded block surfaces, and constrain their horizontal bounds to the editor content column so padded callouts cannot protrude. The drag rectangle is a transparent guide, avoiding a second fill over selected blocks.
 - Selected rendered inline formulas receive a borderless highlight based on the selected LaTeX source, for native and cross-block ranges, table cells, and page-body selection. Clip highlights to the active pane, refresh them on scroll, resize, and font loading, and remove them when the selection collapses. Keep generated KaTeX output outside editable text and clipboard serialization.
 - The toolbar appears for both single-block selection and text spanning multiple blocks, through native DOM selection or custom drag selection.
 - For multiple blocks, apply formatting, color, clearing, or block type changes to all selected segments while respecting partial boundaries in the first and last segments. Commit the change as one history operation.
