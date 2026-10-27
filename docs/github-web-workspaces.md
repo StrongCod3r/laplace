@@ -10,14 +10,13 @@ available separately; opening a web workspace does not migrate or replace its no
 Open a local folder from the workspace selector, then open Source Control. If the folder
 has no Git repository, choose **Configure GitHub synchronization**, enter a GitHub HTTPS
 repository URL and commit author, and authorize with **Connect with GitHub** or a personal
-access token. Saving
-initializes Git and configures the remote in the current folder; existing notes remain
+access token. Saving initializes Git and configures the remote in the current folder; existing notes remain
 in place. Use Sync first to download existing remote notes without creating an unrelated
 local commit. Nonconflicting local notes and local Laplace settings remain as working
 changes; conflicting note paths stop the import before files are changed. Unstage any
 local staged changes before this initial download. Commit retained local changes afterward.
-A remote with unrelated history
-is protected by the existing divergence checks and is not merged automatically.
+A remote with unrelated history is protected by the existing divergence checks and is
+not merged automatically.
 The workspace selector has no separate GitHub button. Previously created web workspaces
 can still be reopened from the selector and survive page reloads. Closing a
 web workspace requires explicit confirmation to delete its browser copy, including
@@ -27,6 +26,20 @@ OPFS and IndexedDB belong to an origin and browser profile. Unsynced work remain
 that browser, and clearing site data removes it. Laplace requests persistent browser
 storage, but the browser decides whether to grant it. A failed clone is discarded only
 from its newly allocated OPFS directory; registered workspaces are never replaced.
+
+## Synchronization commands
+
+- **Commit** records local changes without contacting the remote.
+- **Fetch** downloads remote objects and references without applying files to the workspace.
+- **Sync** fetches, checks local changes and history, applies a clean fast-forward when
+  possible, and pushes pending commits without force-push. For an initialized local
+  branch, conflicting local changes or divergent history stop synchronization.
+- **Commit & Push** creates a local commit and pushes through the guarded push operation.
+- **Commit & Sync** uses the synchronization operation, including its remote-file checks.
+
+Manual operations reserve the workspace and wait for pending saves. Notes reload when
+remote files are applied; operations that leave workspace files unchanged preserve the
+editor and its history. A failed Sync reloads conservatively in case files changed.
 
 ## Personal access tokens
 
@@ -62,14 +75,15 @@ Reference: [Managing personal access tokens](https://docs.github.com/en/authenti
 
 GitHub OAuth code exchange requires a server-held client secret, and Git smart HTTP
 requires a CORS gateway in browsers. The optional service in `services/github` supplies
-both without storing notes or credentials on the server. The SPA remains static and
+both without persisting notes or access tokens on the server. The SPA remains static and
 can still be hosted on GitHub Pages. Local Git and existing manual token configuration
 continue to work without this service.
 
 1. Register a GitHub OAuth App. Set its callback URL to
    `https://YOUR-SERVICE/auth/callback` and its homepage to the deployed Laplace URL.
 2. In `services/github/wrangler.toml`, set `APP_ORIGIN` to the exact SPA origin
-   (scheme and host, without `/Laplace/`) and `GITHUB_CLIENT_ID` to the OAuth App's ID.
+   (scheme, host, and port if present, without the SPA's base path) and
+   `GITHUB_CLIENT_ID` to the OAuth App's ID.
    Deploy this module using Cloudflare Workers or adapt its standard Fetch handler to
    your host. Use a dedicated service origin; its OAuth cookie uses the `__Host-` prefix.
 3. Configure `GITHUB_CLIENT_SECRET` and a cryptographically random `SESSION_SECRET`

@@ -1,5 +1,5 @@
 {
-  "total": 650,
+  "total": 651,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -293,7 +293,8 @@
       "clearAttachmentObjectUrls",
       "hydrateAttachmentImages",
       "imageCropPanelHTML",
-      "imageHTML"
+      "imageHTML",
+      "setAttachmentGalleryFilter"
     ],
     "graph": [
       "wikiTitleKey",

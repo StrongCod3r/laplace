@@ -37,6 +37,8 @@ All code, code comments, and project documentation must be written in English, i
 | `src/features/navigation/services/register.ts`                   | Tabs, groups, docks, and navigation                             |
 | `src/storage.ts`, `src/config.ts`, `src/workspace-config.ts`     | Storage gateway, schema, and configuration separation           |
 | `src/features/git/`                                              | Browser Git, worker, synchronization, and UI                    |
+| `src/features/graph/`                                            | Canvas graph scene, D3 physics, and ownership families          |
+| `src/features/math/`                                             | KaTeX rendering, formula source, clipboard, and inline editor   |
 | `src/shared/lib/controller-lifecycle.ts`                         | Registration and cleanup of listeners and scheduled tasks       |
 | `src/styles/global.css`, `src/features/editor/styles/engine.css` | Global tokens and editable engine presentation                  |
 
@@ -45,6 +47,8 @@ Preact owns the shell, tree, tabs, and panels. The DOM engine owns `contentedita
 The controller owns the mutable document. Zustand publishes typed UI snapshots; do not persist the entire store or create another editable document competing with the runtime. Writes go through the existing services and gateway.
 
 Some legacy algorithms retain `@ts-nocheck`. Boundaries and new contracts must remain typed; do not assume exhaustive checking of legacy services. Global class names and `data-*` attributes may be engine hooks: preserve them when adding local CSS Module classes. `ui-styles.ts`, `htmlWithStyles`, and `classWithStyles` connect engine-generated HTML to those modules.
+
+`docs/migration-inventory.json` is an active input to `tests/unit/feature-inventory.test.mjs`, not an obsolete migration artifact. Keep its function lists and total aligned with the feature registration modules.
 
 For dock events, activate the correct group through `focusEditorGroup` before accessing the page, blocks, or `runtime.els.blockEditor`. Do not accidentally apply an operation to the main editor through references belonging to the wrong pane.
 

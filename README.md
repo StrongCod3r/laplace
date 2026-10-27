@@ -4,8 +4,8 @@ A local-first Markdown workspace for writing and organizing notes stored in a lo
 
 ## Features
 
-- Block editor with tables, images, code blocks, and diagram previews.
-- Folders, folder notes, wikilinks, search, and a graph of connected notes.
+- Block editor with tables, images, code blocks, Mermaid diagrams, and LaTeX equations.
+- Folders, folder notes, wikilinks, search, and an interactive canvas graph of connected notes.
 - Tabs, split editors, Markdown source preview, and undo/redo.
 - Optional GitHub synchronization through the Source Control panel.
 - Light and dark themes and an installable PWA.
@@ -71,6 +71,11 @@ npm run test:e2e
 npm run format:check
 ```
 
-The equivalent pnpm commands are supported. Browser tests use Playwright with Edge on Windows.
+The equivalent pnpm commands are supported. Browser tests use Playwright with Edge on Windows
+and Chromium elsewhere. Install the corresponding Playwright browser before running them.
+Tests use isolated browser data; folder tests use OPFS rather than personal folders.
+
+`public/` is versioned build output; edit source files and `pwa-assets/`, then rebuild
+when application code changes. Documentation-only changes do not require a build.
 
 Built with Preact, TypeScript, Vite, and Zustand. See [client architecture](docs/client-spa-architecture.md) for the code structure and [AGENTS.md](AGENTS.md) for development and data-protection rules.

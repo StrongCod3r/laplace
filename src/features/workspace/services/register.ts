@@ -530,7 +530,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
     if (runtime.els.workspaceAccessMessage) {
       runtime.els.workspaceAccessMessage.textContent =
         mode === 'blocked'
-          ? 'No se puede confirmar que la copia local esté sincronizada. Vuelve a seleccionar este workspace y concede permisos de lectura y escritura para continuar.'
+          ? 'Cannot confirm that the local copy is synchronized. Select this workspace again and grant read and write access to continue.'
           : '';
     }
     runtime
@@ -571,7 +571,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
           runtime.setWorkspaceAccess('blocked');
           if (runtime.els.workspaceAccessMessage)
             runtime.els.workspaceAccessMessage.textContent =
-              'No se pudo confirmar que la caché coincida con los archivos locales. Selecciona el workspace y concede permisos nuevamente.';
+              'Could not confirm that the cache matches the local files. Select the workspace and grant access again.';
         }
       }
       return;
@@ -582,7 +582,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
       runtime.setWorkspaceAccess('blocked');
       if (runtime.els.workspaceAccessMessage)
         runtime.els.workspaceAccessMessage.textContent =
-          'Se perdió el acceso al workspace. La caché queda bloqueada hasta poder comprobar que coincide con los archivos locales. Selecciona el workspace y concede permisos de lectura y escritura.';
+          'Workspace access was lost. The cache remains locked until it can be verified against local files. Select the workspace and grant read and write access.';
       return;
     }
     if (
@@ -610,14 +610,14 @@ export function registerWorkspace(runtime: EditorRuntime) {
         runtime.renderAll();
         if (next === 'readonly')
           runtime.toast(
-            'Workspace sincronizado en solo lectura. Pulsa “Conceder escritura” para solicitar permiso y editar.',
+            'Workspace synchronized with read-only access. Click “Grant write access” to request permission and edit.',
           );
       } catch (error) {
         console.error('Could not synchronize the workspace after a permission change.', error);
         runtime.setWorkspaceAccess('blocked');
         if (runtime.els.workspaceAccessMessage)
           runtime.els.workspaceAccessMessage.textContent =
-            'No se pudo verificar la sincronización con los archivos locales. Selecciona el workspace y concede permisos de lectura y escritura para continuar.';
+            'Could not verify synchronization with local files. Select the workspace and grant read and write access to continue.';
       }
       return;
     }
@@ -636,7 +636,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
   }
 
   function restoreSynchronizedWorkspace(
-    message = 'Este workspace está en modo de solo lectura. Concede permisos de escritura para editar.',
+    message = 'This workspace is read-only. Grant write access to edit.',
   ) {
     if (runtime.lastSyncedWorkspace) {
       const current = runtime.state,
@@ -869,7 +869,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         if (folder.path) await runtime.localStorageGateway.createFolder?.(folder.path);
       if (!(await runtime.persistStateNow()))
         throw new Error(
-          'No se pudo sincronizar el workspace seleccionado. Vuelve a conceder permisos e inténtalo otra vez.',
+          'Could not synchronize the selected workspace. Grant access again and retry.',
         );
       await runtime.localStorageGateway.registerCurrentDirectoryWorkspace();
       await runtime.refreshWorkspaceSelector();
@@ -890,7 +890,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         runtime.setWorkspaceAccess('blocked');
         if (runtime.els.workspaceAccessMessage)
           runtime.els.workspaceAccessMessage.textContent =
-            'No se pudo identificar ni sincronizar el workspace seleccionado. Vuelve a elegir la carpeta correcta y concede permisos de lectura y escritura.';
+            'Could not identify or synchronize the selected workspace. Select the correct folder again and grant read and write access.';
       }
       runtime.toast(error?.message || 'Could not open that folder.');
     }
@@ -1255,21 +1255,18 @@ export function registerWorkspace(runtime: EditorRuntime) {
       if (permission === 'readwrite') {
         await runtime.applyWorkspacePermission(permission, { reload: true });
         if (runtime.workspaceAccess === 'writable')
-          runtime.toast('Permiso de escritura concedido. Workspace synchronized.');
+          runtime.toast('Write access granted. Workspace synchronized.');
         return;
       }
       await runtime.applyWorkspacePermission(permission, { reload: false });
       if (permission === 'read')
         runtime.toast(
-          'El navegador mantuvo el workspace en solo lectura. Concede escritura o selecciona otra carpeta con el botón de carpeta.',
+          'The browser kept the workspace read-only. Grant write access or use the folder button to select another folder.',
         );
-      else
-        runtime.toast(
-          'No se pudo recuperar el acceso. Selecciona la carpeta de nuevo y concede permisos.',
-        );
+      else runtime.toast('Could not restore access. Select the folder again and grant access.');
     } catch (error) {
       console.error('Could not request write access to the selected workspace.', error);
-      runtime.toast(error?.message || 'No se pudo solicitar permiso de escritura.');
+      runtime.toast(error?.message || 'Could not request write access.');
     }
   }
 
@@ -2349,7 +2346,7 @@ export function registerWorkspace(runtime: EditorRuntime) {
         await runtime.persistStateNow();
       if (currentMode === 'readonly')
         runtime.toast(
-          'Workspace en solo lectura. Pulsa “Conceder escritura” para solicitar permiso y editar.',
+          'Workspace is read-only. Click “Grant write access” to request permission and edit.',
         );
       runtime.lifecycle.interval(() => {
         void runtime.checkWorkspacePermission({ reload: true });
@@ -2371,10 +2368,10 @@ export function registerWorkspace(runtime: EditorRuntime) {
       runtime.renderAll();
       if (runtime.els.workspaceAccessMessage)
         runtime.els.workspaceAccessMessage.textContent = missingFolder
-          ? 'La carpeta del workspace ya no está disponible. Puedes cerrar este workspace o volver a seleccionar su carpeta.'
+          ? 'The workspace folder is no longer available. You can close this workspace or select its folder again.'
           : error?.message?.includes('different workspace')
-            ? 'La caché pertenece a otro workspace. Selecciona el workspace local correcto para evitar mezclar datos.'
-            : 'No se pudo comprobar la sincronización con este workspace. Selecciónalo de nuevo y concede permisos de lectura y escritura.';
+            ? 'The cache belongs to another workspace. Select the correct local workspace to avoid mixing data.'
+            : 'Could not verify synchronization with this workspace. Select it again and grant read and write access.';
       runtime.toast(
         missingFolder
           ? 'Workspace folder unavailable. Close it or reconnect its folder.'

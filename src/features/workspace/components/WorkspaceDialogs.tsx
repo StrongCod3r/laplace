@@ -20,16 +20,14 @@ export const WorkspaceDialogs = memo(function WorkspaceDialogs() {
           <div className={withModuleClasses(styles, 'workspace-access-lock')} aria-hidden="true">
             <Icon name="shield-lock" size="24" className={withModuleClasses(styles, '')} />
           </div>
-          <h2 id="workspaceAccessTitle">{'Workspace desconectado'}</h2>
-          <p id="workspaceAccessMessage">
-            {'No se puede comprobar la sincronización con los archivos locales.'}
-          </p>
+          <h2 id="workspaceAccessTitle">{'Workspace disconnected'}</h2>
+          <p id="workspaceAccessMessage">{'Cannot verify synchronization with local files.'}</p>
           <button
             id="workspaceReconnectBtn"
             type="button"
             className={withModuleClasses(styles, 'primary-btn')}
           >
-            {'Volver a conceder permisos'}
+            {'Grant access again'}
           </button>
           <button
             id="workspaceDisconnectCloseBtn"

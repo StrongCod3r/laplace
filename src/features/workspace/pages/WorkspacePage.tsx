@@ -70,7 +70,7 @@ export default function WorkspacePage() {
               type="button"
               className={withModuleClasses(styles, 'workspace-permission-btn hidden')}
             >
-              Conceder escritura
+              Grant write access
             </button>
           </header>
           <EditorTabs />

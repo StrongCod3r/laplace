@@ -4472,10 +4472,10 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (runtime.workspaceAccess !== 'writable') {
       const message =
         runtime.workspaceAccess === 'readonly'
-          ? 'El workspace está en solo lectura. Pulsa “Conceder escritura” para solicitar permiso y crear una página.'
+          ? 'The workspace is read-only. Click “Grant write access” to request permission and create a page.'
           : runtime.workspaceAccess === 'blocked'
-            ? 'El workspace está desconectado. Selecciónalo de nuevo y concede permisos de escritura.'
-            : 'Espera a que se verifiquen los permisos del workspace para crear una página.';
+            ? 'The workspace is disconnected. Select it again and grant write access.'
+            : 'Wait for workspace permissions to be verified before creating a page.';
       runtime.toast(message);
       return null;
     }
