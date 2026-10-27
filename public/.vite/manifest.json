@@ -1,6 +1,10 @@
 {
-  "_WorkspacePage-BLbnxCrc.js": {
-    "file": "assets/WorkspacePage-BLbnxCrc.js",
+  "_WorkspacePage-DdX71NyG.css": {
+    "file": "assets/WorkspacePage-DdX71NyG.css",
+    "src": "_WorkspacePage-DdX71NyG.css"
+  },
+  "_WorkspacePage-cAgm7qQN.js": {
+    "file": "assets/WorkspacePage-cAgm7qQN.js",
     "name": "WorkspacePage",
     "isDynamicEntry": true,
     "imports": [
@@ -80,20 +84,16 @@
       "assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf"
     ]
   },
-  "_WorkspacePage-DdX71NyG.css": {
-    "file": "assets/WorkspacePage-DdX71NyG.css",
-    "src": "_WorkspacePage-DdX71NyG.css"
-  },
   "index.html": {
-    "file": "assets/index-BACqEFFh.js",
+    "file": "assets/index-D8GclD-F.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "dynamicImports": [
-      "_WorkspacePage-BLbnxCrc.js"
+      "_WorkspacePage-cAgm7qQN.js"
     ],
     "css": [
-      "assets/index-Dr4kVd5_.css"
+      "assets/index-DTTDu9mC.css"
     ]
   },
   "node_modules/.pnpm/katex@0.19.0/node_modules/katex/dist/fonts/KaTeX_AMS-Regular.ttf": {
@@ -345,17 +345,17 @@
     "isDynamicEntry": true
   },
   "src/features/git/services/git-client.ts": {
-    "file": "assets/git-client-FIvd8FIi.js",
+    "file": "assets/git-client-DcmPem6_.js",
     "name": "git-client",
     "src": "src/features/git/services/git-client.ts",
     "isDynamicEntry": true,
     "imports": [
       "index.html",
-      "_WorkspacePage-BLbnxCrc.js"
+      "_WorkspacePage-cAgm7qQN.js"
     ]
   },
   "src/features/git/services/git-worker-client.ts": {
-    "file": "assets/git-worker-client-C3EEQrZ3.js",
+    "file": "assets/git-worker-client-B1gVvV0-.js",
     "name": "git-worker-client",
     "src": "src/features/git/services/git-worker-client.ts",
     "isDynamicEntry": true,

@@ -418,6 +418,7 @@
 
 .block-editor {
   position: relative;
+  outline: none;
 }
 
 .empty-hint {
@@ -2976,15 +2977,13 @@ dialog[data-mermaid-viewer] {
 .multi-block-selection-rect {
   position: fixed;
   display: block;
-  border-radius: 2px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--blue) 28%, transparent);
   pointer-events: none;
 }
 
 .multi-block-selection-rect.multi-block-selection-table,
 .multi-block-selection-rect.multi-block-selection-block {
-  border: 2px solid color-mix(in srgb, var(--blue) 62%, transparent);
-  border-radius: 5px;
   background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 

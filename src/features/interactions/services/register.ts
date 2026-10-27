@@ -11,6 +11,7 @@ import { bindMathEditing } from '@/features/math/render';
 import { inlineMathRanges } from '@/features/math/syntax';
 import { copyInlineMathSelection } from '@/features/math/clipboard';
 import {
+  blockBoundaryPoint,
   canStartRectangleSelection,
   clippedSelectionRect,
   isRectangleSelection,
@@ -18,6 +19,7 @@ import {
   selectedBlockRows,
   selectionViewport,
   startRectangleAutoScroll,
+  textBlockSelectionRange,
   topLevelSelectedRows,
   updateRectangleSelection,
   type RectangleBlockSelection,
@@ -1663,6 +1665,12 @@ export function registerInteractions(runtime: EditorRuntime) {
 
   function caretPointInContent(content, x, y) {
     if (!content) return null;
+    if (content.matches('.block-row[data-block-id]')) {
+      const anchor = runtime.multiBlockSelection?.anchor?.content;
+      const after =
+        anchor && !!(anchor.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return blockBoundaryPoint(content, Boolean(after));
+    }
     let node = null,
       offset = 0;
     try {
@@ -1687,44 +1695,27 @@ export function registerInteractions(runtime: EditorRuntime) {
     const pointElement = document.elementFromPoint(x, y);
     const direct = pointElement?.closest?.('.block-content[contenteditable="true"]');
     if (direct && runtime.els.blockEditor?.contains(direct)) return direct;
-    const contents = runtime.selectableBlockContents();
-    const table = pointElement?.closest?.('.simple-table-block');
-    if (table && runtime.els.blockEditor?.contains(table)) {
-      let before = null,
-        after = null;
-      for (const content of contents) {
-        const relation = table.compareDocumentPosition(content);
-        if (relation & Node.DOCUMENT_POSITION_PRECEDING) before = content;
-        if (!after && relation & Node.DOCUMENT_POSITION_FOLLOWING) after = content;
-      }
-      const anchor = runtime.multiBlockSelection?.anchor?.content;
-      if (anchor) {
-        const tableAfterAnchor = !!(
-          anchor.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING
-        );
-        return tableAfterAnchor ? after || before : before || after;
-      }
-      const rect = table.getBoundingClientRect();
-      return y < rect.top + rect.height / 2 ? before || after : after || before;
-    }
-    let best = null,
+    const root = runtime.els.blockEditor;
+    const row = pointElement?.closest?.('.block-row[data-block-id]');
+    let best = row && root?.contains(row) ? row : null,
       bestDistance = Infinity;
-    for (const content of contents) {
-      const r = content.getBoundingClientRect();
+    for (const candidate of best ? [] : root?.querySelectorAll('.block-row[data-block-id]') || []) {
+      if (!candidate.getClientRects().length) continue;
+      const r = candidate.getBoundingClientRect();
       const distance = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
       if (distance < bestDistance) {
-        best = content;
+        best = candidate;
         bestDistance = distance;
       }
     }
-    return bestDistance <= 32 ? best : null;
+    if (!best) return null;
+    return runtime.isTextLikeBlock(runtime.findBlock(best.dataset.blockId))
+      ? best.querySelector('.block-content[contenteditable="true"]')
+      : best;
   }
 
   function pointOrder(a, b, contents = runtime.selectableBlockContents()) {
-    const ai = contents.indexOf(a?.content),
-      bi = contents.indexOf(b?.content);
-    if (ai !== bi) return ai - bi;
-    if (ai < 0) return 0;
+    if (!a || !b) return 0;
     try {
       const ar = document.createRange(),
         br = document.createRange();
@@ -1748,21 +1739,16 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function multiSelectionRanges(selection = runtime.multiBlockSelection) {
-    const ordered = runtime.orderedMultiSelectionPoints(selection);
-    if (!ordered) return [];
-    const { start, end, contents } = ordered,
-      startIndex = contents.indexOf(start.content),
-      endIndex = contents.indexOf(end.content);
-    if (startIndex < 0 || endIndex < startIndex) return [];
+    const selected = textBlockSelectionRange(selection);
+    if (!selected) return [];
     const ranges = [];
-    for (let i = startIndex; i <= endIndex; i++) {
-      const content = contents[i],
-        range = document.createRange();
+    for (const content of runtime.selectableBlockContents()) {
       try {
-        if (i === startIndex) range.setStart(start.node, start.offset);
-        else range.setStart(content, 0);
-        if (i === endIndex) range.setEnd(end.node, end.offset);
-        else range.setEnd(content, content.childNodes.length);
+        if (!selected.intersectsNode(content)) continue;
+        const range = selected.cloneRange();
+        if (!content.contains(selected.startContainer)) range.setStart(content, 0);
+        if (!content.contains(selected.endContainer))
+          range.setEnd(content, content.childNodes.length);
         if (!range.collapsed) ranges.push({ content, range });
       } catch {}
     }
@@ -1770,42 +1756,14 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function multiSelectionTables(selection = runtime.multiBlockSelection) {
-    const ordered = runtime.orderedMultiSelectionPoints(selection);
-    if (!ordered) return [];
-    const { start, end } = ordered;
-    if (start.content === end.content) return [];
-    return Array.from(
-      runtime.els.blockEditor?.querySelectorAll?.('.simple-table-block[data-block-id]') || [],
-    ).filter((table) => {
-      if (!table.isConnected || table.offsetParent === null) return false;
-      const afterStart = !!(
-        start.content.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING
-      );
-      const beforeEnd = !!(
-        table.compareDocumentPosition(end.content) & Node.DOCUMENT_POSITION_FOLLOWING
-      );
-      return afterStart && beforeEnd;
-    });
+    return selectedBlockRows(runtime.els.blockEditor, selection).filter(
+      (row) => row.matches('.simple-table-block') && row.getClientRects().length,
+    );
   }
 
   function multiSelectionCodeBlocks(selection = runtime.multiBlockSelection) {
-    const ordered = runtime.orderedMultiSelectionPoints(selection);
-    if (!ordered) return [];
-    const { start, end } = ordered;
-    if (start.content === end.content) return [];
-    return Array.from(
-      runtime.els.blockEditor?.querySelectorAll?.('.code-block[data-block-id]') || [],
-    )
-      .filter((row) => {
-        if (!row.isConnected || row.offsetParent === null) return false;
-        const afterStart = !!(
-          start.content.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING
-        );
-        const beforeEnd = !!(
-          row.compareDocumentPosition(end.content) & Node.DOCUMENT_POSITION_FOLLOWING
-        );
-        return afterStart && beforeEnd;
-      })
+    return selectedBlockRows(runtime.els.blockEditor, selection)
+      .filter((row) => row.matches('.code-block') && row.getClientRects().length)
       .map((row) => ({ row, block: runtime.findBlock(row.dataset.blockId) }))
       .filter((entry) => entry.block?.type === 'code');
   }

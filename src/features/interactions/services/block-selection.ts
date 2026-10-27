@@ -1,9 +1,11 @@
 import type { ControllerLifecycle } from '@/shared/lib/controller-lifecycle';
 
-interface TextSelectionPoint {
+export interface TextSelectionPoint {
   content: HTMLElement;
   node: Node;
   offset: number;
+  blockId?: string;
+  edge?: 'before' | 'after';
 }
 
 interface TextBlockSelection {
@@ -39,6 +41,72 @@ export function isRectangleSelection(value: unknown): value is RectangleBlockSel
   return (value as RectangleBlockSelection | null)?.mode === 'rectangle';
 }
 
+export function textBlockSelectionRange(selection: unknown): Range | null {
+  const { anchor, focus } = (selection || {}) as TextBlockSelection;
+  if (!anchor || !focus) return null;
+  try {
+    const first = document.createRange();
+    const last = document.createRange();
+    first.setStart(anchor.node, anchor.offset);
+    first.collapse(true);
+    last.setStart(focus.node, focus.offset);
+    last.collapse(true);
+    const [start, end] =
+      first.compareBoundaryPoints(Range.START_TO_START, last) <= 0
+        ? [anchor, focus]
+        : [focus, anchor];
+    const range = document.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    return range;
+  } catch {
+    return null;
+  }
+}
+
+/** A structural endpoint selects the whole hovered row, without needing another paragraph. */
+export function blockBoundaryPoint(row: HTMLElement, after: boolean): TextSelectionPoint {
+  return {
+    content: row,
+    node: row.parentNode!,
+    offset: [...row.parentNode!.childNodes].indexOf(row) + (after ? 1 : 0),
+    blockId: row.dataset.blockId,
+    edge: after ? 'after' : 'before',
+  };
+}
+
+/** Rebuild text and structural endpoints after formatting replaces the editor DOM. */
+export function restoreTextBlockSelection(
+  root: HTMLElement,
+  selection: unknown,
+  pointAtOffset: (content: HTMLElement, offset: number) => { node: Node; offset: number } | null,
+): TextBlockSelection | null {
+  const current = selection as TextBlockSelection | null;
+  if (!current?.anchor || !current.focus) return null;
+  const rebuild = (point: TextSelectionPoint): TextSelectionPoint | null => {
+    const id = point.blockId || point.content.closest<HTMLElement>('.block-row')?.dataset.blockId;
+    const row = [...root.querySelectorAll<HTMLElement>('.block-row[data-block-id]')].find(
+      (row) => row.dataset.blockId === id,
+    );
+    if (!row) return null;
+    if (point.edge) return blockBoundaryPoint(row, point.edge === 'after');
+    const content = row.querySelector<HTMLElement>('.block-content');
+    if (!content) return null;
+    try {
+      const before = document.createRange();
+      before.selectNodeContents(point.content);
+      before.setEnd(point.node, point.offset);
+      const restored = pointAtOffset(content, before.toString().length);
+      return restored ? { content, ...restored } : null;
+    } catch {
+      return null;
+    }
+  };
+  const anchor = rebuild(current.anchor);
+  const focus = rebuild(current.focus);
+  return anchor && focus ? { ...current, anchor, focus } : null;
+}
+
 /** Return complete rows only; boundary paragraphs retain their partial text selection. */
 export function selectedBlockRows(root: HTMLElement, selection: unknown): HTMLElement[] {
   if (!root?.isConnected) return [];
@@ -50,29 +118,22 @@ export function selectedBlockRows(root: HTMLElement, selection: unknown): HTMLEl
   }
   const textSelection = selection as TextBlockSelection | null;
   if (textSelection?.allPage) return rows;
-  let start = textSelection?.active ? textSelection.anchor?.content : null;
-  let end = textSelection?.active ? textSelection.focus?.content : null;
-  if (!start || !end) {
+  let range = textSelection?.active ? textBlockSelectionRange(selection) : null;
+  if (!range) {
     const native = window.getSelection();
     if (!native?.rangeCount || native.isCollapsed) return [];
-    const range = native.getRangeAt(0);
-    const content = (node: Node) =>
-      (node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>(
-        '.block-content[contenteditable="true"]',
-      );
-    start = content(range.startContainer);
-    end = content(range.endContainer);
+    range = native.getRangeAt(0);
   }
-  if (!start || !end || start === end || !root.contains(start) || !root.contains(end)) return [];
-  if (start.compareDocumentPosition(end) & Node.DOCUMENT_POSITION_PRECEDING)
-    [start, end] = [end, start];
-  return rows.filter(
-    (row) =>
-      !row.contains(start) &&
-      !row.contains(end) &&
-      !!(start.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING) &&
-      !!(row.compareDocumentPosition(end) & Node.DOCUMENT_POSITION_FOLLOWING),
-  );
+  if (range.collapsed || !root.contains(range.startContainer) || !root.contains(range.endContainer))
+    return [];
+  return rows.filter((row) => {
+    const bounds = document.createRange();
+    bounds.selectNode(row);
+    return (
+      range.compareBoundaryPoints(Range.START_TO_START, bounds) <= 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, bounds) >= 0
+    );
+  });
 }
 
 export function topLevelSelectedRows(rows: HTMLElement[]): HTMLElement[] {
