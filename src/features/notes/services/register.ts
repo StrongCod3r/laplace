@@ -1086,6 +1086,7 @@ export function registerNotes(runtime: EditorRuntime) {
     cp.favorite = false;
     cp.folderNote = false;
     runtime.state.pages.push(cp);
+    runtime.scheduleSave();
     runtime.openPage(cp.id);
     runtime.toast('Page duplicated');
   }

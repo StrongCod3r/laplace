@@ -32,6 +32,50 @@ async function openNote(page: Page, docked: boolean) {
 }
 
 for (const docked of [false, true]) {
+  test(`undo restores a duplicated page after deleting all content in ${docked ? 'a split pane' : 'the main editor'}`, async ({
+    page,
+  }) => {
+    const editor = await openNote(page, docked);
+    const source = page.locator('#pageTree [data-action="open-page"]').filter({
+      hasText: /^Current note$/,
+    });
+    await source.click({ button: 'right' });
+    await page.locator('[data-tree-context-action="duplicate-page"]').click();
+    const copyId = await page
+      .locator('#pageTree .page-tree-row.active')
+      .getAttribute('data-page-id');
+    expect(copyId).toBeTruthy();
+    const copy = page.locator(`#pageTree [data-page-id="${copyId}"]`);
+    await expect(editor.locator(':scope > .block-row')).toHaveCount(4);
+    const content = editor.locator('.block-content').first();
+    await content.click({ position: { x: 3, y: 8 } });
+    await content.press('Control+a');
+    await page.keyboard.press('Delete');
+    await expect(editor.locator(':scope > .block-row')).toHaveCount(1);
+    await expect(content).toHaveText('');
+
+    await content.press('Control+z');
+    await expect(copy).toBeVisible();
+    await expect(copy).toHaveClass(/active/);
+    await expect(editor.locator(':scope > .block-row')).toHaveCount(4);
+    await expect(editor).toContainText('Alpha content');
+    await expect(editor).toContainText('Omega content');
+    await expect(editor.locator('[data-code-editor]')).toHaveValue('const value = 1;');
+    await expect(editor.locator('[data-table-cell="1:0"]')).toHaveText('Cell value');
+
+    await content.press('Control+Shift+z');
+    await expect(copy).toBeVisible();
+    await expect(editor.locator(':scope > .block-row')).toHaveCount(1);
+    await expect(content).toHaveText('');
+    await source.click();
+    await expect(editor).toContainText('Alpha content');
+    await expect(editor).toContainText('Omega content');
+    if (docked)
+      await expect(page.locator('.dock-pane:not(.active) [data-dock-blocks]')).toContainText(
+        'Other pane text',
+      );
+  });
+
   test(`Ctrl+A selects only the current note in ${docked ? 'a split pane' : 'the main editor'}`, async ({
     page,
     context,
