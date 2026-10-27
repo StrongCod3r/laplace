@@ -10,6 +10,7 @@ import { attachListContinuation, detachListContinuation } from './list-continuat
 import { bindMathEditing } from '@/features/math/render';
 import { inlineMathRanges } from '@/features/math/syntax';
 import { copyInlineMathSelection } from '@/features/math/clipboard';
+import { selectedInlineMathHosts } from '@/features/math/selection';
 import {
   blockBoundaryPoint,
   canStartRectangleSelection,
@@ -135,6 +136,7 @@ export function registerInteractions(runtime: EditorRuntime) {
         }
       }
     });
+    runtime.lifecycle.listen(document.fonts, 'loadingdone', runtime.renderMultiBlockSelection);
     runtime.lifecycle.listen(document, 'keydown', runtime.onKeyDown);
     runtime.lifecycle.listen(document, 'change', runtime.onChange);
     runtime.lifecycle.listen(document, 'dragstart', runtime.onDragStart);
@@ -179,7 +181,8 @@ export function registerInteractions(runtime: EditorRuntime) {
           runtime.captureEditorScrollPosition(e.target);
         if (e.target?.matches?.('.simple-table-scroll'))
           runtime.syncSimpleTableHandles(e.target.closest('.simple-table-block'));
-        if (runtime.multiBlockSelection?.active) runtime.renderMultiBlockSelection();
+        if (runtime.multiBlockSelection?.active || !window.getSelection()?.isCollapsed)
+          runtime.renderMultiBlockSelection();
       },
       true,
     );
@@ -188,7 +191,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.hideTextFormatToolbar();
       runtime.updateSidebarOverflow();
       runtime.syncAllSimpleTableHandles();
-      if (runtime.multiBlockSelection?.active) runtime.renderMultiBlockSelection();
+      if (runtime.multiBlockSelection?.active || !window.getSelection()?.isCollapsed)
+        runtime.renderMultiBlockSelection();
       if (runtime.activeImageCropBlockId)
         runtime.scheduleImageCropDialogLayout(runtime.activeImageCropBlockId);
       runtime.fitImageBlockViewer();
@@ -1799,6 +1803,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.clearMultiBlockSelection();
       return;
     }
+    const painted = [];
     const paint = (rect, className, blockId = null) => {
       if (rect.right <= rect.left || rect.bottom <= rect.top) return;
       const mark = document.createElement('span');
@@ -1809,15 +1814,16 @@ export function registerInteractions(runtime: EditorRuntime) {
       mark.style.height = `${rect.bottom - rect.top}px`;
       if (blockId) mark.dataset.selectedBlockId = blockId;
       layer.appendChild(mark);
+      painted.push({ rect, mark });
       return mark;
     };
     if (rectangle && selection.active && selection.dragging) {
       const mark = paint(rectangleSelectionBounds(selection), 'multi-block-selection-box');
       if (mark) mark.dataset.blockSelectionBox = '';
     }
-    for (const { content, range } of !rectangle && selection?.active && !selection.allPage
-      ? runtime.multiSelectionRanges()
-      : []) {
+    const textRanges =
+      !rectangle && selection?.active && !selection.allPage ? runtime.multiSelectionRanges() : [];
+    for (const { content, range } of textRanges) {
       const viewport = selectionViewport(content);
       for (const rect of range.getClientRects()) {
         if (rect.width < 0.5 || rect.height < 0.5) continue;
@@ -1839,6 +1845,26 @@ export function registerInteractions(runtime: EditorRuntime) {
       const rect = clippedSelectionRect(row);
       if (rect)
         paint(rect, 'multi-block-selection-rect multi-block-selection-block', row.dataset.blockId);
+    }
+    if (!rectangle) {
+      const native = window.getSelection();
+      const ranges =
+        selection?.active && !selection.allPage
+          ? textRanges.map(({ range }) => range)
+          : native?.rangeCount
+            ? [native.getRangeAt(0)]
+            : [];
+      for (const host of selectedInlineMathHosts(root, ranges)) {
+        const rect = clippedSelectionRect(host);
+        if (!rect) continue;
+        const existing = painted.find(({ rect: previous }) =>
+          ['left', 'right', 'top', 'bottom'].every(
+            (key) => Math.abs(previous[key] - rect[key]) < 1,
+          ),
+        );
+        const mark = existing?.mark || paint(rect, 'multi-block-selection-rect');
+        if (mark) mark.dataset.selectedInlineMath = '';
+      }
     }
   }
 

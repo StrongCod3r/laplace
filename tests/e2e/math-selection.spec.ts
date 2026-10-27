@@ -47,6 +47,9 @@ for (const docked of [false, true]) {
       await page.mouse.move(points.end, points.y, { steps: 20 });
       await page.mouse.up();
       await expect(page.getByRole('dialog', { name: 'Inline equation', exact: true })).toBeHidden();
+      await expect(
+        page.locator('#multiBlockSelectionLayer [data-selected-inline-math]'),
+      ).toHaveCount(1);
       await page.keyboard.press('Control+c');
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source);
       await page.keyboard.press('ArrowRight');

@@ -169,6 +169,7 @@ The Attachments gallery filters filenames and path suffixes using case-insensiti
 
 ### Selection and floating panels
 
+- Selected rendered inline formulas receive a borderless highlight based on the selected LaTeX source, for native and cross-block ranges, table cells, and page-body selection. Clip highlights to the active pane, refresh them on scroll, resize, and font loading, and remove them when the selection collapses. Keep generated KaTeX output outside editable text and clipboard serialization.
 - The toolbar appears for both single-block selection and text spanning multiple blocks, through native DOM selection or custom drag selection.
 - For multiple blocks, apply formatting, color, clearing, or block type changes to all selected segments while respecting partial boundaries in the first and last segments. Commit the change as one history operation.
 - Deleting a selection spanning paragraphs removes every complete block between its endpoints, including images, Link to page blocks, tables, dividers, code, and Mermaid or LaTeX previews. Support native and custom drag selections in main and split editors; preserve unselected boundary text, surrounding blocks, and undo/redo. Removing an image or page-link block must retain the attachment file and linked page.
