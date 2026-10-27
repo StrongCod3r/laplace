@@ -893,8 +893,9 @@ export function registerNavigation(runtime: EditorRuntime) {
   function updateBreadcrumbBar(container, page) {
     const button = container.querySelector('[data-page-plain-text-toggle]');
     const menu = container.querySelector('[data-page-menu-trigger]');
-    container.querySelectorAll('.crumb,.crumb-sep').forEach((item) => item.remove());
+    const crumbs = [...container.querySelectorAll('.crumb,.crumb-sep')];
     if (!page) {
+      crumbs.forEach((item) => item.remove());
       button?.remove();
       menu?.remove();
       return;
@@ -907,7 +908,17 @@ export function registerNavigation(runtime: EditorRuntime) {
       button.setAttribute('aria-pressed', String(enabled));
       button.title = enabled ? 'Show editor' : 'Show plain text';
       if (menu) menu.dataset.pageMenuTrigger = page.id;
-      button.insertAdjacentHTML('beforebegin', runtime.breadcrumbMarkup(page));
+      const template = document.createElement('template');
+      template.innerHTML = runtime.breadcrumbMarkup(page);
+      const next = [...template.content.children];
+      // Focusing a pane must not detach the target between pointer press and release.
+      if (
+        crumbs.length !== next.length ||
+        crumbs.some((item, index) => !item.isEqualNode(next[index]))
+      ) {
+        crumbs.forEach((item) => item.remove());
+        button.before(template.content);
+      }
     } else container.innerHTML = runtime.breadcrumbBarMarkup(page);
   }
 

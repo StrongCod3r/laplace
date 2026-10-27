@@ -188,6 +188,8 @@ In the page search palette, Ctrl/Cmd+Enter or Ctrl/Cmd+click opens the selected 
 
 Breadcrumb notes and folder notes open in a new active tab with Ctrl/Cmd+click or middle-click, within the breadcrumb's editor group. Ordinary clicks replace the current tab.
 
+Pointer actions on an inactive pane's breadcrumbs must activate that pane and perform the action in one gesture. Preserve unchanged breadcrumb nodes while changing focus so the pressed target remains connected through release; still refresh labels, icons, and controls when their content changes.
+
 Files and Favorites open notes and folder notes in a new active tab with Ctrl/Cmd+click or middle-click in the active editor group. Ordinary clicks replace the current tab. Files uses Shift+click for range selection; Ctrl/Cmd+Shift+click adds a range to the selection.
 
 Git change lists open existing workspace notes in a new active tab with Ctrl/Cmd+click or middle-click. Ordinary clicks show the diff. Shift+click selects a range; Ctrl/Cmd+Shift+click adds a range. Non-note and deleted file entries must not create notes.
