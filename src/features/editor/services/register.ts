@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import { isRectangleSelection } from '@/features/interactions/services/block-selection';
 import { quoteDepth } from '@/features/markdown/services/quote-depth';
 import { inlineMathRanges } from '@/features/math/syntax';
 import { hydrateInlineMath } from '@/features/math/render';
@@ -1154,7 +1155,7 @@ export function registerEditor(runtime: EditorRuntime) {
           const end = runtime.localTextOffset(content, part.endContainer, part.endOffset);
           return end > start ? [{ blockId, content, start, end }] : [];
         });
-    if (segments.length < 2) return null;
+    if (segments.length < (isRectangleSelection(runtime.multiBlockSelection) ? 1 : 2)) return null;
     const selection = { ...segments[0], segments };
     selection.rect =
       runtime.inlineSelectionViewportRect(selection) || segments[0].content.getBoundingClientRect();
@@ -1489,6 +1490,12 @@ export function registerEditor(runtime: EditorRuntime) {
     if (!selection) return;
     runtime.lifecycle.frame(() => {
       if (selection.segments) {
+        if (isRectangleSelection(runtime.multiBlockSelection)) {
+          runtime.renderMultiBlockSelection();
+          const restored = captureMultiInlineSelection();
+          if (show && restored) runtime.showTextFormatToolbar(restored);
+          return;
+        }
         const segments = selection.segments
           .map((segment) => ({
             ...segment,

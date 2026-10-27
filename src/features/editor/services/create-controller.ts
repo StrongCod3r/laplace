@@ -1419,6 +1419,8 @@ export function createWorkspaceController(): WorkspaceController {
       runtime.clearAttachmentObjectUrls();
       runtime.closeInlineEquation?.();
       runtime.closeMermaidViewer?.();
+      runtime.clearMultiBlockSelection();
+      document.getElementById('multiBlockSelectionLayer')?.remove();
       lifecycle.dispose();
       deleteConfirmResolver?.(false);
     },

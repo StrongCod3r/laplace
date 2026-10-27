@@ -229,7 +229,7 @@ body.workspace-read-only [contenteditable='false'] {
 }
 
 /* Keep the add/drag handle anchored to the beginning of every block. */
-.block-gutter button[data-block-action='add']>.app-lucide {
+.block-gutter button[data-block-action='add'] > .app-lucide {
   width: 14px;
   height: 14px;
   margin: 0;
@@ -314,7 +314,7 @@ body.table-cell-selecting * {
 }
 
 /* Inline selection formatting toolbar */
-.block-menu-item>.app-lucide {
+.block-menu-item > .app-lucide {
   width: 16px;
   height: 16px;
   flex: none;
@@ -481,8 +481,13 @@ body.dark .multi-block-selection-rect {
   background: color-mix(in srgb, var(--blue) 38%, transparent);
 }
 
-body.dark .multi-block-selection-rect.multi-block-selection-table {
+body.dark .multi-block-selection-rect.multi-block-selection-table,
+body.dark .multi-block-selection-rect.multi-block-selection-block {
   background: color-mix(in srgb, var(--blue) 18%, transparent);
+}
+
+body.dark .multi-block-selection-box {
+  background: color-mix(in srgb, var(--blue) 16%, transparent);
 }
 
 /* Docked editor tabs and recursive Obsidian-style split panes. */

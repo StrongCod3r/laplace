@@ -58,6 +58,14 @@ scheduling keep navigation from cloning all notes or creating content history.
 Caret metadata, tab recency, closed-tab history, and graph camera state remain
 session-local rather than part of the saved document.
 
+Cross-block text selections highlight complete nontext blocks between their
+endpoints. Dragging from editor margins or noneditable block surfaces uses a
+rectangular block selection, with geometry and selected IDs kept in controller
+memory. `features/interactions/services/block-selection.ts` handles row discovery,
+viewport clipping, hit testing, and pane-local auto-scroll. The DOM engine paints
+the selection overlay and owns its editing operations and lifecycle; native text,
+code, table-cell, and media controls retain their own interactions.
+
 The [runtime inventory](migration-inventory.json) is used by
 `tests/unit/feature-inventory.test.mjs` to verify registered algorithms and runtime
 dependencies. It is a live test input and must stay aligned with registration.

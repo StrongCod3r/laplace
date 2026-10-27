@@ -11,6 +11,18 @@ import { bindMathEditing } from '@/features/math/render';
 import { inlineMathRanges } from '@/features/math/syntax';
 import { copyInlineMathSelection } from '@/features/math/clipboard';
 import {
+  canStartRectangleSelection,
+  clippedSelectionRect,
+  isRectangleSelection,
+  rectangleSelectionBounds,
+  selectedBlockRows,
+  selectionViewport,
+  startRectangleAutoScroll,
+  topLevelSelectedRows,
+  updateRectangleSelection,
+  type RectangleBlockSelection,
+} from './block-selection';
+import {
   createInlineEquationEditor,
   type InlineEquationEditor,
 } from '@/features/math/inline-equation-editor';
@@ -19,6 +31,7 @@ export function registerInteractions(runtime: EditorRuntime) {
   let previousTextInputKey: string | null = null;
   const verticalNavigation = createEditorVerticalNavigation();
   let equationEditor: InlineEquationEditor | null = null;
+  let suppressSelectionClick = false;
   function bindEvents() {
     if (runtime.eventsBound) return;
     runtime.eventsBound = true;
@@ -49,6 +62,17 @@ export function registerInteractions(runtime: EditorRuntime) {
     runtime.lifecycle.listen(runtime.els.workspaceWritePermissionBtn, 'click', () => {
       void runtime.requestWorkspaceWriteAccess();
     });
+    runtime.lifecycle.listen(
+      document,
+      'click',
+      (event) => {
+        if (!suppressSelectionClick) return;
+        suppressSelectionClick = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      },
+      true,
+    );
     runtime.lifecycle.listen(document, 'click', runtime.onClick);
     runtime.lifecycle.listen(document, 'dblclick', runtime.onImageBlockDoubleClick);
     runtime.lifecycle.listen(document, 'wheel', runtime.onImageBlockViewerWheel, {
@@ -70,6 +94,9 @@ export function registerInteractions(runtime: EditorRuntime) {
     runtime.lifecycle.listen(window, 'pointercancel', runtime.endImageBlockViewerPan);
     runtime.lifecycle.listen(document, 'pointerup', runtime.onInlineSelectionPointerEnd, true);
     runtime.lifecycle.listen(document, 'pointercancel', runtime.onInlineSelectionPointerEnd, true);
+    runtime.lifecycle.listen(document, 'pointercancel', () => {
+      if (runtime.multiBlockSelection?.dragging) runtime.clearMultiBlockSelection();
+    });
     runtime.lifecycle.listen(document, 'keydown', runtime.onInlineSelectionKeyDown, true);
     runtime.lifecycle.listen(document, 'keyup', runtime.onInlineSelectionKeyUp, true);
     runtime.lifecycle.listen(document, 'pointerdown', runtime.onPaneResizeStart);
@@ -120,11 +147,10 @@ export function registerInteractions(runtime: EditorRuntime) {
     runtime.lifecycle.listen(document, 'copy', runtime.onCopy);
     runtime.lifecycle.listen(document, 'cut', runtime.onCut);
     runtime.lifecycle.listen(document, 'beforeinput', runtime.onBeforeInput);
-    runtime.lifecycle.listen(
-      document,
-      'selectionchange',
-      runtime.scheduleTextFormatToolbarFromSelection,
-    );
+    runtime.lifecycle.listen(document, 'selectionchange', () => {
+      runtime.scheduleTextFormatToolbarFromSelection();
+      runtime.renderMultiBlockSelection();
+    });
     runtime.lifecycle.listen(document, 'dragend', runtime.clearDragState);
     runtime.lifecycle.listen(window, 'beforeinstallprompt', (event) => {
       if (matchMedia('(display-mode: standalone)').matches) return;
@@ -138,6 +164,9 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.toast(`${APP_NAME} installed`);
     });
     runtime.lifecycle.listen(window, 'blur', runtime.onInlineSelectionInteractionBlur);
+    runtime.lifecycle.listen(window, 'blur', () => {
+      if (runtime.multiBlockSelection?.dragging) runtime.clearMultiBlockSelection();
+    });
     runtime.lifecycle.listen(
       document,
       'scroll',
@@ -1507,6 +1536,7 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function onMouseDown(e) {
+    suppressSelectionClick = false;
     if (e.button === 3 || e.button === 4) {
       e.preventDefault();
       const pane = e.target.closest?.('.dock-pane[data-editor-group]');
@@ -1575,7 +1605,39 @@ export function registerInteractions(runtime: EditorRuntime) {
         const content = e.target.closest?.('.block-content[contenteditable="true"]');
         if (content && runtime.els.blockEditor?.contains(content))
           runtime.beginMultiBlockSelection(e, content);
-        else runtime.clearMultiBlockSelection();
+        else {
+          runtime.clearMultiBlockSelection();
+          const root = runtime.els.blockEditor;
+          if (root && canStartRectangleSelection(e.target, root)) {
+            const rect = root.getBoundingClientRect();
+            const selection: RectangleBlockSelection = {
+              mode: 'rectangle',
+              root,
+              active: false,
+              dragging: true,
+              startX: e.clientX,
+              startY: e.clientY,
+              originX: e.clientX - rect.left,
+              originY: e.clientY - rect.top,
+              clientX: e.clientX,
+              clientY: e.clientY,
+              blockIds: [],
+              frame: null,
+            };
+            runtime.clearSelectedImageBlock?.();
+            runtime.hideTextFormatToolbar();
+            window.getSelection()?.removeAllRanges();
+            runtime.multiBlockSelection = selection;
+            runtime.lifecycle.listen(window, 'mousemove', runtime.onMultiBlockSelectionMove, true);
+            runtime.lifecycle.listen(window, 'mouseup', runtime.onMultiBlockSelectionEnd, true);
+            startRectangleAutoScroll(
+              selection,
+              runtime.lifecycle,
+              runtime.renderMultiBlockSelection,
+            );
+            e.preventDefault();
+          }
+        }
       }
     }
     if (e.button !== 1) return;
@@ -1762,6 +1824,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       layer = document.createElement('div');
       layer.id = 'multiBlockSelectionLayer';
       layer.className = runtime.classWithStyles('multi-block-selection-layer');
+      layer.setAttribute('aria-hidden', 'true');
       document.body.appendChild(layer);
     }
     return layer;
@@ -1770,38 +1833,66 @@ export function registerInteractions(runtime: EditorRuntime) {
   function renderMultiBlockSelection() {
     const layer = runtime.multiSelectionLayer();
     layer.innerHTML = '';
-    if (!runtime.multiBlockSelection?.active) return;
-    if (runtime.multiBlockSelection.allPage) return;
-    for (const { range } of runtime.multiSelectionRanges()) {
-      for (const rect of range.getClientRects()) {
-        if (rect.width < 0.5 || rect.height < 0.5) continue;
-        const mark = document.createElement('span');
-        mark.className = runtime.classWithStyles('multi-block-selection-rect');
-        mark.style.left = `${rect.left}px`;
-        mark.style.top = `${rect.top}px`;
-        mark.style.width = `${rect.width}px`;
-        mark.style.height = `${rect.height}px`;
-        layer.appendChild(mark);
-      }
+    const root = runtime.els.blockEditor;
+    if (!root?.isConnected || !root.getClientRects().length) return;
+    const selection = runtime.multiBlockSelection;
+    const rectangle = isRectangleSelection(selection);
+    if (rectangle && selection.root !== root) {
+      runtime.clearMultiBlockSelection();
+      return;
     }
-    for (const table of runtime.multiSelectionTables()) {
-      const target = table.querySelector('.simple-table-scroll') || table,
-        rect = target.getBoundingClientRect();
-      if (rect.width < 0.5 || rect.height < 0.5) continue;
+    const paint = (rect, className, blockId = null) => {
+      if (rect.right <= rect.left || rect.bottom <= rect.top) return;
       const mark = document.createElement('span');
-      mark.className = runtime.classWithStyles(
-        'multi-block-selection-rect multi-block-selection-table',
-      );
+      mark.className = runtime.classWithStyles(className);
       mark.style.left = `${rect.left}px`;
       mark.style.top = `${rect.top}px`;
-      mark.style.width = `${rect.width}px`;
-      mark.style.height = `${rect.height}px`;
+      mark.style.width = `${rect.right - rect.left}px`;
+      mark.style.height = `${rect.bottom - rect.top}px`;
+      if (blockId) mark.dataset.selectedBlockId = blockId;
       layer.appendChild(mark);
+      return mark;
+    };
+    if (rectangle && selection.active && selection.dragging) {
+      const mark = paint(rectangleSelectionBounds(selection), 'multi-block-selection-box');
+      if (mark) mark.dataset.blockSelectionBox = '';
+    }
+    for (const { content, range } of !rectangle && selection?.active && !selection.allPage
+      ? runtime.multiSelectionRanges()
+      : []) {
+      const viewport = selectionViewport(content);
+      for (const rect of range.getClientRects()) {
+        if (rect.width < 0.5 || rect.height < 0.5) continue;
+        paint(
+          {
+            left: Math.max(rect.left, viewport.left),
+            right: Math.min(rect.right, viewport.right),
+            top: Math.max(rect.top, viewport.top),
+            bottom: Math.min(rect.bottom, viewport.bottom),
+          },
+          'multi-block-selection-rect',
+        );
+      }
+    }
+    if (rectangle && !selection.active) return;
+    for (const row of topLevelSelectedRows(selectedBlockRows(root, selection))) {
+      const block = runtime.findBlock(row.dataset.blockId);
+      if (!rectangle && runtime.isTextLikeBlock(block)) continue;
+      const rect = clippedSelectionRect(row);
+      if (rect)
+        paint(rect, 'multi-block-selection-rect multi-block-selection-block', row.dataset.blockId);
     }
   }
 
   function clearMultiBlockSelection() {
-    if (runtime.multiBlockSelection?.dragging) {
+    const selection = runtime.multiBlockSelection;
+    const wasDragging = selection?.dragging;
+    if (isRectangleSelection(selection)) {
+      if (wasDragging && selection.active) suppressSelectionClick = true;
+      selection.dragging = false;
+      if (selection.frame !== null) runtime.lifecycle.cancelFrame(selection.frame);
+    }
+    if (wasDragging) {
       window.removeEventListener('mousemove', runtime.onMultiBlockSelectionMove, true);
       window.removeEventListener('mouseup', runtime.onMultiBlockSelectionEnd, true);
     }
@@ -1833,6 +1924,21 @@ export function registerInteractions(runtime: EditorRuntime) {
       runtime.onMultiBlockSelectionEnd(e);
       return;
     }
+    if (isRectangleSelection(selection)) {
+      if (
+        !selection.active &&
+        Math.hypot(e.clientX - selection.startX, e.clientY - selection.startY) <= 4
+      )
+        return;
+      selection.active = true;
+      updateRectangleSelection(selection, e);
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      selection.root.tabIndex = -1;
+      selection.root.focus({ preventScroll: true });
+      runtime.renderMultiBlockSelection();
+      return;
+    }
     const content = runtime.nearestSelectableContent(e.clientX, e.clientY);
     if (!content) return;
     const focus = runtime.caretPointInContent(content, e.clientX, e.clientY);
@@ -1855,8 +1961,18 @@ export function registerInteractions(runtime: EditorRuntime) {
     window.removeEventListener('mousemove', runtime.onMultiBlockSelectionMove, true);
     window.removeEventListener('mouseup', runtime.onMultiBlockSelectionEnd, true);
     selection.dragging = false;
+    if (isRectangleSelection(selection) && selection.frame !== null)
+      runtime.lifecycle.cancelFrame(selection.frame);
     if (!selection.active) {
       runtime.multiBlockSelection = null;
+      return;
+    }
+    if (isRectangleSelection(selection)) {
+      updateRectangleSelection(selection, e);
+      suppressSelectionClick = true;
+      e.preventDefault?.();
+      runtime.renderMultiBlockSelection();
+      runtime.scheduleTextFormatToolbarFromSelection();
       return;
     }
     const content = runtime.nearestSelectableContent(e.clientX, e.clientY);
@@ -1875,6 +1991,25 @@ export function registerInteractions(runtime: EditorRuntime) {
   function multiSelectionSegments() {
     const segments = [];
     if (!runtime.multiBlockSelection?.active) return segments;
+    if (isRectangleSelection(runtime.multiBlockSelection)) {
+      for (const row of selectedBlockRows(runtime.els.blockEditor, runtime.multiBlockSelection)) {
+        const location = runtime.findBlockLocation(row.dataset.blockId);
+        const content = row.querySelector('.block-content');
+        if (!content || !runtime.isTextLikeBlock(location?.block)) continue;
+        const range = document.createRange();
+        range.selectNodeContents(content);
+        segments.push({
+          content,
+          range,
+          row,
+          location,
+          block: location.block,
+          start: 0,
+          end: String(location.block.text || '').length,
+        });
+      }
+      return segments;
+    }
     for (const { content, range } of runtime.multiSelectionRanges()) {
       const row = content.closest('.block-row'),
         location = runtime.findBlockLocation(row?.dataset.blockId),
@@ -1950,6 +2085,17 @@ export function registerInteractions(runtime: EditorRuntime) {
         runtime.clone(runtime.currentPage()?.blocks || []),
         runtime.state,
       );
+    if (isRectangleSelection(runtime.multiBlockSelection))
+      return runtime.markdownForBlocks(
+        runtime.clone(
+          topLevelSelectedRows(
+            selectedBlockRows(runtime.els.blockEditor, runtime.multiBlockSelection),
+          )
+            .map((row) => runtime.findBlock(row.dataset.blockId))
+            .filter(Boolean),
+        ),
+        runtime.state,
+      );
     const segments = runtime.multiSelectionSegments();
     if (!segments.length) return '';
     const entries = segments.map((segment) => ({ kind: 'text', node: segment.content, segment }));
@@ -1959,11 +2105,18 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     for (const { row, block } of runtime.multiSelectionCodeBlocks())
       entries.push({ kind: 'code', node: row, block });
+    for (const row of selectedBlockRows(runtime.els.blockEditor, runtime.multiBlockSelection)) {
+      const block = runtime.findBlock(row.dataset.blockId);
+      if (block && !runtime.isTextLikeBlock(block) && !['code', 'table'].includes(block.type))
+        entries.push({ kind: 'block', node: row, block });
+    }
     entries.sort((a, b) => runtime.compareNodesInDocument(a.node, b.node));
     return entries
       .map((entry) => {
         if (entry.kind === 'table') return runtime.simpleTableMarkdown(entry.block);
         if (entry.kind === 'code') return runtime.markdownCodeBlock(entry.block);
+        if (entry.kind === 'block')
+          return runtime.markdownForBlocks([runtime.clone(entry.block)], runtime.state);
         const { block, location, start, end } = entry.segment;
         const prefix = start === 0 ? runtime.markdownPrefixForBlock(block, location) : '';
         return prefix + runtime.markdownInlineSlice(block, start, end);
@@ -2060,28 +2213,17 @@ export function registerInteractions(runtime: EditorRuntime) {
   function deleteMultiBlockSelection() {
     if (runtime.workspaceAccess !== 'writable') return false;
     if (runtime.multiBlockSelection?.allPage) return replaceSelectedPageContents('');
-    const segments = runtime.multiSelectionSegments();
-    if (!segments.length) {
+    const rectangle = isRectangleSelection(runtime.multiBlockSelection);
+    const segments = rectangle ? [] : runtime.multiSelectionSegments();
+    const selectedRows = selectedBlockRows(runtime.els.blockEditor, runtime.multiBlockSelection);
+    if (!segments.length && !selectedRows.length) {
       runtime.clearMultiBlockSelection();
       return false;
     }
-    const ordered = runtime.orderedMultiSelectionPoints();
-    const selectedBlocks = ordered
-      ? [...runtime.els.blockEditor.querySelectorAll('.block-row[data-block-id]')]
-          .filter((row) => {
-            if (row.contains(ordered.start.content) || row.contains(ordered.end.content))
-              return false;
-            return (
-              ordered.start.content.compareDocumentPosition(row) &
-                Node.DOCUMENT_POSITION_FOLLOWING &&
-              row.compareDocumentPosition(ordered.end.content) & Node.DOCUMENT_POSITION_FOLLOWING
-            );
-          })
-          .map((row) => row.dataset.blockId)
-      : [];
+    const selectedBlocks = selectedRows.map((row) => row.dataset.blockId);
     runtime.flushHistoryPending();
     runtime.captureHistoryBeforeInput({ inputType: 'deleteContentBackward' });
-    const first = segments[0],
+    const first = segments[0] || { location: runtime.findBlockLocation(selectedBlocks[0]) },
       firstContainer = first.location.blocks,
       firstIndex = first.location.index;
     const affectedLists = new Set();
@@ -3130,6 +3272,10 @@ export function registerInteractions(runtime: EditorRuntime) {
       }
     }
     if (e.key === 'Escape') {
+      if (keyboardInlineSelection?.segments) {
+        runtime.clearMultiBlockSelection();
+        window.getSelection()?.removeAllRanges();
+      }
       runtime.hideFloatingMenus();
       runtime.hideTextFormatToolbar();
       document
@@ -3560,6 +3706,10 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function onDragStart(e) {
+    if (isRectangleSelection(runtime.multiBlockSelection) && runtime.multiBlockSelection.dragging) {
+      e.preventDefault();
+      return;
+    }
     const tableHandle = e.target.closest?.('.table-axis-handle[draggable="true"]');
     if (tableHandle) {
       const tableBlock = tableHandle.closest('.simple-table-block[data-block-id]');
