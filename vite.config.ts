@@ -58,6 +58,7 @@ export default defineConfig({
         );
         const version = createHash('sha256')
           .update(manifest)
+          .update(readFileSync(`${output}index.html`, 'utf8'))
           .update(template)
           .digest('hex')
           .slice(0, 16);

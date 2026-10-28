@@ -255,6 +255,7 @@ Every scrollable view, panel, menu and dialog must style its scrollbar using the
 - The default Vite base is `/laplace/`. Use `BASE_URL` for assets and deployment-dependent paths; verify the actual repository name when configuring GitHub Pages.
 - PWA resource sources live in `pwa-assets/`. The build writes to `public/`, including hashed assets, `.vite/manifest.json`, and `sw.js`; these files are versioned. Hash changes may delete old assets: distinguish them from user Markdown files and review the diff.
 - The PWA registers in production, keeps HTML and assets from the same version together, and caches lazy chunks when requested. Private notes remain in their storage, not in Cache Storage.
+- Public search and social metadata live in `index.html`, with the canonical URL `https://strongcod3r.github.io/laplace/` and a single public URL in `pwa-assets/sitemap.xml`. Keep deployment URLs aligned with Vite's base and `package.json`. Never add local note content or workspace paths to public metadata. The service worker cache version includes the generated HTML as well as the asset manifest and worker template.
 
 ## Verification and workflow
 

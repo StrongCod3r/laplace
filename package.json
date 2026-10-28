@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://strongcod3r.github.io/Laplace/",
+  "homepage": "https://strongcod3r.github.io/laplace/",
   "scripts": {
     "dev": "vite --port 3000",
     "build": "tsc --noEmit && vite build",

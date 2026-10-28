@@ -3,7 +3,63 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>__APP_NAME__</title>
+    <title>__APP_NAME__ — Local-first Markdown notes</title>
+    <meta
+      name="description"
+      content="Write and organize Markdown notes with Laplace. Keep files locally, connect ideas with wikilinks and a graph, and optionally sync with GitHub."
+    />
+    <link rel="canonical" href="https://strongcod3r.github.io/laplace/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="__APP_NAME__" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="__APP_NAME__ — Local-first Markdown notes" />
+    <meta
+      property="og:description"
+      content="Write and organize Markdown notes with Laplace. Keep files locally, connect ideas with wikilinks and a graph, and optionally sync with GitHub."
+    />
+    <meta property="og:url" content="https://strongcod3r.github.io/laplace/" />
+    <meta
+      property="og:image"
+      content="https://strongcod3r.github.io/laplace/icons/__APP_ID__-512.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="__APP_NAME__ logo" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="__APP_NAME__ — Local-first Markdown notes" />
+    <meta
+      name="twitter:description"
+      content="Write and organize Markdown notes with Laplace. Keep files locally, connect ideas with wikilinks and a graph, and optionally sync with GitHub."
+    />
+    <meta
+      name="twitter:image"
+      content="https://strongcod3r.github.io/laplace/icons/__APP_ID__-512.png"
+    />
+    <meta name="twitter:image:alt" content="__APP_NAME__ logo" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "__APP_NAME__",
+        "url": "https://strongcod3r.github.io/laplace/",
+        "description": "A local-first Markdown workspace for writing and organizing notes in a local folder or browser storage, with optional GitHub synchronization.",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Web",
+        "browserRequirements": "Requires JavaScript and a modern web browser.",
+        "inLanguage": "en",
+        "image": "https://strongcod3r.github.io/laplace/icons/__APP_ID__-512.png",
+        "featureList": [
+          "Local Markdown files and browser storage",
+          "Block editor with tables, images and code",
+          "Mermaid diagrams and LaTeX equations",
+          "Wikilinks, search and an interactive graph",
+          "Tabs and split editors",
+          "Optional GitHub synchronization",
+          "Installable progressive web app"
+        ]
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/icons/__APP_ID__.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#101216" />
@@ -15,8 +71,60 @@
       } catch {}
     </script>
     <!-- startup-styles -->
+    <noscript>
+      <style>
+        #root {
+          display: none;
+        }
+        html body {
+          overflow: auto;
+          font: 16px/1.6 system-ui, sans-serif;
+          scrollbar-width: thin;
+          scrollbar-color: var(--muted, #777) transparent;
+        }
+        body::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        body::-webkit-scrollbar-track,
+        body::-webkit-scrollbar-corner {
+          background: transparent;
+        }
+        body::-webkit-scrollbar-thumb {
+          background: var(--muted, #777);
+          border-radius: 8px;
+        }
+        body::-webkit-scrollbar-thumb:hover {
+          background: var(--text, #444);
+        }
+        body > noscript > main {
+          max-width: 48rem;
+          margin: auto;
+          padding: 2rem 1.5rem;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
+    <noscript>
+      <main>
+        <h1>__APP_NAME__ — Local-first Markdown notes</h1>
+        <p>
+          Write and organize your notes in a local folder or browser storage. Laplace is a Markdown
+          workspace with a block editor, folders, wikilinks, search, and an interactive graph of
+          connected notes.
+        </p>
+        <p>
+          Work with tables, images, code, Mermaid diagrams, and LaTeX equations. Use tabs and split
+          editors, install the app for offline access, and optionally synchronize your workspace
+          with GitHub. The core app needs no notes backend.
+        </p>
+        <p>Enable JavaScript to open your workspace.</p>
+        <p>
+          <a href="https://github.com/StrongCod3r/Laplace">Read the documentation on GitHub</a>
+        </p>
+      </main>
+    </noscript>
     <div id="root"><!-- startup-skeleton --></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
