@@ -122,7 +122,7 @@ export function registerAttachments(runtime: EditorRuntime) {
       !imageBlockClipboardToken ||
       event.clipboardData?.getData(imageBlockClipboardType) !== imageBlockClipboardToken ||
       runtime.workspaceAccess !== 'writable' ||
-      !editor?.contains?.(event.target)
+      (!editor?.contains?.(event.target) && !runtime.multiBlockSelection?.allPage)
     )
       return false;
     const page = runtime.currentPage();
@@ -133,6 +133,11 @@ export function registerAttachments(runtime: EditorRuntime) {
     const index = location ? location.index + 1 : blocks.length;
     const copy = runtime.cloneBlockWithNewIds(imageBlockClipboard);
     event.preventDefault();
+    if (runtime.replaceMultiBlockSelection([copy])) {
+      clearSelectedImageBlock();
+      runtime.lifecycle.frame(() => runtime.selectImageBlock(copy.id));
+      return true;
+    }
     if (
       location?.block.type === 'text' &&
       !location.block.text &&

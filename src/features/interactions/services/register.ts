@@ -2200,6 +2200,114 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
   }
 
+  function replaceMultiBlockSelection(blocks: Block[]): boolean {
+    if (runtime.workspaceAccess !== 'writable' || !blocks.length) return false;
+    if (runtime.multiBlockSelection?.allPage)
+      return runtime.replaceSelectedPageContents('', blocks);
+    const root = runtime.els.blockEditor;
+    const previous = runtime.multiBlockSelection;
+    if (!previous?.active) {
+      const native = window.getSelection();
+      if (!native?.rangeCount || native.isCollapsed) return false;
+      const range = native.getRangeAt(0);
+      if (!root?.contains(range.startContainer) || !root.contains(range.endContainer)) return false;
+      const startRow = range.startContainer.parentElement?.closest('.block-row');
+      const endRow = range.endContainer.parentElement?.closest('.block-row');
+      if (startRow && startRow === endRow) return false;
+      runtime.multiBlockSelection = {
+        active: true,
+        anchor: { node: range.startContainer, offset: range.startOffset },
+        focus: { node: range.endContainer, offset: range.endOffset },
+      };
+    }
+    const segments = isRectangleSelection(runtime.multiBlockSelection)
+      ? []
+      : runtime.multiSelectionSegments();
+    const rows = [
+      ...new Set([
+        ...selectedBlockRows(root, runtime.multiBlockSelection),
+        ...segments.map((segment) => segment.row),
+      ]),
+    ].sort(runtime.compareNodesInDocument);
+    const first = runtime.findBlockLocation(rows[0]?.dataset.blockId);
+    if (!first) {
+      runtime.multiBlockSelection = previous;
+      return false;
+    }
+    const boundary = (row, side) => {
+      const segment = segments.find((item) => item.row === row);
+      if (!segment) return null;
+      const text = String(segment.block.text || '');
+      if (side === 'left' ? !segment.start : segment.end === text.length) return null;
+      const block = runtime.clone(segment.block);
+      runtime.deleteBlockTextRange(
+        block,
+        side === 'left' ? segment.start : 0,
+        side === 'left' ? text.length : segment.end,
+      );
+      return block;
+    };
+    const left = boundary(rows[0], 'left');
+    const right = boundary(rows.at(-1), 'right');
+    const replacement = [...blocks];
+    const append = (target, source) => {
+      const offset = String(target.text || '').length;
+      target.text = String(target.text || '') + String(source.text || '');
+      for (const key of ['inlineLinks', 'inlineFormats']) {
+        const ranges = [
+          ...(target[key] || []),
+          ...(source[key] || []).map((range) => ({
+            ...range,
+            start: range.start + offset,
+            end: range.end + offset,
+          })),
+        ];
+        if (ranges.length) target[key] = ranges;
+      }
+      return target;
+    };
+    if (left) {
+      if (replacement[0].type === 'text') replacement[0] = append(left, replacement[0]);
+      else replacement.unshift(left);
+    }
+    const focus = [...replacement].reverse().find(runtime.isTextLikeBlock);
+    const offset = String(focus?.text || '').length;
+    if (right) {
+      const last = replacement.at(-1);
+      if (runtime.isTextLikeBlock(last) && blocks.at(-1).type === 'text') append(last, right);
+      else {
+        if (replacement.some((block) => block.id === right.id)) right.id = runtime.uid('b');
+        replacement.push(right);
+      }
+    }
+    runtime.flushHistoryPending();
+    runtime.captureHistoryBeforeInput({ inputType: 'insertFromPaste' });
+    const affected = new Set([first.blocks]);
+    for (const row of [...rows].reverse()) {
+      const location = runtime.findBlockLocation(row.dataset.blockId);
+      if (!location) continue;
+      affected.add(location.blocks);
+      location.blocks.splice(location.index, 1);
+    }
+    first.blocks.splice(first.index, 0, ...replacement);
+    for (const container of affected) {
+      runtime.normalizeListIndentation(container);
+      runtime.ensureBlockList(container);
+    }
+    runtime.clearMultiBlockSelection();
+    runtime.hideFloatingMenus();
+    runtime.renderBlocks(runtime.currentPage());
+    if (focus) {
+      const content = [...root.querySelectorAll('.block-row[data-block-id]')]
+        .find((row) => row.dataset.blockId === focus.id)
+        ?.querySelector('.block-content');
+      content?.focus({ preventScroll: true });
+      if (content) runtime.setCaretOffset(content, offset);
+    }
+    runtime.scheduleSave();
+    return true;
+  }
+
   function deleteMultiBlockSelection() {
     if (runtime.workspaceAccess !== 'writable') return false;
     if (runtime.multiBlockSelection?.allPage) return replaceSelectedPageContents('');
@@ -2849,16 +2957,23 @@ export function registerInteractions(runtime: EditorRuntime) {
     const page = runtime.currentPage();
     if (!page) return false;
     runtime.flushHistoryPending();
-    runtime.captureHistoryBeforeInput({ inputType: text ? 'insertText' : 'deleteContentBackward' });
+    runtime.captureHistoryBeforeInput({
+      inputType: blocks?.length ? 'insertFromPaste' : text ? 'insertText' : 'deleteContentBackward',
+    });
     const block = runtime.newTextBlock();
     block.text = text;
     page.blocks = blocks?.length ? blocks : [block];
     runtime.clearMultiBlockSelection();
     runtime.hideFloatingMenus();
     runtime.renderBlocks(page);
-    const content = runtime.els.blockEditor.querySelector('.block-content');
+    const target = [...page.blocks].reverse().find(runtime.isTextLikeBlock);
+    const content =
+      target &&
+      [...runtime.els.blockEditor.querySelectorAll('.block-row[data-block-id]')]
+        .find((row) => row.dataset.blockId === target.id)
+        ?.querySelector('.block-content');
     content?.focus({ preventScroll: true });
-    if (content) runtime.setCaretOffset(content, text.length);
+    if (content) runtime.setCaretOffset(content, String(target.text || '').length);
     const typing = !!text && blocks === undefined;
     if (typing)
       previousTextInputKey = JSON.stringify([runtime.activeVaultId, page.id, block.id, 'insert']);
@@ -4742,6 +4857,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     deleteBlockTextRange,
     normalizeListIndentation,
     deleteMultiBlockSelection,
+    replaceMultiBlockSelection,
     onAuxClick,
     onInput,
     openInlineEquation,

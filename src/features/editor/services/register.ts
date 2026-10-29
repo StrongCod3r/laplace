@@ -2410,10 +2410,74 @@ export function registerEditor(runtime: EditorRuntime) {
     }
     if (runtime.pasteCopiedImageBlock?.(e)) return;
     if (
-      runtime.multiBlockSelection?.allPage &&
+      (runtime.multiBlockSelection?.active || !window.getSelection()?.isCollapsed) &&
       runtime.workspaceAccess === 'writable' &&
-      !runtime.transferImageFile(e.clipboardData)
+      !e.target.closest?.('input,textarea,select,[data-table-cell],#pageTitle,[data-dock-title]') &&
+      (runtime.multiBlockSelection?.allPage ||
+        runtime.els.blockEditor?.contains(e.target) ||
+        (runtime.multiBlockSelection?.active && e.target === document.body))
     ) {
+      const file =
+        runtime.transferImageFile(e.clipboardData) ||
+        runtime.clipboardSvgImageFile(e.clipboardData);
+      if (file) {
+        const selection = runtime.multiBlockSelection;
+        const native = window.getSelection();
+        const range = native?.rangeCount ? native.getRangeAt(0).cloneRange() : null;
+        const content = e.target.closest?.('.block-content');
+        if (
+          selection?.active ||
+          (range && content && !content.contains(range.commonAncestorContainer))
+        ) {
+          e.preventDefault();
+          if (!runtime.localStorageGateway.hasDirectory?.() && file.size > 2.5 * 1024 * 1024) {
+            runtime.toast('Use an image smaller than 2.5 MB without a notes folder.');
+            return;
+          }
+          const epoch = runtime.pageOperationEpoch;
+          const vaultId = runtime.activeVaultId;
+          const pageId = runtime.state.currentPageId;
+          const groupId = runtime.state.activeEditorGroupId;
+          // Save the attachment first so failures cannot erase the selected content.
+          void runtime
+            .saveImageBlobAttachment(file, file.name || 'image')
+            .then((src) => {
+              if (
+                runtime.lifecycle.disposed ||
+                runtime.workspaceAccess !== 'writable' ||
+                epoch !== runtime.pageOperationEpoch ||
+                vaultId !== runtime.activeVaultId ||
+                pageId !== runtime.state.currentPageId ||
+                groupId !== runtime.state.activeEditorGroupId ||
+                runtime.multiBlockSelection !== selection
+              )
+                return;
+              if (!selection?.active) {
+                const current = window.getSelection();
+                if (!current?.rangeCount) return;
+                const currentRange = current.getRangeAt(0);
+                if (
+                  currentRange.startContainer !== range.startContainer ||
+                  currentRange.startOffset !== range.startOffset ||
+                  currentRange.endContainer !== range.endContainer ||
+                  currentRange.endOffset !== range.endOffset
+                )
+                  return;
+              }
+              runtime.replaceMultiBlockSelection([
+                {
+                  id: runtime.uid('b'),
+                  type: 'image',
+                  src,
+                  caption: '',
+                  alt: file.name.replace(/\.[^.]+$/, ''),
+                },
+              ]);
+            })
+            .catch((error) => runtime.toast(error?.message || 'Could not save that image.'));
+          return;
+        }
+      }
       const html = String(e.clipboardData?.getData('text/html') || '');
       const explicit = String(e.clipboardData?.getData('text/markdown') || '');
       const text = explicit || String(e.clipboardData?.getData('text/plain') || '');
@@ -2425,9 +2489,13 @@ export function registerEditor(runtime: EditorRuntime) {
           preserveBlankLines: true,
         });
       else if (html) blocks = runtime.parseRichHtmlBlocks(html);
-      if (html || text) {
+      if (!blocks.length && text) {
+        const block = runtime.newTextBlock();
+        block.text = text;
+        blocks = [block];
+      }
+      if (blocks.length && runtime.replaceMultiBlockSelection(blocks)) {
         e.preventDefault();
-        runtime.replaceSelectedPageContents(text, blocks);
         return;
       }
     }

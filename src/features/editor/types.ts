@@ -48,6 +48,7 @@ export interface EditorRuntime {
   deferPublication(update: () => void): void;
   captureHistoryBeforeInput(event: Pick<InputEvent, 'inputType'>): void;
   replaceSelectedPageContents(text: string, blocks?: Block[]): boolean;
+  replaceMultiBlockSelection(blocks: Block[]): boolean;
   togglePagePlainText(): void;
   syncPlainTextView(root: HTMLElement | null, page: unknown, tabId?: string): void;
   openInlineEquation(
