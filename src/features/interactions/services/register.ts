@@ -593,13 +593,12 @@ export function registerInteractions(runtime: EditorRuntime) {
         ...(runtime.els.blockEditor?.querySelectorAll('.block-row[data-block-id]') || []),
       ].find((item) => item.dataset.blockId === blockId);
       if (row) {
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        runtime.lifecycle.frame(() => {
-          const content = row.querySelector('.block-content[contenteditable="true"]');
-          if (!content) return;
-          content.focus();
+        const content = row.querySelector('.block-content[contenteditable="true"]');
+        if (content) {
+          content.focus({ preventScroll: true });
           runtime.setCaretOffset(content, 0);
-        });
+        }
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       return;
     }

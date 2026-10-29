@@ -182,6 +182,8 @@ The Attachments gallery filters filenames and path suffixes using case-insensiti
 
 ### Navigation and performance
 
+Outline navigation focuses the destination heading without scrolling before starting a smooth, centered scroll from the current position. Preserve this behavior in main and split editors; focus and caret placement must not interrupt the animation.
+
 Closing the active tab returns to the most recently visited open tab in the same editor group, including Graph and Attachments views, before falling back to another group. Track tab recency per vault in controller memory, outside the saved workspace document.
 
 In the page search palette, Ctrl/Cmd+Enter or Ctrl/Cmd+click opens the selected page in a new active tab. Enter and ordinary clicks replace the current tab as usual.
