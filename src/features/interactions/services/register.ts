@@ -3051,6 +3051,19 @@ export function registerInteractions(runtime: EditorRuntime) {
       return;
     }
     if (
+      runtime.els.attachmentPreview?.hasAttribute('data-image-block-fullscreen') &&
+      !runtime.els.attachmentPreview.classList.contains('hidden') &&
+      ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      !e.shiftKey
+    ) {
+      e.preventDefault();
+      runtime.navigateImageBlockViewer(['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1);
+      return;
+    }
+    if (
       e.key === 'Escape' &&
       runtime.els.attachmentPreview &&
       !runtime.els.attachmentPreview.classList.contains('hidden')

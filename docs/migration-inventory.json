@@ -1,5 +1,5 @@
 {
-  "total": 652,
+  "total": 653,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -249,6 +249,7 @@
       "updateImageViewerTransform",
       "fitImageBlockViewer",
       "openImageBlockPreview",
+      "navigateImageBlockViewer",
       "closeAttachmentPreview",
       "isImageBlockPreviewOpen",
       "setImageBlockViewerZoom",

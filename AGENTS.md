@@ -149,6 +149,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
+The fullscreen image viewer navigates image blocks in the source note's reading order with arrow keys: Left/Up for previous and Right/Down for next. Stop at the first and last image, reset zoom and pan on image changes, and retain the source note context across split panes.
+
 - Pasting over native or custom selections of text and blocks replaces the selection in one history operation, preserving unselected boundary text and inline metadata in main and split editors. Keep ordinary inputs, code editors, and table cells on their local paste paths. Save pasted image files successfully before replacing selected content, and revalidate the workspace, note, pane, and selection after asynchronous attachment writes.
 
 - Rich HTML fragments with inline code, emphasis, or links remain in the same paragraph. Group consecutive inline siblings when importing HTML, and insert a single pasted paragraph into the current text block at the selection, retaining surrounding text, spaces, inline metadata, block identity, and undo/redo. Structural HTML elements still delimit separate blocks.

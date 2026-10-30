@@ -12,6 +12,7 @@ export function registerAttachments(runtime: EditorRuntime) {
   let imageViewerDrag = null;
   let imageViewerSuppressClick = false;
   let imageViewerOpenGeneration = 0;
+  let imageViewerContext = null;
   let selectedImageBlockId = null;
   let imageBlockClipboard = null;
   let imageBlockClipboardToken = null;
@@ -355,11 +356,16 @@ export function registerAttachments(runtime: EditorRuntime) {
     }
   }
 
-  function openImageBlockPreview(id) {
-    const block = runtime.findBlock(id);
+  function openImageBlockPreview(id, page = runtime.currentPage()) {
+    const block = runtime.flattenBlocks(page?.blocks || []).find((block) => block.id === id);
     const preview = runtime.els.attachmentPreview;
     const image = runtime.els.attachmentPreviewImage;
     if (!block?.src || !preview || !image) return;
+    imageViewerContext = {
+      workspace: runtime.state,
+      vaultId: runtime.activeVaultId,
+      pageId: page.id,
+    };
     resetImageViewerState();
     image.removeAttribute('src');
     image.removeAttribute('data-attachment-path');
@@ -378,6 +384,26 @@ export function registerAttachments(runtime: EditorRuntime) {
     if (image.complete && image.naturalWidth) fitImageBlockViewer();
   }
 
+  function navigateImageBlockViewer(direction: number): void {
+    if (!isImageBlockPreviewOpen() || !imageViewerContext) return;
+    if (
+      runtime.state !== imageViewerContext.workspace ||
+      runtime.activeVaultId !== imageViewerContext.vaultId
+    )
+      return;
+    const page = runtime.state.pages.find((page) => page.id === imageViewerContext.pageId);
+    const images = runtime
+      .flattenBlocks(page?.blocks || [])
+      .filter((block) => block.type === 'image' && block.src);
+    const index = images.findIndex(
+      (block) => block.id === runtime.els.attachmentPreview.dataset.imageViewerBlockId,
+    );
+    const next = index >= 0 ? images[index + direction] : null;
+    if (!next) return;
+    endImageBlockViewerPan();
+    openImageBlockPreview(next.id, page);
+  }
+
   function closeAttachmentPreview() {
     const preview = runtime.els.attachmentPreview;
     if (!preview) return;
@@ -385,6 +411,7 @@ export function registerAttachments(runtime: EditorRuntime) {
     preview.setAttribute('aria-hidden', 'true');
     preview.removeAttribute('data-image-block-fullscreen');
     delete preview.dataset.imageViewerBlockId;
+    imageViewerContext = null;
     resetImageViewerState();
   }
 
@@ -1342,6 +1369,7 @@ export function registerAttachments(runtime: EditorRuntime) {
     cleanupUnusedAttachments,
     imageLinkEditorHTML,
     openImageBlockPreview,
+    navigateImageBlockViewer,
     fitImageBlockViewer,
     toggleImageBlockViewerZoom,
     zoomImageBlockViewer,
