@@ -625,9 +625,15 @@ button.attachment-gallery-thumb {
 .file-block {
   margin: 10px 0;
   min-height: 64px;
+  min-width: 0;
+  container-type: inline-size;
+}
+.file-block:has(details[open]) {
+  z-index: 21;
 }
 
 .file-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -660,6 +666,7 @@ button.attachment-gallery-thumb {
   color: var(--muted);
   font-size: 12px;
   margin-top: 3px;
+  overflow-wrap: anywhere;
 }
 .file-card button,
 .file-menu summary {
@@ -704,7 +711,7 @@ button.attachment-gallery-thumb {
   right: 0;
   top: calc(100% + 6px);
   width: 230px;
-  max-width: calc(100vw - 40px);
+  max-width: min(calc(100vw - 40px), calc(100cqi - 24px));
   display: grid;
   gap: 8px;
   padding: 12px;
@@ -721,9 +728,43 @@ button.attachment-gallery-thumb {
 }
 .file-menu-body input {
   width: 100%;
+  min-width: 0;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text);
   background: var(--bg);
+}
+
+@container (max-width: 360px) {
+  .file-card {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+  .file-icon {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .file-copy {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .file-card > button {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .file-menu {
+    position: static;
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .file-menu-body {
+    right: 12px;
+  }
+  .file-empty .file-copy {
+    grid-column: 2 / -1;
+  }
 }
