@@ -122,12 +122,19 @@ export function registerTables(runtime: EditorRuntime) {
         handle = tableBlock.querySelector(`[data-table-col-menu="${ci}"]`);
       if (!handle) return;
       const rect = cell.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2 - shellRect.left;
+      const centerX = Math.max(
+        scrollRect.left - shellRect.left + 17,
+        Math.min(
+          scrollRect.right - shellRect.left - 17,
+          rect.left + rect.width / 2 - shellRect.left,
+        ),
+      );
       const topLine = scrollRect.top - shellRect.top;
       handle.style.left = `${centerX}px`;
       handle.style.top = `${topLine}px`;
       const visible = rect.right > scrollRect.left + 1 && rect.left < scrollRect.right - 1;
       handle.style.visibility = visible ? 'visible' : 'hidden';
+      handle.style.display = visible ? '' : 'none';
     });
     tableBlock.querySelectorAll('tr[data-table-row]').forEach((row) => {
       const ri = Number(row.dataset.tableRow),
@@ -151,6 +158,7 @@ export function registerTables(runtime: EditorRuntime) {
       const rightEdgeVisible =
         tableRect.right >= scrollRect.left - 1 && tableRect.right <= scrollRect.right + 1;
       addColumn.style.visibility = rightEdgeVisible ? 'visible' : 'hidden';
+      addColumn.style.display = rightEdgeVisible ? '' : 'none';
     }
   }
 

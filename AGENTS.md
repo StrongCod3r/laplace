@@ -226,6 +226,8 @@ Page or tab switching should avoid work proportional to the entire workspace con
 
 Workspace panel headers, editor tab rows, and editor toolbars share `--workspace-toolbar-height`, using the panel toolbar height as the reference. Derive editor content offsets from `--workspace-header-height` and preserve alignment in split editors and the ribbon.
 
+Editor panes retain a minimum width of 280 px, including nested splits. When the layout exceeds the available width, scroll the dock as a whole. Note bodies and titles wrap within their pane without page-level horizontal scrolling; tables keep their own horizontal scroller. Reserve enough left padding for both gutter buttons at every pane and viewport width, and keep table controls within the visible table bounds when resizing or scrolling.
+
 Dragging a tab over a tab strip shows a vertical insertion marker at the drop edge, including active tabs and split editors. Clear the marker on drop or drag cancellation; tab strip drops must not highlight the entire pane.
 
 `spellcheckEnabled` and `showCustomPageIcons` are disabled by default for new workspaces and when the property is absent. Preserve an explicitly saved `true` value. Keep controller defaults, the workspace factory, and normalization consistent.

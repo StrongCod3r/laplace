@@ -227,6 +227,7 @@ export function registerInteractions(runtime: EditorRuntime) {
           ),
         );
         splitElement.style.setProperty('--first-size', `${Math.round(node.ratio * 100)}%`);
+        runtime.syncAllSimpleTableHandles();
       };
       const stop = () => {
         dockDivider.classList.remove('resizing');

@@ -1,6 +1,7 @@
 .editor-view {
   height: 100%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-gutter: stable;
 }
 :global(.page[data-plain-text='true']) > :global(.note-inline-header),
@@ -39,6 +40,9 @@
   height: 10px;
 }
 .editor-view::-webkit-scrollbar-track {
+  background: transparent;
+}
+.editor-view::-webkit-scrollbar-corner {
   background: transparent;
 }
 .editor-view::-webkit-scrollbar-thumb {

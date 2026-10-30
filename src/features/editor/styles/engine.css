@@ -418,6 +418,7 @@
 
 .block-editor {
   position: relative;
+  min-width: 0;
   outline: none;
 }
 
@@ -432,6 +433,8 @@
 .block-row {
   position: relative;
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   margin: 1px 0;
   min-height: 30px;
   border-radius: 3px;
@@ -2592,7 +2595,7 @@ dialog[data-mermaid-viewer] {
 
 @media (max-width: 600px) {
   .block-gutter {
-    display: none;
+    left: -42px;
   }
 }
 
@@ -2743,9 +2746,8 @@ dialog[data-mermaid-viewer] {
   line-height: 1.25;
   font-weight: 650;
   letter-spacing: -0.012em;
-  white-space: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   scrollbar-width: none;
 }
 
@@ -2755,6 +2757,10 @@ dialog[data-mermaid-viewer] {
 
 .page {
   padding-top: 30px;
+  padding-left: 52px;
+  min-width: 0;
+  width: 100%;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 600px) {
@@ -2767,23 +2773,31 @@ dialog[data-mermaid-viewer] {
   color: var(--danger);
 }
 
+.editor-dock,
+.simple-table-scroll,
 .dock-scroll,
 #blockMenu {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
 }
 
+.editor-dock::-webkit-scrollbar,
+.simple-table-scroll::-webkit-scrollbar,
 .dock-scroll::-webkit-scrollbar,
 #blockMenu::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
+.editor-dock::-webkit-scrollbar-track,
+.simple-table-scroll::-webkit-scrollbar-track,
 .dock-scroll::-webkit-scrollbar-track,
 #blockMenu::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.editor-dock::-webkit-scrollbar-thumb,
+.simple-table-scroll::-webkit-scrollbar-thumb,
 .dock-scroll::-webkit-scrollbar-thumb,
 #blockMenu::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--muted) 42%, transparent);
@@ -2792,6 +2806,8 @@ dialog[data-mermaid-viewer] {
   border-radius: 999px;
 }
 
+.editor-dock::-webkit-scrollbar-thumb:hover,
+.simple-table-scroll::-webkit-scrollbar-thumb:hover,
 .dock-scroll::-webkit-scrollbar-thumb:hover,
 #blockMenu::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--muted) 68%, transparent);
@@ -2996,7 +3012,8 @@ dialog[data-mermaid-viewer] {
   display: flex;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: var(--workspace);
 }
 
@@ -3025,7 +3042,7 @@ dialog[data-mermaid-viewer] {
 }
 
 .dock-split > .dock-branch:first-child {
-  flex: 0 0 calc(var(--first-size, 50%) - 3px);
+  flex: 0 1 calc(var(--first-size, 50%) - 3px);
 }
 
 .dock-divider {
@@ -3082,7 +3099,7 @@ dialog[data-mermaid-viewer] {
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
-  min-width: 0;
+  min-width: 280px;
   min-height: 0;
   overflow: hidden;
   background: var(--workspace);
@@ -3146,12 +3163,19 @@ dialog[data-mermaid-viewer] {
   flex: 1 1 0;
   min-height: 0;
   min-width: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-gutter: stable;
 }
 
 .dock-page {
-  padding: 12px 36px 36vh;
+  padding: 12px 32px 36vh 52px;
+}
+
+.editor-dock::-webkit-scrollbar-corner,
+.simple-table-scroll::-webkit-scrollbar-corner,
+.dock-scroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .dock-empty {

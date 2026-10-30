@@ -4,6 +4,7 @@ import type { EditorRuntime } from '@/features/editor/types';
 import type { EditorTab } from '@/features/workspace/types';
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { hydrateInlineMath } from '@/features/math/render';
+import { dockMinimumWidth } from './dock-sizing';
 
 export function registerNavigation(runtime: EditorRuntime) {
   let editorScrollSaveTimer = null;
@@ -149,7 +150,7 @@ export function registerNavigation(runtime: EditorRuntime) {
   function dockNodeMarkup(node) {
     if (node.type === 'group') return runtime.dockGroupMarkup(node);
     return runtime.htmlWithStyles(
-      `<div class="dock-split ${node.direction}" data-dock-split style="--first-size:${Math.round(node.ratio * 100)}%"><div class="dock-branch">${runtime.dockNodeMarkup(node.first)}</div><div class="dock-divider" data-dock-divider role="separator" aria-orientation="${node.direction === 'row' ? 'vertical' : 'horizontal'}" title="Drag to resize"></div><div class="dock-branch">${runtime.dockNodeMarkup(node.second)}</div></div>`,
+      `<div class="dock-split ${node.direction}" data-dock-split style="--first-size:${Math.round(node.ratio * 100)}%;min-width:${dockMinimumWidth(node)}px"><div class="dock-branch" style="min-width:${dockMinimumWidth(node.first)}px">${runtime.dockNodeMarkup(node.first)}</div><div class="dock-divider" data-dock-divider role="separator" aria-orientation="${node.direction === 'row' ? 'vertical' : 'horizontal'}" title="Drag to resize"></div><div class="dock-branch" style="min-width:${dockMinimumWidth(node.second)}px">${runtime.dockNodeMarkup(node.second)}</div></div>`,
     );
   }
 
