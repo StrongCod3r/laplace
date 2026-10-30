@@ -258,6 +258,12 @@ export function registerCommands(runtime: EditorRuntime) {
       b.alt = '';
       delete b.text;
     }
+    if (type === 'file') {
+      b.src = '';
+      b.fileName = '';
+      b.fileLabel = '';
+      delete b.text;
+    }
     if (type === 'code') {
       b.language = 'bash';
       b.codeWrap = false;
@@ -283,7 +289,7 @@ export function registerCommands(runtime: EditorRuntime) {
           .querySelector(`.simple-table-block[data-block-id="${b.id}"] [data-table-cell="0:0"]`)
           ?.focus(),
       );
-    else if (!['divider', 'image'].includes(type)) runtime.focusBlock(b.id, 0);
+    else if (!['divider', 'image', 'file'].includes(type)) runtime.focusBlock(b.id, 0);
   }
 
   function showBlockMenu(row, id) {

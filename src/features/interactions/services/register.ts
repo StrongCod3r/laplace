@@ -78,6 +78,16 @@ export function registerInteractions(runtime: EditorRuntime) {
       true,
     );
     runtime.lifecycle.listen(document, 'click', runtime.onClick);
+    runtime.lifecycle.listen(
+      document,
+      'pointerdown',
+      (event) => {
+        document.querySelectorAll('details.file-menu[open]').forEach((menu) => {
+          if (!menu.contains(event.target)) menu.removeAttribute('open');
+        });
+      },
+      true,
+    );
     runtime.lifecycle.listen(document, 'dblclick', runtime.onImageBlockDoubleClick);
     runtime.lifecycle.listen(document, 'wheel', runtime.onImageBlockViewerWheel, {
       passive: false,
@@ -177,6 +187,12 @@ export function registerInteractions(runtime: EditorRuntime) {
       document,
       'scroll',
       (e) => {
+        if (!runtime.els.slashMenu.contains(e.target)) runtime.hideSlashMenu();
+        if (!runtime.els.blockMenu.contains(e.target))
+          runtime.els.blockMenu.classList.add('hidden');
+        document.querySelectorAll('details.file-menu[open]').forEach((menu) => {
+          if (!menu.contains(e.target)) menu.removeAttribute('open');
+        });
         runtime.onInlineSelectionScroll(e);
         if (e.target?.matches?.('[data-code-editor]')) runtime.syncCodeScroll(e.target);
         if (e.target?.matches?.('#editorView, .dock-scroll'))
@@ -930,6 +946,17 @@ export function registerInteractions(runtime: EditorRuntime) {
     const blockRow = e.target.closest('.block-row');
     if (blockRow) {
       const id = blockRow.dataset.blockId;
+      const fileAction = e.target.closest('[data-file-action]');
+      if (fileAction) {
+        e.preventDefault();
+        const pane = blockRow.closest('[data-editor-group]');
+        if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
+        const row = runtime.els.blockEditor.querySelector(
+          `.block-row[data-block-id="${CSS.escape(id)}"]`,
+        );
+        if (row) runtime.fileBlockAction(id, fileAction.dataset.fileAction, row);
+        return;
+      }
       if (blockRow.classList.contains('image-block') && e.target.closest('.image-preview img')) {
         runtime.selectImageBlock?.(id);
         return;
@@ -4001,6 +4028,13 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function onDragOver(e) {
+    const fileCard = e.target.closest?.('[data-file-card]');
+    if (fileCard && [...(e.dataTransfer?.types || [])].includes('Files')) {
+      e.preventDefault();
+      if (e.dataTransfer)
+        e.dataTransfer.dropEffect = runtime.workspaceAccess === 'writable' ? 'copy' : 'none';
+      return;
+    }
     if (runtime.tableAxisDrag) {
       const tableBlock = e.target.closest?.(
         `.simple-table-block[data-block-id="${runtime.tableAxisDrag.blockId}"]`,
@@ -4160,6 +4194,16 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function onDrop(e) {
+    const fileCard = e.target.closest?.('[data-file-card]');
+    if (fileCard && e.dataTransfer?.files?.length) {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = fileCard.closest('.block-row');
+      const pane = row.closest('[data-editor-group]');
+      if (pane) runtime.focusEditorGroup(pane.dataset.editorGroup);
+      void runtime.uploadFilesIntoBlock(e.dataTransfer.files, row.dataset.blockId);
+      return;
+    }
     if (runtime.tableAxisDrag) {
       const drag = { ...runtime.tableAxisDrag };
       const tableBlock = e.target.closest?.(`.simple-table-block[data-block-id="${drag.blockId}"]`);

@@ -4,8 +4,27 @@ import type { EditorRuntime } from '@/features/editor/types';
 import { attachmentReferenceSources, findUnusedAttachments } from './unused-attachments';
 import { normalizeImageCrop } from './image-presentation';
 import { filterAttachments } from './filter-attachments';
+import { createFileBlocks } from './file-blocks';
 
 export function registerAttachments(runtime: EditorRuntime) {
+  const files = createFileBlocks(runtime);
+
+  function fileHTML(block, gutter) {
+    return files.html(block, gutter);
+  }
+
+  function hydrateFileBlocks(root) {
+    files.hydrate(root);
+  }
+
+  function uploadFilesIntoBlock(selected, id) {
+    return files.upload(Array.from(selected), id);
+  }
+
+  function fileBlockAction(id, action, row) {
+    files.action(id, action, row);
+  }
+
   let imageViewerZoom = 1;
   let imageViewerPanX = 0;
   let imageViewerPanY = 0;
@@ -1270,6 +1289,7 @@ export function registerAttachments(runtime: EditorRuntime) {
 
   function hydrateAttachmentImages(root) {
     if (!root?.querySelectorAll) return;
+    runtime.hydrateFileBlocks(root);
     const generation = runtime.attachmentCacheGeneration;
     root.querySelectorAll('img[data-attachment-path]').forEach((image) => {
       const path = runtime.normalizeVaultAssetPath(image.dataset.attachmentPath);
@@ -1354,6 +1374,10 @@ export function registerAttachments(runtime: EditorRuntime) {
   }
 
   Object.assign(runtime, {
+    fileHTML,
+    hydrateFileBlocks,
+    uploadFilesIntoBlock,
+    fileBlockAction,
     setAttachmentGalleryFilter,
     attachmentIcon,
     formatAttachmentSize,

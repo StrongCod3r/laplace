@@ -7,29 +7,29 @@ and Git gateway is deployed separately; Vite supplies a Git proxy for developmen
 
 ## Code map
 
-| Location                                                     | Responsibility                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `src/main.tsx`, `src/app/App.tsx`                            | Startup, error boundary, and lazy workspace loading          |
-| `src/app/components/`                                        | Ribbon and shared startup skeleton                           |
-| `src/app/providers/pwa.ts`                                   | Production service worker registration                       |
-| `src/store/workspace.store.ts`                               | Immutable UI projection and active controller                |
-| `src/features/workspace/`                                    | Composition, hydration, permissions, and persistence         |
-| `src/features/editor/`                                       | DOM editor, controller, hooks, and editor styles             |
-| `src/features/notes/`                                        | Pages, folders, tree, favorites, and context panels          |
-| `src/features/navigation/`                                   | Tabs, editor groups, and navigation history                  |
-| `src/features/history/`                                      | Undo/redo, caret context, and save scheduling                |
-| `src/features/markdown/`                                     | Parsing, serialization, frontmatter, links, and shortcuts    |
-| `src/features/tables/`                                       | Table model, selection, clipboard, and editing               |
-| `src/features/code/`                                         | Highlighting, Mermaid, and display math blocks               |
-| `src/features/math/`                                         | KaTeX rendering, source syntax, clipboard, and inline editor |
-| `src/features/graph/`                                        | Canvas scene, graph model, and ownership family layout       |
-| `src/features/git/`                                          | Browser Git, worker, credentials, synchronization, and UI    |
-| `src/features/attachments/`                                  | Gallery, image presentation, references, and cleanup         |
-| `src/features/commands/`                                     | Slash commands, search, icons, and emoji                     |
-| `src/features/interactions/`                                 | Keyboard, dragging, clipboard, and selection                 |
-| `src/features/settings/`, `src/features/dashboard/`          | Preferences, shortcuts, dialogs, and home view               |
-| `src/shared/lib/`                                            | Lifecycle, CSS class helpers, and workspace file events      |
-| `src/config.ts`, `src/workspace-config.ts`, `src/storage.ts` | Storage configuration, settings separation, and gateway      |
+| Location                                                     | Responsibility                                                    |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `src/main.tsx`, `src/app/App.tsx`                            | Startup, error boundary, and lazy workspace loading               |
+| `src/app/components/`                                        | Ribbon and shared startup skeleton                                |
+| `src/app/providers/pwa.ts`                                   | Production service worker registration                            |
+| `src/store/workspace.store.ts`                               | Immutable UI projection and active controller                     |
+| `src/features/workspace/`                                    | Composition, hydration, permissions, and persistence              |
+| `src/features/editor/`                                       | DOM editor, controller, hooks, and editor styles                  |
+| `src/features/notes/`                                        | Pages, folders, tree, favorites, and context panels               |
+| `src/features/navigation/`                                   | Tabs, editor groups, and navigation history                       |
+| `src/features/history/`                                      | Undo/redo, caret context, and save scheduling                     |
+| `src/features/markdown/`                                     | Parsing, serialization, frontmatter, links, and shortcuts         |
+| `src/features/tables/`                                       | Table model, selection, clipboard, and editing                    |
+| `src/features/code/`                                         | Highlighting, Mermaid, and display math blocks                    |
+| `src/features/math/`                                         | KaTeX rendering, source syntax, clipboard, and inline editor      |
+| `src/features/graph/`                                        | Canvas scene, graph model, and ownership family layout            |
+| `src/features/git/`                                          | Browser Git, worker, credentials, synchronization, and UI         |
+| `src/features/attachments/`                                  | File blocks, gallery, image presentation, references, and cleanup |
+| `src/features/commands/`                                     | Slash commands, search, icons, and emoji                          |
+| `src/features/interactions/`                                 | Keyboard, dragging, clipboard, and selection                      |
+| `src/features/settings/`, `src/features/dashboard/`          | Preferences, shortcuts, dialogs, and home view                    |
+| `src/shared/lib/`                                            | Lifecycle, CSS class helpers, and workspace file events           |
+| `src/config.ts`, `src/workspace-config.ts`, `src/storage.ts` | Storage configuration, settings separation, and gateway           |
 
 Features contain components, hooks, services, and types as needed. `WorkspacePage`
 composes panels, views, and dialogs. Components subscribe to small Zustand

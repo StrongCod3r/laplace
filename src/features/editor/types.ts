@@ -1,5 +1,6 @@
 import type { ControllerLifecycle } from '@/shared/lib/controller-lifecycle';
 import type { Block, WorkspaceDocument } from '@/features/workspace/types';
+import type { FileBlock } from '@/features/attachments/services/file-markdown';
 
 export type WorkspaceAction =
   | 'openPage'
@@ -58,6 +59,10 @@ export interface EditorRuntime {
   ): void;
   closeInlineEquation(): void;
   closeMermaidViewer(): void;
+  fileHTML(block: FileBlock, gutter: string): string;
+  hydrateFileBlocks(root: HTMLElement): void;
+  uploadFilesIntoBlock(files: ArrayLike<File>, id: string): Promise<void>;
+  fileBlockAction(id: string, action: string, row: HTMLElement): void;
   selectImageBlock?: (id: string) => boolean;
   navigateImageBlockViewer(direction: number): void;
   clearSelectedImageBlock?: () => void;

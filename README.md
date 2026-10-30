@@ -4,7 +4,7 @@ A local-first Markdown workspace for writing and organizing notes stored in a lo
 
 ## Features
 
-- Block editor with tables, images, code blocks, Mermaid diagrams, and LaTeX equations.
+- Block editor with tables, images, downloadable File attachments, code blocks, Mermaid diagrams, and LaTeX equations.
 - Folders, folder notes, wikilinks, search, and an interactive canvas graph of connected notes.
 - Tabs, split editors, Markdown source preview, and undo/redo.
 - Optional GitHub synchronization through the Source Control panel.

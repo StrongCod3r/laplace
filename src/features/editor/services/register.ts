@@ -229,6 +229,7 @@ export function registerEditor(runtime: EditorRuntime) {
     if (block.type === 'page') return runtime.pageBlockHTML(block, gutter);
     if (block.type === 'page-link') return runtime.pageLinkBlockHTML(block, gutter);
     if (block.type === 'image') return runtime.imageHTML(block, gutter);
+    if (block.type === 'file') return runtime.fileHTML(block, gutter);
     if (block.type === 'code') return runtime.codeBlockHTML(block, gutter);
     if (block.type === 'table') return runtime.simpleTableHTML(block, gutter);
     if (block.type === 'divider')

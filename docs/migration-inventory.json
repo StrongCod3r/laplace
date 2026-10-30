@@ -1,5 +1,5 @@
 {
-  "total": 653,
+  "total": 657,
   "features": {
     "settings": [
       "normalizePageFont",
@@ -231,6 +231,10 @@
       "applyTheme"
     ],
     "attachments": [
+      "fileHTML",
+      "hydrateFileBlocks",
+      "uploadFilesIntoBlock",
+      "fileBlockAction",
       "clearSelectedImageBlock",
       "selectImageBlock",
       "selectedImageBlock",

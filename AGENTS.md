@@ -149,6 +149,8 @@ Gutter block reordering normalizes list indentation in the affected source and d
 
 ### Clipboard and tables
 
+File blocks use `/file` (also found with `/upload`) and store binary attachments in `.attachments/`. Persist each card as a standard Markdown link immediately followed by `<!-- laplace:file: {"version":1} -->`; preserve the original download filename in the marker's optional `name` when the display label differs. Empty cards use `[File]()` with the same marker. Only supported, adjacent markers create File blocks; preserve malformed or unsupported markers as ordinary content. Upload multiple files as consecutive cards, use unique storage paths without overwriting attachments, and commit only after successful writes and revalidation of the workspace, vault, note, pane, and original block. Rename changes the display label; replacing or removing a card retains previous attachment files. Downloads use the original filename. Missing files remain replaceable and display `File not found`.
+
 The fullscreen image viewer navigates image blocks in the source note's reading order with arrow keys: Left/Up for previous and Right/Down for next. Stop at the first and last image, reset zoom and pan on image changes, and retain the source note context across split panes.
 
 - Pasting over native or custom selections of text and blocks replaces the selection in one history operation, preserving unselected boundary text and inline metadata in main and split editors. Keep ordinary inputs, code editors, and table cells on their local paste paths. Save pasted image files successfully before replacing selected content, and revalidate the workspace, note, pane, and selection after asynchronous attachment writes.

@@ -2,6 +2,10 @@
 import { APP_FRONTMATTER_PATTERN, APP_FRONTMATTER_VALUE_PATTERN } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
 import type { EditorRuntime } from '@/features/editor/types';
+import {
+  fileBlockMarkdown,
+  parseFileMarkdown,
+} from '@/features/attachments/services/file-markdown';
 import { quoteDepth } from './quote-depth';
 import { normalizeImagePresentation } from '@/features/attachments/services/image-presentation';
 import { inlineMathAt, inlineMathRanges } from '@/features/math/syntax';
@@ -913,6 +917,12 @@ export function registerMarkdown(runtime: EditorRuntime) {
     while (i < lines.length) {
       const line = lines[i];
       const trimmed = line.trim();
+      const file = parseFileMarkdown(line, lines[i + 1] || '', runtime.normalizeAttachmentPath);
+      if (file) {
+        blocks.push({ id: runtime.uid('b'), ...file });
+        i += 2;
+        continue;
+      }
       const metadata = trimmed.match(/^<!--\s*laplace:image:\s*(\{.*\})\s*-->$/);
       const previousImage = blocks.at(-1);
       if (metadata && previousImage?.type === 'image' && /^\s*!\[/.test(lines[i - 1] || '')) {
@@ -1595,7 +1605,8 @@ export function registerMarkdown(runtime: EditorRuntime) {
         );
         if (presentation && Object.keys(presentation).length)
           lines.push(`<!-- laplace:image: ${JSON.stringify(presentation)} -->`);
-      } else if (block.type === 'page-link' || block.type === 'page')
+      } else if (block.type === 'file') lines.push(fileBlockMarkdown(block));
+      else if (block.type === 'page-link' || block.type === 'page')
         lines.push(runtime.markdownPageBlockReference(block, workspace, paths));
       else if (block.type === 'table')
         lines.push(runtime.simpleTableMarkdown(block, workspace, paths));

@@ -622,3 +622,108 @@ button.attachment-gallery-thumb {
     max-height: calc(100vh - 105px);
   }
 }
+.file-block {
+  margin: 10px 0;
+  min-height: 64px;
+}
+
+.file-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.file-empty {
+  border-style: dashed;
+}
+.file-icon {
+  display: flex;
+  color: var(--muted);
+  flex: none;
+}
+.file-copy {
+  flex: 1;
+  min-width: 0;
+}
+.file-name {
+  font-size: 14px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.file-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.file-card button,
+.file-menu summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  font-size: 12px;
+  flex: none;
+  cursor: pointer;
+}
+.file-card button:hover,
+.file-menu summary:hover {
+  background: var(--hover);
+}
+.file-card button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.file-card button:focus-visible,
+.file-menu summary:focus-visible,
+.file-menu input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.file-menu {
+  position: relative;
+}
+.file-menu summary {
+  list-style: none;
+}
+.file-menu summary::-webkit-details-marker {
+  display: none;
+}
+.file-menu-body {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 230px;
+  max-width: calc(100vw - 40px);
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px #0002;
+}
+.file-menu-body label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.file-menu-body input {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--bg);
+}

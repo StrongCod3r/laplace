@@ -208,6 +208,7 @@ export function createWorkspaceController(): WorkspaceController {
         attachmentGalleryPage = value;
       },
     },
+    attachmentGalleryFilter: { value: '', writable: true },
     selectedAttachmentPath: {
       get: () => selectedAttachmentPath,
       set: (value) => {
@@ -816,6 +817,13 @@ export function createWorkspaceController(): WorkspaceController {
             imageAlign: 'center',
           },
           {
+            id: 'getting_started_file',
+            type: 'file',
+            src: '',
+            fileName: '',
+            fileLabel: '',
+          },
+          {
             id: 'getting_started_page',
             type: 'page',
             pageId: 'page_getting_started_example',
@@ -952,6 +960,13 @@ export function createWorkspaceController(): WorkspaceController {
       icon: 'image',
       name: 'Image',
       desc: 'Upload or embed an image',
+      group: 'Media',
+    },
+    {
+      type: 'file',
+      icon: 'file',
+      name: 'File',
+      desc: 'Upload and download files',
       group: 'Media',
     },
     {

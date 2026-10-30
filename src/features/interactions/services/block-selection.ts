@@ -190,7 +190,7 @@ export function blockSelectionGeometry(
   if (rect.right <= rect.left) return null;
   if (
     !row.matches(
-      '.code-block,[data-type="callout"],.image-block,.simple-table-block,.page-block,.page-link-block',
+      '.code-block,[data-type="callout"],.image-block,.file-block,.simple-table-block,.page-block,.page-link-block',
     )
   )
     return { rect, radius: '0px' };
