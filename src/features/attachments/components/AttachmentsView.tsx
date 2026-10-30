@@ -197,34 +197,34 @@ export function AttachmentsView() {
             ))}
           </div>
         )}
-        {gallery.pageCount > 1 && (
-          <nav
-            className={withModuleClasses(styles, 'attachments-pagination')}
-            aria-label="Attachment pages"
-          >
-            <button
-              type="button"
-              data-attachment-page={gallery.page - 1}
-              disabled={gallery.page === 0}
-            >
-              <Icon name="chevron-left" size="15" />
-              <span>Previous</span>
-            </button>
-            <span>
-              Showing {start + 1}–{Math.min(start + 24, gallery.count)} of {gallery.count} · Page{' '}
-              {gallery.page + 1} of {gallery.pageCount}
-            </span>
-            <button
-              type="button"
-              data-attachment-page={gallery.page + 1}
-              disabled={gallery.page >= gallery.pageCount - 1}
-            >
-              <span>Next</span>
-              <Icon name="chevron-right" size="15" />
-            </button>
-          </nav>
-        )}
       </div>
+      {gallery.pageCount > 1 && (
+        <nav
+          className={withModuleClasses(styles, 'attachments-pagination')}
+          aria-label="Attachment pages"
+        >
+          <button
+            type="button"
+            data-attachment-page={gallery.page - 1}
+            disabled={gallery.page === 0}
+          >
+            <Icon name="chevron-left" size="15" />
+            <span>Previous</span>
+          </button>
+          <span>
+            Showing {start + 1}–{Math.min(start + 24, gallery.count)} of {gallery.count} · Page{' '}
+            {gallery.page + 1} of {gallery.pageCount}
+          </span>
+          <button
+            type="button"
+            data-attachment-page={gallery.page + 1}
+            disabled={gallery.page >= gallery.pageCount - 1}
+          >
+            <span>Next</span>
+            <Icon name="chevron-right" size="15" />
+          </button>
+        </nav>
+      )}
     </section>
   );
 }

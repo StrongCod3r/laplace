@@ -43,6 +43,10 @@ for (const docked of [false, true]) {
     await expect(viewer).toBeVisible();
     await expect(image).toHaveAttribute('alt', 'Second');
     await expect(image).toHaveJSProperty('naturalWidth', 120);
+    await image.hover();
+    await page.mouse.wheel(0, -100);
+    await expect(viewer.locator('[data-image-viewer-zoom-value]')).toHaveText('125%');
+    await viewer.locator('[data-image-viewer-fit]').click();
     await viewer.locator('[data-image-viewer-zoom="in"]').click();
     await expect(viewer.locator('[data-image-viewer-zoom-value]')).toHaveText('125%');
     await page.keyboard.press('ArrowRight');

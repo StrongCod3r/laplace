@@ -157,6 +157,10 @@ The fullscreen image viewer navigates image blocks in the source note's reading 
 
 The Attachments gallery filters filenames and path suffixes using case-insensitive file patterns: `*` matches within a path segment, `?` matches one character, and `**` spans folders. Separate patterns with `;` to match any of them, for example `*.svg;*.png`. Trim surrounding whitespace and ignore empty entries; an empty pattern list shows all attachments. Other punctuation is literal; the filter does not accept regular expressions.
 
+The Attachments gallery header and pagination footer remain outside the scrollable gallery content. Keep pagination visible at the bottom while scrolling; changing the page or filter resets the content scroll position.
+
+While an image preview is open, consume wheel events before they reach the underlying workspace. Gallery previews must not scroll the background; fullscreen note image previews retain wheel zoom. Restore normal scrolling immediately after closing the preview.
+
 - Pasting an image file or a copied image block into an empty ordinary paragraph replaces that paragraph in place, preserving its block ID and surrounding blocks. Nonempty paragraphs remain intact, and image presentation metadata and undo/redo must be preserved.
 
 - Store image presentation in a JSON HTML comment immediately below the image: `<!-- laplace:image: {"width":313,"align":"right","crop":{...}} -->`. Width, alignment, and the full reversible crop settings belong there; do not read or write width suffixes in image labels. Omit default presentation, keep captions and attachment references, and preserve malformed, unsupported, or detached comments as ordinary note content.

@@ -81,6 +81,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     runtime.lifecycle.listen(document, 'dblclick', runtime.onImageBlockDoubleClick);
     runtime.lifecycle.listen(document, 'wheel', runtime.onImageBlockViewerWheel, {
       passive: false,
+      capture: true,
     });
     runtime.lifecycle.listen(document, 'pointerover', runtime.onLinkPointerOver);
     runtime.lifecycle.listen(document, 'pointerout', runtime.onLinkPointerOut);

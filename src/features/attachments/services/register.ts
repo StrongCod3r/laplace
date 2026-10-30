@@ -455,9 +455,11 @@ export function registerAttachments(runtime: EditorRuntime) {
   }
 
   function onImageBlockViewerWheel(event) {
-    if (!isImageBlockPreviewOpen()) return;
+    const preview = runtime.els.attachmentPreview;
+    if (!preview || preview.classList.contains('hidden')) return;
     event.preventDefault();
-    zoomImageBlockViewer(event.deltaY < 0 ? 'in' : 'out', event);
+    event.stopPropagation();
+    if (isImageBlockPreviewOpen()) zoomImageBlockViewer(event.deltaY < 0 ? 'in' : 'out', event);
   }
 
   function startImageBlockViewerPan(event) {
