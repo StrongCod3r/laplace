@@ -2,6 +2,7 @@ import { withModuleClasses } from '@/shared/lib/css-classes';
 import ribbonStyles from './Ribbon.module.css';
 import { Icon } from '@/shared/components/Icon';
 import { useWorkspaceStore } from '@/store/workspace.store';
+import { WebMcpWidget } from '@/features/webmcp/components/WebMcpWidget';
 
 const styles = ribbonStyles;
 
@@ -85,6 +86,7 @@ export function Ribbon() {
         </button>
       </div>
       <div className={withModuleClasses(styles, 'ribbon-bottom')}>
+        <WebMcpWidget buttonClassName={withModuleClasses(styles, 'ribbon-btn')} />
         <a
           className={withModuleClasses(styles, 'ribbon-btn')}
           href="https://github.com/strongcod3r/laplace"

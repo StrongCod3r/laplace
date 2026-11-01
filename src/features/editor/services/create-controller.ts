@@ -27,6 +27,7 @@ import { registerCode } from '@/features/code/services/register';
 import { registerInteractions } from '@/features/interactions/services/register';
 import { registerMarkdown } from '@/features/markdown/services/register';
 import { registerCommands } from '@/features/commands/services/register';
+import { createWebMcpTools } from '@/features/webmcp/services/tools';
 
 export function createWorkspaceController(): WorkspaceController {
   const lifecycle = new ControllerLifecycle();
@@ -1446,6 +1447,7 @@ export function createWorkspaceController(): WorkspaceController {
       return result;
     },
     getDocument: () => structuredClone(state),
+    invokeWebMcpTool: (vaultId, name, args) => createWebMcpTools(runtime, vaultId)(name, args),
     flush: () => runtime.persistStateNow(),
   };
 }

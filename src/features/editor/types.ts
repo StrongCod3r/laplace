@@ -2,6 +2,12 @@ import type { ControllerLifecycle } from '@/shared/lib/controller-lifecycle';
 import type { Block, WorkspaceDocument } from '@/features/workspace/types';
 import type { FileBlock } from '@/features/attachments/services/file-markdown';
 
+export interface PageCreationOptions {
+  blocks?: Block[];
+  frontmatter?: string[];
+  folderPath?: string;
+}
+
 export type WorkspaceAction =
   | 'openPage'
   | 'createPage'
@@ -40,6 +46,7 @@ export interface WorkspaceController {
   invoke(action: WorkspaceAction, ...args: unknown[]): unknown;
   getDocument(): WorkspaceDocument;
   flush(): Promise<boolean>;
+  invokeWebMcpTool(vaultId: string, name: string, args: unknown): unknown;
 }
 
 /** Dynamic dependencies of the preserved editor algorithms, internal to the controller. */

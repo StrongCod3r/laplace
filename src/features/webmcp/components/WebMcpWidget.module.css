@@ -1,0 +1,223 @@
+.widget {
+  position: relative;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.panel,
+.instructions {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 24px #0003;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.panel {
+  position: fixed;
+  left: calc(var(--ribbon-width) + 8px);
+  bottom: 12px;
+  width: min(280px, calc(100vw - 40px));
+  max-width: calc(100vw - var(--ribbon-width) - 20px);
+  max-height: calc(100dvh - 24px);
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 24px #0003;
+  line-height: 1.5;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.panel::-webkit-scrollbar,
+.dialogContent::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.panel::-webkit-scrollbar-track,
+.panel::-webkit-scrollbar-corner,
+.dialogContent::-webkit-scrollbar-track,
+.dialogContent::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.panel::-webkit-scrollbar-thumb,
+.dialogContent::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 8px;
+}
+.panel::-webkit-scrollbar-thumb:hover,
+.dialogContent::-webkit-scrollbar-thumb:hover {
+  background: var(--text);
+}
+.panel code,
+.instructions code {
+  overflow-wrap: anywhere;
+}
+.panel input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+}
+.panel input,
+.panel button {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.panel button {
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.bridgeForm {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.disconnect {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.statusRow > span:first-child {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.statusRow > span:last-child {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.statusRow[data-state='ready'] .nativeValue {
+  color: #187443;
+}
+
+:global(body.dark) .statusRow[data-state='ready'] .nativeValue {
+  color: #6cdda0;
+}
+.trigger {
+  position: relative;
+  cursor: pointer;
+}
+
+.trigger[aria-expanded='true'] {
+  background: var(--active);
+  color: var(--obsidian-accent);
+}
+
+.trigger[data-connected]::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #187443;
+}
+
+:global(body.dark) .trigger[data-connected]::after {
+  background: #6cdda0;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel .iconButton,
+.instructions .iconButton {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.panel .iconButton:hover,
+.instructions .iconButton:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.instructions {
+  width: min(540px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.instructions[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialogHeader {
+  flex-shrink: 0;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.instructions::backdrop {
+  background: #0006;
+}
+
+.dialogContent {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.instructions h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.instructions ol {
+  padding-left: 20px;
+}
+
+.instructions li + li {
+  margin-top: 12px;
+}
+
+.instructions pre {
+  padding: 12px;
+  border-radius: 5px;
+  background: var(--hover);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

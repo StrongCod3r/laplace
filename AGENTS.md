@@ -273,6 +273,12 @@ Every scrollable view, panel, menu and dialog must style its scrollbar using the
 
 ## Verification and workflow
 
+WebMCP integration lives in `src/features/webmcp/` and supports both the native experimental `document.modelContext` API and the original webmcp.dev local bridge. Both reuse the same tool definitions and guarded controller services. Native tools register automatically for an available vault and unregister through an owned AbortSignal on vault/access changes and unmount; never clear unrelated registrations or expose tools cross-origin. Bridge connections require an explicit registration token and remain bound to one vault. Never store the single-use registration token. Remember only the issued authorized channel credentials in this tab's sessionStorage, scoped to vault and host with an expiry, to resume after F5/remount once the same vault is available. Close sockets on unmount; clear remembered sessions on Disconnect, expiry, blocked access, connection failure, and a different hydrated vault. Never write tokens into workspace files or localStorage. Browser registration failures must leave the bridge usable. See `docs/webmcp.md` for setup and the supported tools.
+
+WebMCP note creation accepts initial Markdown through the existing `createPage` service's typed options, recording creation and body as one history operation. Replacing or appending note content requires exact canonical `expectedMarkdown` from a recent read. Preserve frontmatter when replacements omit it, retain existing block IDs when appending, and do not rebuild unrelated editor panes. Explicit saves use `persistStateNow` and revalidate the connection after awaiting it.
+
+WebMCP editor-control tools list and manage tabs, groups, split layout, and auxiliary views through existing navigation services. Use current tab/group IDs and validate destinations before mutations. Closing a tab never deletes its note. Preserve inactive-pane context, tab recency, and the distinction between navigation state and content history. Read-only workspaces still allow editor navigation. Both native and bridge adapters advertise the shared tool set.
+
 ```bash
 npm run dev           # Vite, port 3000
 npm run typecheck     # TypeScript without emitting

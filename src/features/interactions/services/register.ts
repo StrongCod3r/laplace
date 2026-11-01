@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { APP_NAME } from './../../../app-identity';
 // Existing editor algorithms, isolated behind the typed controller boundary.
-import type { EditorRuntime } from '@/features/editor/types';
+import type { EditorRuntime, PageCreationOptions } from '@/features/editor/types';
 import { quoteDepth, splitQuoteAtLine } from '@/features/markdown/services/quote-depth';
 import type { Block } from '@/features/workspace/types';
 import { createEditorVerticalNavigation } from '@/features/editor/services/vertical-navigation';
@@ -4818,6 +4818,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     groupId = runtime.state.activeEditorGroupId,
     title = 'Untitled',
     folderNote = false,
+    options: PageCreationOptions = {},
   ) {
     if (runtime.workspaceAccess !== 'writable') {
       const message =
@@ -4841,7 +4842,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       parentFolderNote?.id ||
       (effectiveParentId
         ? runtime.pageById(effectiveParentId)?.folderId || null
-        : runtime.folderByPath(runtime.state.activeFolderPath)?.id || null);
+        : runtime.folderByPath(options.folderPath ?? runtime.state.activeFolderPath)?.id || null);
     const pageTitle = folderNote
       ? title
       : runtime.uniqueNoteTitle(title, effectiveParentId, pageFolderId);
@@ -4854,7 +4855,8 @@ export function registerInteractions(runtime: EditorRuntime) {
       favorite: false,
       expanded: true,
       folderNote,
-      blocks: [runtime.newTextBlock()],
+      blocks: options.blocks?.length ? options.blocks : [runtime.newTextBlock()],
+      ...(options.frontmatter ? { frontmatter: options.frontmatter } : {}),
     };
     if (!folderNote) runtime.resetFilesTreeSelection('page:' + page.id);
     if (!folderNote) runtime.state.activeFolderPath = '';
