@@ -279,6 +279,8 @@ WebMCP note creation accepts initial Markdown through the existing `createPage` 
 
 WebMCP editor-control tools list and manage tabs, groups, split layout, and auxiliary views through existing navigation services. Use current tab/group IDs and validate destinations before mutations. Closing a tab never deletes its note. Preserve inactive-pane context, tab recency, and the distinction between navigation state and content history. Read-only workspaces still allow editor navigation. Both native and bridge adapters advertise the shared tool set.
 
+WebMCP deletion requests return immediately with a session-local request ID and require the existing in-app confirmation dialog; never add a force or automatic-confirm parameter. Individual deletion includes descendants; deleting all notes requires a fresh expected count. Revalidate the vault, location, document content, access, baseline, and Git reservation after confirmation and the storage queue. Use explicit confirmed deletion markers, one history operation, and guarded persistence; restore removed notes on save failure while preserving concurrent edits to surviving notes. Preserve folders, attachments, and unmanaged files. Pending requests expire and cancel on adapter/controller disposal; a save already in progress must finish through the guarded queue. Status and cancellation tools never authorize deletion.
+
 ```bash
 npm run dev           # Vite, port 3000
 npm run typecheck     # TypeScript without emitting

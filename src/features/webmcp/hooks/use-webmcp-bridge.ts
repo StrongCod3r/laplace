@@ -15,8 +15,8 @@ export function useWebMcpBridge(
   function newConnection() {
     if (!available || !controller || !vaultId) return null;
     connection.current?.disconnect();
-    const next = new WebMcpConnection(
-      (name, args) => controller.invokeWebMcpTool(vaultId, name, args),
+    const next: WebMcpConnection = new WebMcpConnection(
+      (name, args) => controller.invokeWebMcpTool(vaultId, name, args, { signal: next.signal }),
       setStatus,
       (credentials) => saveBridgeSession(vaultId, credentials),
     );

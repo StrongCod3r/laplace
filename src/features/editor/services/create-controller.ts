@@ -28,6 +28,7 @@ import { registerInteractions } from '@/features/interactions/services/register'
 import { registerMarkdown } from '@/features/markdown/services/register';
 import { registerCommands } from '@/features/commands/services/register';
 import { createWebMcpTools } from '@/features/webmcp/services/tools';
+import { cancelWebMcpDeletions } from '@/features/webmcp/services/deletion';
 
 export function createWorkspaceController(): WorkspaceController {
   const lifecycle = new ControllerLifecycle();
@@ -1424,6 +1425,7 @@ export function createWorkspaceController(): WorkspaceController {
     },
     dispose: () => {
       if (lifecycle.disposed) return;
+      cancelWebMcpDeletions(runtime);
       runtime.flushHistoryPending();
       if (
         runtime.saveTimer &&
@@ -1447,7 +1449,8 @@ export function createWorkspaceController(): WorkspaceController {
       return result;
     },
     getDocument: () => structuredClone(state),
-    invokeWebMcpTool: (vaultId, name, args) => createWebMcpTools(runtime, vaultId)(name, args),
+    invokeWebMcpTool: (vaultId, name, args, options) =>
+      createWebMcpTools(runtime, vaultId, options)(name, args),
     flush: () => runtime.persistStateNow(),
   };
 }

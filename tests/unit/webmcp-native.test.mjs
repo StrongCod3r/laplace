@@ -48,7 +48,10 @@ test('native WebMCP binds callbacks to one vault and releases registrations on c
     const callback = tools.get('laplace_create_note').execute;
     const args = { title: 'Native note', markdown: '# Body' };
     await callback(args);
-    assert.deepEqual(invocations, [['vault-a', 'laplace_create_note', args]]);
+    assert.deepEqual(invocations[0].slice(0, 3), ['vault-a', 'laplace_create_note', args]);
+    assert.equal(invocations[0][3].signal, signals[0]);
+    assert.equal(tools.get('laplace_delete_note').annotations.consequentialHint, true);
+    assert.equal(tools.get('laplace_deletion_status').annotations.readOnlyHint, true);
     const cancelled = new AbortController();
     cancelled.abort();
     await assert.rejects(callback(args, { signal: cancelled.signal }), { name: 'AbortError' });

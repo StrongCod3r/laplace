@@ -11,7 +11,11 @@ export interface NativeModelContext {
       name: string;
       description: string;
       inputSchema: (typeof webMcpTools)[number]['inputSchema'];
-      annotations: { readOnlyHint: boolean; untrustedContentHint: boolean };
+      annotations: {
+        readOnlyHint: boolean;
+        untrustedContentHint: boolean;
+        consequentialHint: boolean;
+      };
       execute(args: unknown, options?: { signal?: AbortSignal }): Promise<unknown>;
     },
     options: { signal: AbortSignal },
@@ -43,13 +47,19 @@ export function registerNativeWebMcp(
     'laplace_search_notes',
     'laplace_read_note',
     'laplace_list_tabs',
+    'laplace_deletion_status',
   ]);
   const ready = Promise.all(
     webMcpTools.map(async (tool) => {
       await context.registerTool(
         {
           ...structuredClone(tool),
-          annotations: { readOnlyHint: readOnly.has(tool.name), untrustedContentHint: true },
+          annotations: {
+            readOnlyHint: readOnly.has(tool.name),
+            untrustedContentHint: true,
+            consequentialHint:
+              tool.name === 'laplace_delete_note' || tool.name === 'laplace_delete_all_notes',
+          },
           execute: async (args, options) => {
             if (!active || lifetime.signal.aborted || options?.signal?.aborted)
               throw new DOMException(
@@ -58,7 +68,9 @@ export function registerNativeWebMcp(
               );
             // Both transports share validation, permissions, concurrency checks, history, and storage.
             // A save already started must finish through the guarded storage queue, not be interrupted.
-            return await controller.invokeWebMcpTool(vaultId, tool.name, args);
+            return await controller.invokeWebMcpTool(vaultId, tool.name, args, {
+              signal: lifetime.signal,
+            });
           },
         },
         { signal: lifetime.signal },

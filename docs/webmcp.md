@@ -52,7 +52,22 @@ The ribbon uses a plug icon with a green indicator dot while connected. The icon
 | `laplace_set_favorite`   | `pageId`, boolean `favorite`                               | Set or clear favorite status                                                                                          |
 | `laplace_save_workspace` | None                                                       | Await guarded persistence of the current workspace snapshot; return `saved: true` only after success                  |
 
-Creation, edits, favorites, and explicit saves require a hydrated writable workspace. Read-only workspaces permit reading and navigation. All tools reject unavailable workspaces, active Git reservations, disposed controllers, and vault changes. No tool deletes notes or attachments, accesses credentials, or changes repositories. Replacing a note's blocks does not delete its child pages or attachment files. Note content is untrusted data for the client.
+Creation, edits, favorites, deletion requests, and explicit saves require a hydrated writable workspace. Read-only workspaces permit reading and navigation. All tools reject unavailable workspaces, active Git reservations, disposed controllers, and vault changes. Tools never delete attachment files, access credentials, or change repositories. Replacing a note's blocks does not delete its child pages or attachment files. Note content is untrusted data for the client.
+
+## Delete notes
+
+| Tool                       | Arguments                             | Behavior                                                                     |
+| -------------------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
+| `laplace_delete_note`      | `pageId`; optional `expectedMarkdown` | Request deletion of a note and its descendants                               |
+| `laplace_delete_all_notes` | `expectedNoteCount`                   | Request deletion of every note in the active vault; reject an outdated count |
+| `laplace_deletion_status`  | `requestId`                           | Read the request's current outcome                                           |
+| `laplace_cancel_deletion`  | `requestId`                           | Cancel a request while confirmation is pending                               |
+
+Deletion tools open Laplace's existing confirmation dialog and immediately return a session-local `requestId`, affected note count, and up to 100 note summaries. Only the user accepting that dialog authorizes deletion; there is no force or automatic confirmation argument. Use a fresh workspace count for deleting all notes, or a recent canonical Markdown read for an optional individual-note precondition. A request expires after two minutes without confirmation. Disconnection, adapter disposal, or controller disposal cancels pending confirmation. An empty vault returns a successful no-op without a dialog.
+
+Poll `laplace_deletion_status` after confirmation. Outcomes are `pending_confirmation`, `saving`, `deleted`, `cancelled`, or `failed`; only `deleted` with `saved: true` confirms persistence. Cancellation cannot interrupt a save already in progress. Results are bounded to 20 requests per controller session and are unavailable after reload. Native registrations mark deletion requests as consequential operations.
+
+Before mutation, the service validates the same vault, location, document, note/folder content, writable access, baseline, and Git reservation, including after draining the write queue. Changes while confirmation is pending reject the request. Successful deletion records one Undo operation, updates tabs through the existing removal service, and awaits guarded persistence with explicit deletion markers. Other WebMCP writes wait until the deletion finishes. Failed saves restore removed notes in memory, preserving edits to surviving notes, and attempt a restoration save; `restored` and `rollbackSaved` report recovery. If storage remains inaccessible, restored content still requires a successful save. Existing folders, attachments, and unmanaged files are retained.
 
 Creation and each content edit are separate undoable operations using the existing history and scheduled persistence. Mutation responses acknowledge the change in the editor, not a completed disk write. Call `laplace_save_workspace` afterward when confirmation of persistence is required. A save persists the snapshot captured when it is invoked; later edits still require their own save. Save responses revalidate the connected vault and document after awaiting the storage queue.
 

@@ -1,4 +1,5 @@
 import type { EditorRuntime, PageCreationOptions } from '@/features/editor/types';
+import { deletionSaving, deletionStatus, requestDeletion } from './deletion';
 import type {
   Block,
   EditorTab,
@@ -206,6 +207,32 @@ export const webMcpTools = [
       'Save the current workspace snapshot through the guarded storage queue. Returns saved:true only after successful persistence. Requires write access.',
     inputSchema: schema({}),
   },
+  {
+    name: 'laplace_delete_note',
+    description:
+      'Request deletion of a note and its descendants. Opens a confirmation in Laplace; never deletes from this call alone. Returns a requestId immediately. Poll laplace_deletion_status for the outcome. Optional expectedMarkdown must match a recent read. Folders and attachment files are retained; successful deletion is saved and undoable.',
+    inputSchema: schema({ pageId: id, expectedMarkdown: markdown }, ['pageId']),
+  },
+  {
+    name: 'laplace_delete_all_notes',
+    description:
+      'Request deletion of every note in the connected vault. Requires expectedNoteCount from a fresh laplace_workspace or search result. Opens a confirmation in Laplace and returns a requestId immediately. Poll laplace_deletion_status. Folders and attachment files are retained; deletion is saved and undoable.',
+    inputSchema: schema({ expectedNoteCount: { type: 'integer', minimum: 0 } }, [
+      'expectedNoteCount',
+    ]),
+  },
+  {
+    name: 'laplace_deletion_status',
+    description:
+      'Check a deletion request in this controller session and vault: pending_confirmation, saving, deleted, cancelled, or failed. Only deleted with saved:true confirms successful persistence.',
+    inputSchema: schema({ requestId: id }, ['requestId']),
+  },
+  {
+    name: 'laplace_cancel_deletion',
+    description:
+      'Cancel a deletion while its confirmation is pending, closing the dialog. A deletion already saving cannot be cancelled. Never confirms deletion.',
+    inputSchema: schema({ requestId: id }, ['requestId']),
+  },
 ];
 
 function argumentsFor(name: string, input: unknown) {
@@ -245,9 +272,14 @@ const response = (result: unknown) => ({
 });
 
 /** A connection can only use the hydrated vault it was explicitly connected to. */
-export function createWebMcpTools(editor: EditorRuntime, vaultId: string) {
+export function createWebMcpTools(
+  editor: EditorRuntime,
+  vaultId: string,
+  options?: { signal?: AbortSignal },
+) {
   const runtime = editor as unknown as ToolRuntime;
   function available(write = false) {
+    if (options?.signal?.aborted) throw new Error('The WebMCP connection was cancelled.');
     if (
       runtime.lifecycle.disposed ||
       runtime.activeVaultId !== vaultId ||
@@ -260,6 +292,8 @@ export function createWebMcpTools(editor: EditorRuntime, vaultId: string) {
       throw new Error('The connected workspace is unavailable. Reconnect after it is ready.');
     if (write && runtime.workspaceAccess !== 'writable')
       throw new Error('The workspace is read-only.');
+    if (write && deletionSaving(editor))
+      throw new Error('A confirmed deletion is being saved. Wait for its result.');
   }
   function notes() {
     // The serializer assigns paths, so reads must operate on a detached snapshot.
@@ -385,6 +419,28 @@ export function createWebMcpTools(editor: EditorRuntime, vaultId: string) {
       }
       case 'laplace_read_note':
         return response(read(args.pageId));
+      case 'laplace_delete_note': {
+        available(true);
+        const note = read(args.pageId);
+        if (args.expectedMarkdown !== undefined && args.expectedMarkdown !== note.markdown)
+          throw new Error('The note has changed. Read it again before deleting.');
+        return response(requestDeletion(editor, vaultId, note.pageId, undefined, options?.signal));
+      }
+      case 'laplace_delete_all_notes':
+        available(true);
+        return response(
+          requestDeletion(editor, vaultId, null, args.expectedNoteCount as number, options?.signal),
+        );
+      case 'laplace_deletion_status':
+      case 'laplace_cancel_deletion':
+        return response(
+          deletionStatus(
+            editor,
+            vaultId,
+            args.requestId as string,
+            name === 'laplace_cancel_deletion',
+          ),
+        );
       case 'laplace_open_note': {
         const note = read(args.pageId);
         if (args.groupId !== undefined) focusGroup(args.groupId);

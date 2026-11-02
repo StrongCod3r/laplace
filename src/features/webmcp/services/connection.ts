@@ -32,6 +32,10 @@ export interface BridgeCredentials {
 }
 
 export class WebMcpConnection {
+  private readonly lifetime = new AbortController();
+  get signal() {
+    return this.lifetime.signal;
+  }
   private socket: WebSocket | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private stopped = false;
@@ -173,6 +177,7 @@ export class WebMcpConnection {
   disconnect(message = 'Disconnected', { preserveSession = false } = {}) {
     if (this.stopped) return;
     this.stopped = true;
+    this.lifetime.abort();
     clearTimeout(this.timer);
     if (this.socket) {
       this.socket.onopen = this.socket.onmessage = this.socket.onerror = this.socket.onclose = null;

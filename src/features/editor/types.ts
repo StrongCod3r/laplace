@@ -46,7 +46,12 @@ export interface WorkspaceController {
   invoke(action: WorkspaceAction, ...args: unknown[]): unknown;
   getDocument(): WorkspaceDocument;
   flush(): Promise<boolean>;
-  invokeWebMcpTool(vaultId: string, name: string, args: unknown): unknown;
+  invokeWebMcpTool(
+    vaultId: string,
+    name: string,
+    args: unknown,
+    options?: { signal?: AbortSignal },
+  ): unknown;
 }
 
 /** Dynamic dependencies of the preserved editor algorithms, internal to the controller. */

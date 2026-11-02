@@ -155,6 +155,8 @@ test('WebMCP validates local tokens and scopes tools to a hydrated vault', async
       ],
       ['laplace_set_favorite', { pageId: 'one', favorite: true }],
       ['laplace_save_workspace', {}],
+      ['laplace_delete_note', { pageId: 'one' }],
+      ['laplace_delete_all_notes', { expectedNoteCount: 2 }],
     ])
       assert.throws(() => execute(name, args), /read-only/);
     execute('laplace_read_note', { pageId: 'one' });
