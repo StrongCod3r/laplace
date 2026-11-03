@@ -36,6 +36,38 @@ export function registerInteractions(runtime: EditorRuntime) {
   const verticalNavigation = createEditorVerticalNavigation();
   let equationEditor: InlineEquationEditor | null = null;
   let suppressSelectionClick = false;
+  function replaceTypedArrow(event, content) {
+    if (
+      event.isComposing ||
+      event.inputType !== 'insertText' ||
+      !['>', '-', '='].includes(event.data)
+    )
+      return;
+    const selection = window.getSelection();
+    if (!selection?.isCollapsed || !selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    const offset = range.startOffset;
+    if (node.nodeType !== Node.TEXT_NODE || !content.contains(node) || offset < 2) return;
+    if (node.parentElement?.closest('code, [data-inline-math]')) return;
+    const before = document.createRange();
+    before.selectNodeContents(content);
+    before.setEnd(node, offset - 2);
+    const prefix = before.toString();
+    if (
+      (prefix.match(/(?<!\\)\$/g) || []).length % 2 ||
+      prefix.lastIndexOf('\\(') > prefix.lastIndexOf('\\)')
+    )
+      return;
+    const symbols = { '->': '→', '<-': '←', '=>': '⇒', '<=': '⇐' };
+    const symbol = symbols[node.data.slice(offset - 2, offset)];
+    if (!symbol) return;
+    node.replaceData(offset - 2, 2, symbol);
+    range.setStart(node, offset - 1);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
   function bindEvents() {
     if (runtime.eventsBound) return;
     runtime.eventsBound = true;
@@ -2692,6 +2724,7 @@ export function registerInteractions(runtime: EditorRuntime) {
     }
     const content = e.target.closest('.block-content');
     if (content) {
+      replaceTypedArrow(e, content);
       const row = content.closest('.block-row');
       const b = runtime.findBlock(row.dataset.blockId);
       if (!b) return;
@@ -2730,6 +2763,7 @@ export function registerInteractions(runtime: EditorRuntime) {
       return;
     }
     if (e.target.matches('[data-table-cell]')) {
+      replaceTypedArrow(e, e.target);
       const row = e.target.closest('.simple-table-block'),
         b = runtime.findBlock(row?.dataset.blockId);
       if (!b) return;
