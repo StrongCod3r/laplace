@@ -1451,6 +1451,10 @@ dialog[data-mermaid-viewer] {
   min-height: 44px;
 }
 
+.image-block.image-block-selected:focus {
+  outline: none;
+}
+
 .image-block.image-block-selected .image-preview {
   outline: 2px solid color-mix(in srgb, var(--obsidian-accent, var(--blue)) 78%, transparent);
   outline-offset: 3px;
