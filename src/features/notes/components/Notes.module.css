@@ -683,6 +683,7 @@ body:global(.hide-files-tab-icons) [data-left-panel='files'] .tree-icon {
 }
 
 .folder-select-btn .tree-title {
+  font-weight: 700;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
