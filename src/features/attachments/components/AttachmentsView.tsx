@@ -167,22 +167,37 @@ export function AttachmentsView() {
                     data-attachment-references-path={item.path}
                     aria-pressed={gallery.selectedPath === item.path}
                     aria-label={`Show references for ${item.name}`}
+                    title={
+                      item.references.length
+                        ? `Used in ${item.references.length} ${item.references.length === 1 ? 'page' : 'pages'}`
+                        : 'Not referenced'
+                    }
                   >
-                    {item.references.length
-                      ? `Used in ${item.references.length} ${item.references.length === 1 ? 'page' : 'pages'}`
-                      : 'Not referenced'}
+                    <Icon name="link" size="12" />
+                    <span>{item.references.length}</span>
                   </button>
                   {item.image && (
                     <button
                       type="button"
                       className={withModuleClasses(styles, 'attachment-gallery-copy-action')}
                       data-attachment-copy={item.path}
-                      title={`Copy ${item.name} for pasting into a page`}
+                      data-attachment-copy-mode="image"
+                      title="Copy as image"
                       aria-label={`Copy image attachment ${item.name}`}
                     >
-                      <Icon name="copy" size="14" />
+                      <Icon name="image" size="14" />
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className={withModuleClasses(styles, 'attachment-gallery-copy-action')}
+                    data-attachment-copy={item.path}
+                    data-attachment-copy-mode="file"
+                    title="Copy as file"
+                    aria-label={`Copy file attachment ${item.name}`}
+                  >
+                    <Icon name="file" size="14" />
+                  </button>
                   <button
                     type="button"
                     className={withModuleClasses(styles, 'attachment-gallery-delete')}

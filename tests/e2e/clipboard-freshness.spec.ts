@@ -155,9 +155,18 @@ test('a newly copied external image replaces the earlier internal image', async 
 test('gallery image copying uses the current system clipboard', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await copyImage(page);
+  const attachmentPath = await page
+    .locator('#blockEditor .image-preview img')
+    .getAttribute('data-attachment-path');
+  expect(attachmentPath).toBeTruthy();
   await page.locator('[data-ribbon-action="attachments"]').click();
   await expect(page.locator('#attachmentsView')).toBeVisible();
-  await page.locator('[data-attachment-copy]').first().click();
+  await page
+    .getByRole('button', {
+      name: `Copy image attachment ${attachmentPath!.split('/').at(-1)}`,
+      exact: true,
+    })
+    .click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/^!\[/);
   await page.locator('#newPageBtn').click();
   const content = page.locator('#blockEditor .block-content').first();

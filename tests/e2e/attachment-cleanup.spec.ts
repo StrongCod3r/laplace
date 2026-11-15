@@ -53,7 +53,7 @@ test('Attachments cleans only unused files after confirmation, including nested 
         .getByRole('listitem')
         .filter({ has: page.locator('b', { hasText: name }) })
         .getByRole('button', { name: `Show references for ${name}`, exact: true }),
-    ).toHaveText('Used in 1 page');
+    ).toHaveText('1');
   }
   await gallery
     .getByRole('button', { name: 'Show references for manual.pdf', exact: true })

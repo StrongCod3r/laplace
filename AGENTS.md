@@ -171,6 +171,7 @@ While an image preview is open, consume wheel events before they reach the under
 
 - The clipboard event contents are the source of the current paste. A private cache from another page or an earlier copy cannot override them; undo/redo must not alter this contract.
 - The image block cache is valid only when its token matches the `application/x-laplace-image-block` MIME token in the current event. Copying from the gallery writes the corresponding content to the system clipboard.
+- The Attachments gallery can copy every attachment as a File block and images as an image block. Copy the corresponding Markdown, including the File marker, to the system clipboard; pasting reuses the attachment path without uploading another copy. When an existing File block references the same normalized path, preserve its display label and original download filename instead of exposing the storage filename. Report clipboard failures instead of showing success.
 - Tables store text in `tableRows` and inline metadata in `tableCellInline`. Preserve formatting and link ranges during HTML pasting, editing, and serialization; TSV text alone does not preserve styles.
 - Detect HTML tables before Markdown fallback or single-link detection. A link inside a table must not turn the entire table into a link block.
 - Pasting cells may expand the matrix; preserve neighboring cells and line breaks. Plain-text replacement clears old formatting in the replaced cells.

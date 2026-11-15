@@ -395,7 +395,10 @@ export function registerInteractions(runtime: EditorRuntime) {
     if (attachmentCopyButton) {
       e.preventDefault();
       e.stopPropagation();
-      runtime.copyAttachmentToClipboard?.(attachmentCopyButton.dataset.attachmentCopy);
+      void runtime.copyAttachmentToClipboard?.(
+        attachmentCopyButton.dataset.attachmentCopy,
+        attachmentCopyButton.dataset.attachmentCopyMode === 'file' ? 'file' : 'image',
+      );
       return;
     }
     const attachmentDeleteButton = e.target.closest?.('[data-attachment-delete]');

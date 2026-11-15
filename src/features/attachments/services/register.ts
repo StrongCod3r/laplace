@@ -5,6 +5,7 @@ import { attachmentReferenceSources, findUnusedAttachments } from './unused-atta
 import { normalizeImageCrop } from './image-presentation';
 import { filterAttachments } from './filter-attachments';
 import { createFileBlocks } from './file-blocks';
+import { fileBlockMarkdown } from './file-markdown';
 
 export function registerAttachments(runtime: EditorRuntime) {
   const files = createFileBlocks(runtime);
@@ -601,19 +602,40 @@ export function registerAttachments(runtime: EditorRuntime) {
     return true;
   }
 
-  function copyAttachmentToClipboard(path) {
+  async function copyAttachmentToClipboard(path, mode = 'image') {
     const attachment = runtime.attachmentListItems.find((item) => item.path === path);
-    if (!attachment || !runtime.isImageAttachment(attachment)) return false;
+    if (!attachment || (mode === 'image' && !runtime.isImageAttachment(attachment))) return false;
 
     const source = runtime.normalizeAttachmentPath(attachment.path);
+    const originalFile =
+      mode === 'file'
+        ? runtime.state.pages
+            .flatMap((page) => runtime.flattenBlocks(page.blocks || []))
+            .find(
+              (block) =>
+                block.type === 'file' &&
+                runtime.normalizeAttachmentPath(block.src || '') === source,
+            )
+        : null;
     const alt = attachment.name.replace(/\.[^.]+$/, '') || 'Image';
     try {
       const escapedPath = runtime.markdownEscapeLinkUrl(runtime.markdownAssetPath(source));
-      const markdown = `![${runtime.markdownEscapeLinkLabel(alt)}](${escapedPath})`;
-      const write = navigator.clipboard?.writeText?.(markdown);
-      write?.catch(() => {});
-    } catch {}
-    runtime.toast('Image copied. Paste it into a page.');
+      const markdown =
+        mode === 'file'
+          ? fileBlockMarkdown({
+              id: '',
+              type: 'file',
+              src: source,
+              fileName: originalFile?.fileName || attachment.name,
+              fileLabel: originalFile?.fileLabel || originalFile?.fileName || attachment.name,
+            })
+          : `![${runtime.markdownEscapeLinkLabel(alt)}](${escapedPath})`;
+      await navigator.clipboard.writeText(markdown);
+    } catch {
+      runtime.toast('Could not copy the attachment. Try again.');
+      return false;
+    }
+    runtime.toast(`${mode === 'file' ? 'File' : 'Image'} copied. Paste it into a page.`);
     return true;
   }
 

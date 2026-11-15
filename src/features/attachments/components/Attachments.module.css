@@ -221,11 +221,14 @@ button.attachment-gallery-thumb {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
   margin: 0 11px 10px;
 }
 .attachment-gallery-reference-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
   flex: 1;
   max-width: 100%;
@@ -239,6 +242,13 @@ button.attachment-gallery-thumb {
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.attachment-gallery-reference-trigger > svg {
+  flex-shrink: 0;
+}
+.attachment-gallery-reference-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .attachment-gallery-copy-action {
   width: 28px;
