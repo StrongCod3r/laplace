@@ -6,6 +6,15 @@ test('Getting Started contains working examples of every block and preserves edi
   await page.goto('/');
   await expect(page.locator('#pageTitle')).toHaveText('Getting Started');
   await expect(page.locator('body')).not.toHaveClass(/workspace-read-only/);
+  const parentTitle = page.locator('#pageTree [data-page-id="page_getting_started"] .tree-title');
+  const childTitle = page.locator(
+    '#pageTree [data-page-id="page_getting_started_example"] .tree-title',
+  );
+  await expect(parentTitle).toHaveCSS('font-weight', '700');
+  await expect(childTitle).not.toHaveCSS('font-weight', '700');
+  await page.locator('#pageTree [data-action="toggle-page"]').first().click();
+  await expect(parentTitle).toHaveCSS('font-weight', '700');
+  await page.locator('#pageTree [data-action="toggle-page"]').first().click();
   const editor = page.locator('#blockEditor');
   for (const type of [
     'text',
@@ -59,6 +68,7 @@ test('Getting Started contains working examples of every block and preserves edi
   });
   await page.reload();
   await expect(page.locator('#pageTitle')).toHaveText('Getting Started');
+  await expect(parentTitle).toHaveCSS('font-weight', '700');
   await expect(editor.locator('[data-block-id="getting_started_text"] .block-content')).toHaveText(
     'My own example.',
   );

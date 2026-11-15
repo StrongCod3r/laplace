@@ -50,7 +50,7 @@ function Rows({ items, favorites = false }: { items: TreeItem[]; favorites?: boo
         <div
           className={withModuleClasses(
             styles,
-            `page-tree-row ${item.selected ? 'selected active' : item.active ? 'active' : ''}`,
+            `page-tree-row ${!favorites && item.children.length ? 'page-tree-parent' : ''} ${item.selected ? 'selected active' : item.active ? 'active' : ''}`,
           )}
           data-item-type="note"
           data-page-id={item.id}
