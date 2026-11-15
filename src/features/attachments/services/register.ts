@@ -621,21 +621,27 @@ export function registerAttachments(runtime: EditorRuntime) {
     try {
       const escapedPath = runtime.markdownEscapeLinkUrl(runtime.markdownAssetPath(source));
       const markdown =
-        mode === 'file'
-          ? fileBlockMarkdown({
-              id: '',
-              type: 'file',
-              src: source,
-              fileName: originalFile?.fileName || attachment.name,
-              fileLabel: originalFile?.fileLabel || originalFile?.fileName || attachment.name,
-            })
-          : `![${runtime.markdownEscapeLinkLabel(alt)}](${escapedPath})`;
+        mode === 'name'
+          ? attachment.name
+          : mode === 'file'
+            ? fileBlockMarkdown({
+                id: '',
+                type: 'file',
+                src: source,
+                fileName: originalFile?.fileName || attachment.name,
+                fileLabel: originalFile?.fileLabel || originalFile?.fileName || attachment.name,
+              })
+            : `![${runtime.markdownEscapeLinkLabel(alt)}](${escapedPath})`;
       await navigator.clipboard.writeText(markdown);
     } catch {
       runtime.toast('Could not copy the attachment. Try again.');
       return false;
     }
-    runtime.toast(`${mode === 'file' ? 'File' : 'Image'} copied. Paste it into a page.`);
+    runtime.toast(
+      mode === 'name'
+        ? 'Filename copied.'
+        : `${mode === 'file' ? 'File' : 'Image'} copied. Paste it into a page.`,
+    );
     return true;
   }
 

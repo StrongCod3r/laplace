@@ -3,8 +3,35 @@ import attachmentsStyles from './Attachments.module.css';
 import { Icon, NoteIcon } from '@/shared/components/Icon';
 import { useWorkspaceStore } from '@/store/workspace.store';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { FilterInput } from '@/shared/components/FilterInput';
 
 const styles = attachmentsStyles;
+
+function AttachmentName({ name, path }: { name: string; path: string }) {
+  const extensionStart = name.lastIndexOf('.');
+  const hasExtension = extensionStart > 0 && extensionStart < name.length - 1;
+  return (
+    <button
+      type="button"
+      className={withModuleClasses(styles, 'attachment-name-copy')}
+      data-attachment-copy={path}
+      data-attachment-copy-mode="name"
+      aria-label={`Copy filename ${name}`}
+      title={name}
+    >
+      <b title={name}>
+        <span className={withModuleClasses(styles, 'attachment-name-stem')}>
+          {hasExtension ? name.slice(0, extensionStart) : name}
+        </span>
+        {hasExtension && (
+          <span className={withModuleClasses(styles, 'attachment-name-extension')}>
+            {name.slice(extensionStart)}
+          </span>
+        )}
+      </b>
+    </button>
+  );
+}
 
 export function AttachmentsView() {
   const gallery = useWorkspaceStore((state) => state.ui.gallery);
@@ -21,8 +48,8 @@ export function AttachmentsView() {
     : gallery.error
       ? 'Folder unavailable'
       : gallery.filter
-        ? `${gallery.count} of ${gallery.totalCount} files · .attachments`
-        : `${gallery.count} file${gallery.count === 1 ? '' : 's'} · .attachments`;
+        ? `${gallery.count} of ${gallery.totalCount} files`
+        : `${gallery.count} file${gallery.count === 1 ? '' : 's'}`;
   const start = gallery.page * 24;
   return (
     <section
@@ -32,29 +59,24 @@ export function AttachmentsView() {
       aria-busy={gallery.loading || cleaning}
     >
       <header className={withModuleClasses(styles, 'graph-toolbar attachments-gallery-header')}>
-        <div className={withModuleClasses(styles, 'graph-title')}>
-          <b>Attachments</b>
-          <span>{status}</span>
-        </div>
-        <div className={withModuleClasses(styles, 'attachments-filter')}>
-          <input
-            type="text"
-            aria-label="Filter attachments by file pattern"
-            placeholder="Filter files, e.g. *.svg;*.png"
-            title="Separate file patterns with ; to match any. * matches text, ? matches one character, ** matches folders (case-insensitive)"
-            value={gallery.filter}
-            aria-invalid={!!gallery.filterError}
-            aria-describedby={gallery.filterError ? 'attachmentsFilterError' : undefined}
-            spellcheck={false}
-            onInput={(event) =>
-              controller?.invoke('setAttachmentGalleryFilter', event.currentTarget.value)
-            }
-          />
-          {gallery.filterError && (
-            <span id="attachmentsFilterError" role="status">
-              {gallery.filterError}
-            </span>
-          )}
+        <div className={withModuleClasses(styles, 'toolbar-filter-group')}>
+          <div className={withModuleClasses(styles, 'attachments-filter toolbar-filter-input')}>
+            <FilterInput
+              label="Filter attachments by file pattern"
+              placeholder="Filter files, e.g. *.svg;*.png"
+              title="Separate file patterns with ; to match any. * matches text, ? matches one character, ** matches folders (case-insensitive)"
+              value={gallery.filter}
+              invalid={!!gallery.filterError}
+              describedBy={gallery.filterError ? 'attachmentsFilterError' : undefined}
+              onValueChange={(value) => controller?.invoke('setAttachmentGalleryFilter', value)}
+            />
+            {gallery.filterError && (
+              <span id="attachmentsFilterError" role="status">
+                {gallery.filterError}
+              </span>
+            )}
+          </div>
+          <span className={withModuleClasses(styles, 'toolbar-count')}>{status}</span>
         </div>
         <div className={withModuleClasses(styles, 'graph-controls')}>
           <button
@@ -158,7 +180,7 @@ export function AttachmentsView() {
                   </div>
                 )}
                 <div className={withModuleClasses(styles, 'attachment-gallery-copy')}>
-                  <b title={item.name}>{item.name}</b>
+                  <AttachmentName name={item.name} path={item.path} />
                 </div>
                 <div className={withModuleClasses(styles, 'attachment-gallery-actions')}>
                   <button

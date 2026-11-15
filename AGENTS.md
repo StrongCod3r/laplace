@@ -161,6 +161,8 @@ The Attachments gallery filters filenames and path suffixes using case-insensiti
 
 The Attachments gallery header and pagination footer remain outside the scrollable gallery content. Keep pagination visible at the bottom while scrolling; changing the page or filter resets the content scroll position.
 
+Attachments and Graph use the shared FilterInput design, including a clear button that resets filtering and restores input focus. Clicking an attachment filename copies its full displayed name, including the extension, even when the label is truncated.
+
 While an image preview is open, consume wheel events before they reach the underlying workspace. Gallery previews must not scroll the background; fullscreen note image previews retain wheel zoom. Restore normal scrolling immediately after closing the preview.
 
 - Pasting an image file or a copied image block into an empty ordinary paragraph replaces that paragraph in place, preserving its block ID and surrounding blocks. Nonempty paragraphs remain intact, and image presentation metadata and undo/redo must be preserved.

@@ -82,7 +82,7 @@ export interface EditorRuntime {
   cutSelectedImageBlock?: (event: ClipboardEvent) => boolean;
   deleteSelectedImageBlock?: (id: string) => boolean;
   pasteCopiedImageBlock?: (event: ClipboardEvent) => boolean;
-  copyAttachmentToClipboard?: (path: string, mode?: 'image' | 'file') => Promise<boolean>;
+  copyAttachmentToClipboard?: (path: string, mode?: 'image' | 'file' | 'name') => Promise<boolean>;
   deleteAttachmentFromGallery?: (path: string) => Promise<void>;
   selectAttachmentForBacklinks?: (path: string) => boolean;
   selectedAttachmentPath?: string | null;

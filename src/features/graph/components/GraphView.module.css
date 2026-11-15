@@ -14,21 +14,6 @@
   display: flex;
   flex-direction: column;
 }
-.graph-search {
-  width: min(230px, 28vw);
-  height: 29px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--bg);
-  color: var(--text);
-  outline: none;
-  padding: 0 9px;
-  font-size: 12px;
-}
-.graph-search:focus {
-  border-color: color-mix(in srgb, var(--obsidian-accent) 72%, var(--border));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--obsidian-accent) 13%, transparent);
-}
 .graph-stage {
   position: relative;
   flex: 1;

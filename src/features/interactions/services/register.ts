@@ -397,7 +397,11 @@ export function registerInteractions(runtime: EditorRuntime) {
       e.stopPropagation();
       void runtime.copyAttachmentToClipboard?.(
         attachmentCopyButton.dataset.attachmentCopy,
-        attachmentCopyButton.dataset.attachmentCopyMode === 'file' ? 'file' : 'image',
+        attachmentCopyButton.dataset.attachmentCopyMode === 'name'
+          ? 'name'
+          : attachmentCopyButton.dataset.attachmentCopyMode === 'file'
+            ? 'file'
+            : 'image',
       );
       return;
     }

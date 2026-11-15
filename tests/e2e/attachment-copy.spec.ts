@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 for (const docked of [false, true]) {
-  for (const name of ['report (1).pdf', 'picture.svg']) {
+  for (const name of [
+    'report (1).pdf',
+    'picture.svg',
+    'A very long attachment filename that exceeds the available card width.pdf',
+  ]) {
     test(`gallery copies ${name} as a File block in the ${docked ? 'split' : 'main'} editor`, async ({
       page,
       context,
@@ -32,6 +36,24 @@ for (const docked of [false, true]) {
       await page.locator('[data-ribbon-action="attachments"]').click();
       const copy = page.getByRole('button', { name: `Copy file attachment ${name}`, exact: true });
       await expect(copy).toBeVisible();
+      if (name.startsWith('A very long')) {
+        const title = page.locator('.attachment-gallery-copy b').filter({ hasText: name });
+        await expect(title).toHaveAttribute('title', name);
+        await expect(title.locator('.attachment-name-extension')).toHaveText('.pdf');
+        expect(
+          await title.evaluate((element) => {
+            const stem = element.querySelector('.attachment-name-stem')!;
+            const extension = element.querySelector('.attachment-name-extension')!;
+            const bounds = element.getBoundingClientRect();
+            const suffix = extension.getBoundingClientRect();
+            return (
+              stem.scrollWidth > stem.clientWidth &&
+              suffix.left >= bounds.left &&
+              suffix.right <= bounds.right
+            );
+          }),
+        ).toBe(true);
+      }
       await expect(copy).toHaveAttribute('title', 'Copy as file');
       if (name.endsWith('.svg'))
         await expect(
@@ -40,6 +62,12 @@ for (const docked of [false, true]) {
       await expect(
         page.getByRole('button', { name: `Copy image attachment ${name}`, exact: true }),
       ).toHaveCount(name.endsWith('.svg') ? 1 : 0);
+      const filename = page.getByRole('button', { name: `Copy filename ${name}`, exact: true });
+      if (docked) {
+        await filename.focus();
+        await filename.press('Enter');
+      } else await filename.click();
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(name);
       await copy.click();
       await expect
         .poll(() => page.evaluate(() => navigator.clipboard.readText()))

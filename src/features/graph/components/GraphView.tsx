@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { FilterInput } from '@/shared/components/FilterInput';
 import { GraphScene } from '../services/scene';
 import { withModuleClasses } from '@/shared/lib/css-classes';
 import graphStyles from './GraphView.module.css';
@@ -14,7 +15,7 @@ export function GraphView() {
   const vaultId = useWorkspaceStore((state) => state.ui.activeVaultId);
   const canvasHost = useRef<HTMLDivElement>(null);
   const zoomLabel = useRef<HTMLOutputElement>(null);
-  const search = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('');
   const scene = useRef<GraphScene | null>(null);
 
   useLayoutEffect(() => {
@@ -27,7 +28,7 @@ export function GraphView() {
       zoomLabel.current,
     );
     scene.current = instance;
-    if (search.current) search.current.value = '';
+    setQuery('');
     return () => {
       instance.dispose();
       scene.current = null;
@@ -46,23 +47,25 @@ export function GraphView() {
     >
       <div className={withModuleClasses(styles, 'graph-shell')}>
         <div className={withModuleClasses(styles, 'graph-toolbar')}>
-          <div className={withModuleClasses(styles, 'graph-title')}>
-            <b>Graph view</b>
-            <span>
-              {graph.nodes.length} notes · {graph.edges.length} links
+          <div className={withModuleClasses(styles, 'toolbar-filter-group')}>
+            <div className={withModuleClasses(styles, 'toolbar-filter-input')}>
+              <FilterInput
+                value={query}
+                onValueChange={(value) => {
+                  setQuery(value);
+                  scene.current?.search(value);
+                }}
+                label="Filter notes"
+                graphSearch
+                placeholder="Filter notes…"
+              />
+            </div>
+            <span className={withModuleClasses(styles, 'toolbar-count')}>
+              {graph.nodes.length} {graph.nodes.length === 1 ? 'note' : 'notes'} ·{' '}
+              {graph.edges.length} {graph.edges.length === 1 ? 'link' : 'links'}
             </span>
           </div>
           <div className={withModuleClasses(styles, 'graph-controls')}>
-            <input
-              className={withModuleClasses(styles, 'graph-search')}
-              ref={search}
-              onInput={(event) => scene.current?.search(event.currentTarget.value)}
-              aria-label="Filter notes"
-              data-graph-search
-              type="search"
-              placeholder="Filter notes…"
-              autoComplete="off"
-            />
             <button
               className={withModuleClasses(styles, 'graph-control-btn')}
               onClick={() => scene.current?.zoom(1 / 1.2)}

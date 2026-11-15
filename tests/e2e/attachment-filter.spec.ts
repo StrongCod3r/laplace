@@ -27,7 +27,7 @@ test('Attachments keeps its header and pagination fixed and filters all pages by
   const content = gallery.locator('.attachments-gallery-content');
   const header = gallery.locator('header');
   const footer = gallery.getByRole('navigation', { name: 'Attachment pages' });
-  const filter = gallery.getByRole('textbox', { name: 'Filter attachments by file pattern' });
+  const filter = gallery.getByRole('searchbox', { name: 'Filter attachments by file pattern' });
   await expect(gallery.getByRole('listitem')).toHaveCount(24);
   for (const theme of ['light', 'dark']) {
     await page.evaluate((value) => {
@@ -51,6 +51,7 @@ test('Attachments keeps its header and pagination fixed and filters all pages by
     await expect(footer.getByRole('button', { name: 'Previous', exact: true })).toBeInViewport();
     await expect(filter).toBeInViewport();
   }
+  await page.setViewportSize({ width: 1280, height: 720 });
   await gallery.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(gallery.getByRole('listitem')).toHaveCount(6);
   await expect(content).toHaveJSProperty('scrollTop', 0);
@@ -75,6 +76,30 @@ test('Attachments keeps its header and pagination fixed and filters all pages by
   await expect(content).toContainText('No attachments match this pattern.');
   await filter.fill('*.pdf');
   await expect(gallery.getByRole('listitem')).toHaveCount(24);
-  await filter.fill('');
+  await gallery.getByRole('button', { name: 'Clear filter attachments by file pattern' }).click();
+  await expect(filter).toHaveValue('');
+  await expect(filter).toBeFocused();
   await expect(gallery.getByRole('listitem')).toHaveCount(24);
+  await expect(
+    gallery.getByRole('button', { name: 'Clear filter attachments by file pattern' }),
+  ).toHaveCount(0);
+  const filterStyle = await filter.evaluate((input) => {
+    const css = getComputedStyle(input);
+    return [css.height, css.borderRadius, css.backgroundColor, css.padding, css.fontSize];
+  });
+  await page.locator('[data-ribbon-action="graph"]').click();
+  const graphFilter = page.getByRole('searchbox', { name: 'Filter notes', exact: true });
+  expect(
+    await graphFilter.evaluate((input) => {
+      const css = getComputedStyle(input);
+      return [css.height, css.borderRadius, css.backgroundColor, css.padding, css.fontSize];
+    }),
+  ).toEqual(filterStyle);
+  await graphFilter.fill('Example');
+  await page.getByRole('button', { name: 'Clear filter notes', exact: true }).click();
+  await expect(graphFilter).toHaveValue('');
+  await expect(graphFilter).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Clear filter notes', exact: true })).toHaveCount(
+    0,
+  );
 });

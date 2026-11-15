@@ -1,0 +1,52 @@
+.field {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.field input {
+  width: 100%;
+  min-width: 0;
+  height: 29px;
+  padding: 0 29px 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.field input::placeholder {
+  color: var(--muted);
+}
+.field input:focus {
+  border-color: color-mix(in srgb, var(--obsidian-accent) 72%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--obsidian-accent) 13%, transparent);
+}
+.field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.field input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.field button {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+}
+.field button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.field button:focus-visible {
+  outline: 2px solid var(--obsidian-accent);
+}
