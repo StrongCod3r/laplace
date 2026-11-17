@@ -714,7 +714,7 @@
   border-radius: 7px;
   background: var(--code-toolbar-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .code-language-select {
@@ -723,7 +723,7 @@
   max-width: 145px;
   border: 0;
   border-right: 1px solid var(--code-border);
-  border-radius: 0;
+  border-radius: 6px 0 0 6px;
   background: var(--code-toolbar-bg);
   color: var(--code-muted);
   padding: 0 22px 0 8px;
@@ -767,6 +767,32 @@
   border-right: 0;
 }
 
+.code-toolbar-actions > .code-tool-btn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.code-mode-control {
+  position: relative;
+  display: flex;
+  border-right: 1px solid var(--code-border);
+}
+
+.mermaid-mode-toggle {
+  position: relative;
+  border-right: 0;
+}
+
+.mermaid-mode-toggle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  border-left: 4px solid transparent;
+  border-bottom: 4px solid currentColor;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .code-tool-btn:hover {
   background: var(--code-toolbar-hover);
   color: var(--code-text);
@@ -790,8 +816,9 @@
 
 .mermaid-mode-toolbar {
   position: absolute;
-  top: 41px;
-  right: 8px;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -3196,6 +3223,7 @@ dialog[data-mermaid-viewer] {
 .dock-pane.dock-drop-bottom:after {
   content: '';
   position: absolute;
+  box-sizing: border-box;
   z-index: 30;
   pointer-events: none;
   background: color-mix(in srgb, var(--obsidian-accent, var(--blue)) 22%, transparent);
@@ -3203,19 +3231,19 @@ dialog[data-mermaid-viewer] {
 }
 
 .dock-pane.dock-drop-left:after {
-  inset: 0 75% 0 0;
+  inset: 0 calc(50% + 3px) 0 0;
 }
 
 .dock-pane.dock-drop-right:after {
-  inset: 0 0 0 75%;
+  inset: 0 0 0 calc(50% + 3px);
 }
 
 .dock-pane.dock-drop-top:after {
-  inset: 0 0 75% 0;
+  inset: 0 0 calc(50% + 3px) 0;
 }
 
 .dock-pane.dock-drop-bottom:after {
-  inset: 75% 0 0 0;
+  inset: calc(50% + 3px) 0 0 0;
 }
 
 .dock-pane.dock-drop-center {

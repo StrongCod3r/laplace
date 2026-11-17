@@ -61,21 +61,28 @@
 .editor-view:global(.dock-drop-top):after,
 .editor-view:global(.dock-drop-bottom):after {
   content: '';
-  position: absolute;
+  position: fixed;
+  box-sizing: border-box;
+  left: var(--dock-preview-left);
+  top: var(--dock-preview-top);
+  width: var(--dock-preview-width);
+  height: var(--dock-preview-height);
   z-index: 30;
   pointer-events: none;
   background: color-mix(in srgb, var(--obsidian-accent, var(--blue)) 22%, transparent);
   border: 2px solid var(--obsidian-accent, var(--blue));
 }
 .editor-view:global(.dock-drop-left):after {
-  inset: 0 75% 0 0;
+  width: calc(var(--dock-preview-width) / 2 - 3px);
 }
 .editor-view:global(.dock-drop-right):after {
-  inset: 0 0 0 75%;
+  left: calc(var(--dock-preview-left) + var(--dock-preview-width) / 2 + 3px);
+  width: calc(var(--dock-preview-width) / 2 - 3px);
 }
 .editor-view:global(.dock-drop-top):after {
-  inset: 0 0 75% 0;
+  height: calc(var(--dock-preview-height) / 2 - 3px);
 }
 .editor-view:global(.dock-drop-bottom):after {
-  inset: 75% 0 0 0;
+  top: calc(var(--dock-preview-top) + var(--dock-preview-height) / 2 + 3px);
+  height: calc(var(--dock-preview-height) / 2 - 3px);
 }

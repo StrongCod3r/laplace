@@ -4202,6 +4202,13 @@ export function registerInteractions(runtime: EditorRuntime) {
           groupId:
             pane.dataset.editorGroup || runtime.editorGroups(runtime.state.editorLayout)[0].id,
         };
+        if (target.edge && pane === runtime.els.editorView) {
+          const rect = pane.getBoundingClientRect();
+          pane.style.setProperty('--dock-preview-left', `${rect.left}px`);
+          pane.style.setProperty('--dock-preview-top', `${rect.top}px`);
+          pane.style.setProperty('--dock-preview-width', `${pane.clientWidth}px`);
+          pane.style.setProperty('--dock-preview-height', `${pane.clientHeight}px`);
+        }
         pane.classList.add(`dock-drop-${target.edge || 'center'}`);
         return;
       }
@@ -4565,6 +4572,8 @@ export function registerInteractions(runtime: EditorRuntime) {
   }
 
   function clearDockIndicators() {
+    for (const dimension of ['left', 'top', 'width', 'height'])
+      runtime.els.editorView.style.removeProperty(`--dock-preview-${dimension}`);
     document
       .querySelectorAll('.tab-drop-before,.tab-drop-after')
       .forEach((node) => node.classList.remove('tab-drop-before', 'tab-drop-after'));
