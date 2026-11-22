@@ -367,9 +367,11 @@ test('browser Git pushes to a real remote and reloads received notes in the edit
     await dialog.getByRole('button', { name: 'Save settings' }).click();
     await expect(dialog).toBeHidden();
     await panel.getByLabel('Commit message').fill('Synchronize notes');
-    await panel.getByLabel('More commit actions', { exact: true }).click();
-    await panel.getByRole('button', { name: 'Commit & Push', exact: true }).click();
-    await expect(panel.getByText('Changes committed and pushed.', { exact: true })).toBeVisible({
+    await panel.getByRole('button', { name: 'Commit local changes', exact: true }).click();
+    await expect(panel.getByText(/^Commit created:/)).toBeVisible();
+    await panel.getByLabel('Commit message').fill('');
+    await repositoryAction(panel, 'Push');
+    await expect(panel.getByText('Local commits pushed.', { exact: true })).toBeVisible({
       timeout: 30_000,
     });
     const sent = execFileSync('git', ['--git-dir', remote.bare, 'show', 'main:Local note.md'], {

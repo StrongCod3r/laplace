@@ -248,7 +248,7 @@ export function registerCode(runtime: EditorRuntime) {
   function highlightMarkup(code) {
     let out = '',
       last = 0;
-    const re = /<!--[\s\S]*?-->|<\/?[A-Za-z][^>]*>/g;
+    const re = /<!--[\s\S]*?-->|<\/?[A-Za-z](?:"[^"]*"|'[^']*'|[^'">])*>/g;
     let m;
     while ((m = re.exec(code))) {
       out += runtime.escapeHtml(code.slice(last, m.index));
@@ -257,17 +257,29 @@ export function registerCode(runtime: EditorRuntime) {
         out += runtime.htmlWithStyles(
           `<span class="code-token comment">${runtime.escapeHtml(token)}</span>`,
         );
-      else
-        out += runtime
-          .escapeHtml(token)
-          .replace(
-            /^(&lt;\/?)([A-Za-z][\w:-]*)/,
-            runtime.htmlWithStyles('$1<span class="code-token tag">$2</span>'),
-          )
-          .replace(
-            /([A-Za-z_:][\w:.-]*)(=)/g,
-            runtime.htmlWithStyles('<span class="code-token attr">$1</span>$2'),
-          );
+      else {
+        // Tokenize source only: later replacements must never process generated spans.
+        const parts = /^<\/?[A-Za-z][\w:-]*|[A-Za-z_:][\w:.-]*(?=\s*=)|"[^"]*"|'[^']*'/g;
+        let part,
+          offset = 0;
+        while ((part = parts.exec(token))) {
+          out += runtime.escapeHtml(token.slice(offset, part.index));
+          const value = part[0];
+          if (value.startsWith('<')) {
+            const prefix = value.startsWith('</') ? '</' : '<';
+            out += runtime.escapeHtml(prefix);
+            out += runtime.htmlWithStyles(
+              `<span class="code-token tag">${runtime.escapeHtml(value.slice(prefix.length))}</span>`,
+            );
+          } else if (/^["']/.test(value)) out += runtime.escapeHtml(value);
+          else
+            out += runtime.htmlWithStyles(
+              `<span class="code-token attr">${runtime.escapeHtml(value)}</span>`,
+            );
+          offset = parts.lastIndex;
+        }
+        out += runtime.escapeHtml(token.slice(offset));
+      }
       last = re.lastIndex;
     }
     return out + runtime.escapeHtml(code.slice(last));

@@ -47,6 +47,16 @@ export function createDirectoryFs(root: DirectoryHandle) {
       if (name === 'NotFoundError') throw fsError('ENOENT', path);
       if (name === 'TypeMismatchError') throw fsError('ENOTDIR', path);
       if (name === 'InvalidModificationError') throw fsError('ENOTEMPTY', path);
+      if (name === 'SecurityError' && parts(path)[0] === '.git') {
+        const action =
+          path === '/.git/config'
+            ? 'Update the repository settings with desktop Git (git config --local), then reopen Source Control.'
+            : 'Initialize or update this repository with desktop Git, then reopen Source Control.';
+        throw Object.assign(
+          new Error(`The browser security policy blocked access to ${path}. ${action}`),
+          { name: 'SecurityError', code: 'EACCES', cause: error },
+        );
+      }
       throw error;
     }
   }

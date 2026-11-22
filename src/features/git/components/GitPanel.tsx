@@ -33,6 +33,7 @@ type Action =
   | 'refresh'
   | 'configure'
   | 'fetch'
+  | 'push'
   | 'commit'
   | 'commitPush'
   | 'sync'
@@ -591,6 +592,7 @@ export function GitPanel() {
     const version = generation.current;
     const descriptions = {
       commitPush: 'Committing and pushing',
+      push: 'Pushing commits',
       refresh: 'Reading changesâ€¦',
       configure: 'Saving settingsâ€¦',
       fetch: 'Fetching remoteâ€¦',
@@ -669,10 +671,10 @@ export function GitPanel() {
         const oid = await current.commit(message);
         setNotice(oid ? `Commit created: ${oid.slice(0, 7)}` : 'There are no changes to commit.');
       }
-      if (action === 'commitPush') {
-        await current.commit(message);
+      if (action === 'push' || action === 'commitPush') {
+        if (action === 'commitPush') await current.commit(message);
         result = await current.push();
-        setNotice('Changes committed and pushed.');
+        setNotice(action === 'push' ? 'Local commits pushed.' : 'Changes committed and pushed.');
       }
       if (action === 'sync') {
         const synchronized = await current.synchronize(message);
@@ -970,6 +972,7 @@ export function GitPanel() {
 
   const canCommit = Boolean(writable && status?.branch && status.changes.length && message.trim());
   const canFetch = Boolean(writable && status?.branch && status.settings.url);
+  const canPush = Boolean(canFetch && status?.outgoing.length && !diverged);
   const canSync =
     canFetch &&
     !diverged &&
@@ -1024,6 +1027,9 @@ export function GitPanel() {
     <>
       <button type="button" disabled={!canFetch} onClick={() => void run('fetch')}>
         <Icon name="download" size="16" /> Fetch remote
+      </button>
+      <button type="button" disabled={!canPush} onClick={() => void run('push')}>
+        <Icon name="arrow-up" size="16" /> Push
       </button>
       <button type="button" disabled={!canSync} onClick={() => void run('sync')}>
         <Icon name="refresh-cw" size="16" /> Sync workspace

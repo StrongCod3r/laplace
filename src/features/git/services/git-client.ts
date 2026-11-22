@@ -1,5 +1,6 @@
 import { APP_ID, APP_DIRECTORY, APP_DIRECTORY_IGNORE_PATTERN } from './../../../app-identity';
-import git, { type FsClient, type GitHttpRequest, type ReadCommitResult } from 'isomorphic-git';
+import type { FsClient, GitHttpRequest, ReadCommitResult } from 'isomorphic-git';
+import git from './git-api';
 import http from 'isomorphic-git/http/web';
 import { Buffer } from 'buffer';
 import { connectionProxy } from './git-connection';
@@ -202,6 +203,14 @@ export class WorkspaceGitClient {
     const status = await this.repositoryInfo();
     if (!status.initialized || !status.branch)
       throw new Error('Open a branch in a Git repository.');
+    // Authentication is stored separately; saving it must not rewrite protected Git files.
+    if (
+      url === status.settings.url &&
+      proxy === status.settings.corsProxy &&
+      settings.name.trim() === status.settings.name &&
+      settings.email.trim() === status.settings.email
+    )
+      return;
     await git.setConfig({ ...this.base, path: `remote.${status.remote}.url`, value: url });
     await git.setConfig({
       ...this.base,

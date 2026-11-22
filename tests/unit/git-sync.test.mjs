@@ -243,6 +243,88 @@ test('Git directory adapter creates real commits, previews text and stages delet
   );
 });
 
+test('blocked Git settings explain the browser restriction and preserve repository files', async (t) => {
+  const { directory, WorkspaceGitClient, createDirectoryFs } = await fixture(t);
+  const setup = new WorkspaceGitClient(fs, directory);
+  await setup.initialize();
+  const settings = {
+    url: 'https://example.com/notes.git',
+    corsProxy: '',
+    name: 'Existing author',
+    email: 'existing@example.com',
+  };
+  await setup.configure(settings);
+  await fs.promises.writeFile(path.join(directory, 'Note.md'), 'Keep this note\n');
+  const configBefore = await fs.promises.readFile(path.join(directory, '.git/config'), 'utf8');
+  const blocked = new DOMException('Blocked by browser policy', 'SecurityError');
+  const rootHandle = directoryHandle(directory);
+  const getDirectory = rootHandle.getDirectoryHandle;
+  rootHandle.getDirectoryHandle = async (name, options) => {
+    const handle = await getDirectory(name, options);
+    if (name === '.git') {
+      const getFile = handle.getFileHandle;
+      handle.getFileHandle = async (filename, fileOptions) => {
+        if (filename === 'config' && fileOptions?.create) throw blocked;
+        return getFile(filename, fileOptions);
+      };
+    }
+    return handle;
+  };
+  const client = new WorkspaceGitClient(createDirectoryFs(rootHandle));
+  assert.equal((await client.repositoryInfo()).initialized, true);
+  client.authenticate('user', 'new-token');
+  await client.configure(settings);
+  await client.configure({ ...settings, name: ' Existing author ' });
+  await assert.rejects(
+    client.configure({ url: '', corsProxy: '', name: 'Author', email: 'author@example.com' }),
+    (error) => {
+      assert.equal(error.name, 'SecurityError');
+      assert.equal(error.code, 'EACCES');
+      assert.match(error.message, /browser security policy.*\/\.git\/config/);
+      assert.match(error.message, /git config --local/);
+      return true;
+    },
+  );
+  assert.equal(
+    await fs.promises.readFile(path.join(directory, '.git/config'), 'utf8'),
+    configBefore,
+  );
+  assert.equal(
+    await fs.promises.readFile(path.join(directory, 'Note.md'), 'utf8'),
+    'Keep this note\n',
+  );
+});
+
+test('damaged compressed Git objects report a diagnostic without modifying notes or refs', async (t) => {
+  const { directory, WorkspaceGitClient, createDirectoryFs } = await fixture(t);
+  const client = new WorkspaceGitClient(createDirectoryFs(directoryHandle(directory)));
+  await client.initialize();
+  await client.configure({ url: '', corsProxy: '', name: 'Author', email: 'author@example.com' });
+  const note = path.join(directory, 'Note.md');
+  await fs.promises.writeFile(note, 'Preserve the note\n');
+  const oid = await client.commit('Initial note');
+  const objectPath = path.join(directory, '.git/objects', oid.slice(0, 2), oid.slice(2));
+  const object = await fs.promises.readFile(objectPath);
+  const head = await fs.promises.readFile(path.join(directory, '.git/refs/heads/main'), 'utf8');
+  // A failed external write can leave an empty object where Git expects zlib data.
+  await fs.promises.writeFile(objectPath, new Uint8Array());
+  await assert.rejects(client.status(), (error) => {
+    assert.equal(error.code, 'GitDecompressionError');
+    assert.match(error.message, /git fsck --full/);
+    assert.match(error.cause.message, /Cannot create property 'caller' on string 'buffer error'/);
+    return true;
+  });
+  assert.equal(await fs.promises.readFile(note, 'utf8'), 'Preserve the note\n');
+  assert.equal(
+    await fs.promises.readFile(path.join(directory, '.git/refs/heads/main'), 'utf8'),
+    head,
+  );
+  assert.equal((await fs.promises.readFile(objectPath)).length, 0);
+  // A repaired object must be readable again, without retaining a rejected history cache.
+  await fs.promises.writeFile(objectPath, object);
+  assert.equal((await client.status()).headOid, oid);
+});
+
 test('automatic commit settings persist in each repository without storing credentials', async (t) => {
   const { directory, WorkspaceGitClient } = await fixture(t);
   const client = new WorkspaceGitClient(fs, directory);
