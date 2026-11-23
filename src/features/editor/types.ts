@@ -31,6 +31,8 @@ export type WorkspaceAction =
   | 'activateTab'
   | 'closeTab'
   | 'reopenClosedTab'
+  | 'splitTab'
+  | 'focusEditorGroup'
   | 'cancelPageOperations'
   | 'requestCloseSelectedWorkspace'
   | 'resetAppSettings'

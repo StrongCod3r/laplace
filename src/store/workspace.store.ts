@@ -238,6 +238,7 @@ export function publishWorkspace(
     return [
       {
         id: tab.id,
+        groupId: tab.groupId,
         kind: tab.kind,
         pageId: tab.pageId,
         active: tab.id === document.activeTabId,

@@ -199,6 +199,8 @@ Outline navigation focuses the destination heading without scrolling before star
 
 Closing the active tab returns to the most recently visited open tab in the same editor group, including Graph and Attachments views, before falling back to another group. Track tab recency per vault in controller memory, outside the saved workspace document.
 
+Tab context menus work in the main strip and split panes, including keyboard opening with Shift+F10. Bulk close actions affect only the clicked tab's editor group and never delete notes. Duplicate tab opens the same note in another tab; split actions use the clicked tab and group without requiring prior activation.
+
 In the page search palette, Ctrl/Cmd+Enter or Ctrl/Cmd+click opens the selected page in a new active tab. Enter and ordinary clicks replace the current tab as usual.
 
 Breadcrumb notes and folder notes open in a new active tab with Ctrl/Cmd+click or middle-click, within the breadcrumb's editor group. Ordinary clicks replace the current tab.

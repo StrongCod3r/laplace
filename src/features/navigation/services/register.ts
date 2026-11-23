@@ -123,7 +123,7 @@ export function registerNavigation(runtime: EditorRuntime) {
       ? runtime.pageIconMarkup(runtime.pageIconFor(page))
       : runtime.iconMarkup(tab.kind === 'attachments' ? 'paperclip' : 'network');
     return runtime.htmlWithStyles(
-      `<div class="dock-tab ${active ? 'active' : ''}" role="tab" aria-selected="${active}" data-tab-id="${tab.id}" draggable="true"><span class="tab-icon">${tabIcon}</span><span class="tab-title">${runtime.escapeHtml(title)}</span><button type="button" class="tab-close" data-tab-close="${tab.id}" title="Close ${runtime.escapeHtml(title)}">${runtime.iconMarkup('x', '14px')}</button></div>`,
+      `<div class="dock-tab ${active ? 'active' : ''}" role="tab" tabindex="${active ? 0 : -1}" aria-selected="${active}" data-tab-id="${tab.id}" draggable="true"><span class="tab-icon">${tabIcon}</span><span class="tab-title">${runtime.escapeHtml(title)}</span><button type="button" class="tab-close" data-tab-close="${tab.id}" title="Close ${runtime.escapeHtml(title)}">${runtime.iconMarkup('x', '14px')}</button></div>`,
     );
   }
 
@@ -294,7 +294,7 @@ export function registerNavigation(runtime: EditorRuntime) {
     runtime.state.currentPageId = tab.pageId;
     runtime.state.mainView = 'page';
     runtime.repairEditorGroups();
-    runtime.scheduleSave();
+    runtime.scheduleSave('view');
     runtime.renderAll();
   }
 
