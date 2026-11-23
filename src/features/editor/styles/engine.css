@@ -718,6 +718,7 @@
 }
 
 .code-language-select {
+  color-scheme: light;
   height: 27px;
   min-width: 66px;
   max-width: 145px;
@@ -730,6 +731,10 @@
   font-size: 11px;
   outline: none;
   cursor: pointer;
+}
+
+body.dark .code-language-select {
+  color-scheme: dark;
 }
 
 .code-language-select:hover,
