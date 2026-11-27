@@ -150,7 +150,7 @@ for (const dark of [false, true]) {
   });
 }
 
-test('math toolbar switches modes, defaults new languages to preview and downloads a standalone SVG', async ({
+test('math toolbar switches modes, defaults language changes to split and downloads a standalone SVG', async ({
   page,
   context,
 }, testInfo) => {
@@ -200,8 +200,15 @@ test('math toolbar switches modes, defaults new languages to preview and downloa
   await exportPage.close();
   const other = page.locator('#blockEditor .code-block').last();
   await other.locator('[data-code-language]').selectOption('latex');
-  await expect(other).toHaveClass(/math-mode-preview/);
-  await expect(other.locator('[data-code-editor]')).toBeHidden();
+  await expect(other).toHaveClass(/math-mode-split/);
+  await expect(other.locator('[data-code-editor]')).toBeVisible();
+  await expect(other.locator('[data-math-preview]')).toBeVisible();
+  await other.locator('[data-code-language]').selectOption('mermaid');
+  await expect(other).toHaveClass(/mermaid-mode-split/);
+  await expect(other.locator('[data-code-editor]')).toBeVisible();
+  await expect(other.locator('[data-mermaid-preview]')).toBeVisible();
+  await other.locator('[data-code-language]').selectOption('latex');
+  await expect(other).toHaveClass(/math-mode-split/);
 });
 
 for (const docked of [false, true]) {

@@ -109,7 +109,7 @@ Heading blocks support H1 through H6 in the slash menu, formatting toolbar, outl
 
 Mermaid syntax is rendered by bundled, lazily loaded Pele without a CDN dependency. Keep theme colors connected through `--pele-*` variables and resolve them in standalone SVG downloads. Preserve authored diagram directions and the existing navigation controls.
 
-Mermaid code blocks default to Preview display, including imported Markdown and blocks switched to the Mermaid language. Preserve an explicitly selected Code, Preview, or Split display mode.
+New and imported Mermaid code blocks default to Preview display. Switching an existing block to Mermaid defaults to Split; otherwise preserve an explicitly selected Code, Preview, or Split display mode. Apply the same rule to LaTeX blocks.
 
 Mermaid previews support pointer dragging, zoom buttons, and keyboard navigation. Wheel zoom is enabled only in the fullscreen viewer; in a block preview, the wheel retains normal page scrolling. Keep zoom and pan local to each preview, retain them when preserving its DOM during unrelated edits, and exclude navigation transforms from Markdown and SVG exports. Reset restores 100% zoom and the original position.
 

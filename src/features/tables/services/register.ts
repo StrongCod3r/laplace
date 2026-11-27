@@ -10,7 +10,7 @@ export function registerTables(runtime: EditorRuntime) {
 
   function normalizeSimpleTableBlock(block) {
     let rows = Array.isArray(block.tableRows) ? block.tableRows : null;
-    if (!rows?.length) rows = Array.from({ length: 3 }, () => Array(3).fill(''));
+    if (!rows?.length) rows = Array.from({ length: 3 }, () => Array(2).fill(''));
     const cols = Math.max(1, ...rows.map((r) => (Array.isArray(r) ? r.length : 0)));
     block.tableRows = rows.map((r) => {
       const row = Array.isArray(r) ? r.map((v) => String(v ?? '')) : [];

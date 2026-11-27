@@ -2853,8 +2853,10 @@ export function registerInteractions(runtime: EditorRuntime) {
       const row = e.target.closest('.code-block'),
         b = runtime.findBlock(row?.dataset.blockId);
       if (b) {
-        if (e.target.value === 'mermaid' && b.language !== 'mermaid' && !b.mermaidViewMode)
-          b.mermaidPreview = true;
+        if (e.target.value !== b.language) {
+          if (e.target.value === 'mermaid') b.mermaidViewMode = 'split';
+          if (e.target.value === 'latex') b.mathViewMode = 'split';
+        }
         b.language = e.target.value;
         if (b.language === 'mermaid' && typeof b.mermaidPreview !== 'boolean')
           b.mermaidPreview = true;

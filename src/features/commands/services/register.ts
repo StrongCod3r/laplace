@@ -272,9 +272,9 @@ export function registerCommands(runtime: EditorRuntime) {
       b.text = '';
     }
     if (type === 'table') {
-      b.tableRows = Array.from({ length: 3 }, () => Array(3).fill(''));
-      b.tableColumnAlignments = Array(3).fill('left');
-      b.tableCellInline = Array.from({ length: 3 }, () => Array(3).fill(null));
+      b.tableRows = Array.from({ length: 3 }, () => Array(2).fill(''));
+      b.tableColumnAlignments = Array(2).fill('left');
+      b.tableCellInline = Array.from({ length: 3 }, () => Array(2).fill(null));
       b.tableHeaderRow = true;
       b.tableHeaderColumn = false;
       delete b.text;

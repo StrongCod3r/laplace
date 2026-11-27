@@ -5,6 +5,7 @@ import type { EditorRuntime } from '@/features/editor/types';
 import { createMathSvg, renderMathHTML } from '@/features/math/render';
 import { bindMermaidNavigation } from './mermaid-navigation';
 import { renderMermaidSvg, copyMermaidSvg } from './mermaid-renderer';
+import { highlightSql } from './sql-highlight';
 
 export function registerCode(runtime: EditorRuntime) {
   const renderedMermaidPreviews = new WeakMap();
@@ -86,13 +87,13 @@ export function registerCode(runtime: EditorRuntime) {
     if (language === 'latex') return runtime.escapeHtml(code);
     if (language === 'html' || language === 'xml') return runtime.highlightMarkup(code);
     if (language === 'mermaid') return runtime.highlightMermaid(code);
+    if (language === 'sql') return highlightSql(code, runtime.escapeHtml, runtime.htmlWithStyles);
 
     const keywordSet = new Set(
       (runtime.CODE_KEYWORDS[language] || '').split(/\s+/).filter(Boolean),
     );
     const hashComment = ['python', 'bash', 'yaml'].includes(language);
-    const sqlComment = language === 'sql';
-    const slashComment = !['python', 'bash', 'yaml', 'sql', 'html', 'xml'].includes(language);
+    const slashComment = !['python', 'bash', 'yaml', 'html', 'xml'].includes(language);
 
     // Build the tokenizer from RegExp.source values so escaping stays valid.
     const parts = [
@@ -102,7 +103,6 @@ export function registerCode(runtime: EditorRuntime) {
     ];
     if (slashComment) parts.push(/\/\*[\s\S]*?\*\//.source, /\/\/[^\n]*/.source);
     if (hashComment) parts.push(/#[^\n]*/.source);
-    if (sqlComment) parts.push(/--[^\n]*/.source, /\/\*[\s\S]*?\*\//.source);
     parts.push(/\b\d+(?:\.\d+)?\b/.source, /\b[A-Za-z_$][\w$]*\b/.source);
 
     const pattern = new RegExp(parts.join('|'), 'g');
@@ -115,8 +115,7 @@ export function registerCode(runtime: EditorRuntime) {
       let cls = '';
       if (
         (slashComment && (token.startsWith('//') || token.startsWith('/*'))) ||
-        (hashComment && token.startsWith('#')) ||
-        (sqlComment && (token.startsWith('--') || token.startsWith('/*')))
+        (hashComment && token.startsWith('#'))
       )
         cls = 'comment';
       else if (/^[\'"`]/.test(token)) cls = 'string';
